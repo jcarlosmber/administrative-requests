@@ -22,7 +22,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -60,7 +60,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GERMAN ALBERTO PULIDO PULIDO",
+    "servidor_activo_cedula": "80222608"
   },
   {
     "id_plaza": 2,
@@ -85,7 +87,7 @@
     "titular_nombre": "OSCAR JAVIER SUAREZ RAMOS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -123,7 +125,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "OSCAR JAVIER SUAREZ RAMOS",
+    "servidor_activo_cedula": "2968815"
   },
   {
     "id_plaza": 3,
@@ -186,7 +190,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALMA ROSA RAMOS MARIA",
+    "servidor_activo_cedula": "64586540"
   },
   {
     "id_plaza": 4,
@@ -211,7 +217,7 @@
     "titular_nombre": "MARIA PAULA ALBORNOZ CARDENAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -249,7 +255,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA PAULA ALBORNOZ CARDENAS",
+    "servidor_activo_cedula": "1020810401"
   },
   {
     "id_plaza": 5,
@@ -274,7 +282,7 @@
     "titular_nombre": "MARIA TATIANA MEJIA ROJAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -312,7 +320,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA TATIANA MEJIA ROJAS",
+    "servidor_activo_cedula": "1121857540"
   },
   {
     "id_plaza": 6,
@@ -375,7 +385,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CARLOS ANDRES BERNAL CASAS",
+    "servidor_activo_cedula": "80096113"
   },
   {
     "id_plaza": 7,
@@ -400,7 +412,7 @@
     "titular_nombre": "LAURA JULIANA ARIZA HERRERA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -438,7 +450,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LAURA JULIANA ARIZA HERRERA",
+    "servidor_activo_cedula": "1098774988"
   },
   {
     "id_plaza": 8,
@@ -463,7 +477,7 @@
     "titular_nombre": "MILDRED PAOLA ARDILA VERGARA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -501,7 +515,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MILDRED PAOLA ARDILA VERGARA",
+    "servidor_activo_cedula": "52235989"
   },
   {
     "id_plaza": 9,
@@ -526,7 +542,7 @@
     "titular_nombre": "KATHERYN YOLANDA RODGERS QUIROGA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -564,7 +580,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "KATHERYN YOLANDA RODGERS QUIROGA",
+    "servidor_activo_cedula": "52146196"
   },
   {
     "id_plaza": 10,
@@ -627,7 +645,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "OLGA LILIANA LONDOÑO GARCIA",
+    "servidor_activo_cedula": "1012339868"
   },
   {
     "id_plaza": 11,
@@ -690,7 +710,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ADRIANA PATRICIA RAMIREZ BAUTISTA",
+    "servidor_activo_cedula": "52542976"
   },
   {
     "id_plaza": 12,
@@ -753,7 +775,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CARMEN ALICIA FORERO FORERO",
+    "servidor_activo_cedula": "51882380"
   },
   {
     "id_plaza": 13,
@@ -778,7 +802,7 @@
     "titular_nombre": "BETTY ESPERANZA MONTAÑA MORA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -816,7 +840,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "BETTY ESPERANZA MONTAÑA MORA",
+    "servidor_activo_cedula": "52124597"
   },
   {
     "id_plaza": 14,
@@ -879,7 +905,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CLAUDIA BEATRIZ CASTILLA OLAYA",
+    "servidor_activo_cedula": "20699098"
   },
   {
     "id_plaza": 15,
@@ -904,7 +932,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -942,7 +970,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALBA KARINA ESTEVEZ AMAYA",
+    "servidor_activo_cedula": "52827794"
   },
   {
     "id_plaza": 16,
@@ -967,7 +997,7 @@
     "titular_nombre": "ALEX CORTES SALGADO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1005,7 +1035,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALEX CORTES SALGADO",
+    "servidor_activo_cedula": "79138328"
   },
   {
     "id_plaza": 17,
@@ -1030,7 +1062,7 @@
     "titular_nombre": "MARLY YULY ROJAS LAIDEO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1068,7 +1100,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARLY YULY ROJAS LAIDEO",
+    "servidor_activo_cedula": "1098632731"
   },
   {
     "id_plaza": 18,
@@ -1131,7 +1165,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JEFFER FRANK VELANDIA LOPEZ",
+    "servidor_activo_cedula": "80842817"
   },
   {
     "id_plaza": 19,
@@ -1159,11 +1195,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1027523637",
     "encargo_nombre": "ANGELA LISETH MUÑOZ BEDOYA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E07",
     "peldano_escalera": 2,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -1194,7 +1230,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANGELA LISETH MUÑOZ BEDOYA",
+    "servidor_activo_cedula": "1027523637"
   },
   {
     "id_plaza": 20,
@@ -1257,7 +1295,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LIZETH MAYERLY VILLARRAGA ROJAS",
+    "servidor_activo_cedula": "1015409873"
   },
   {
     "id_plaza": 21,
@@ -1285,11 +1325,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "52176286",
     "encargo_nombre": "DIANA LICET SANCHEZ CASTIBLANCO",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -1320,7 +1360,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DIANA LICET SANCHEZ CASTIBLANCO",
+    "servidor_activo_cedula": "52176286"
   },
   {
     "id_plaza": 22,
@@ -1345,7 +1387,7 @@
     "titular_nombre": "MIGUEL ANGEL VARGAS CORDERO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1383,7 +1425,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MIGUEL ANGEL VARGAS CORDERO",
+    "servidor_activo_cedula": "1121816584"
   },
   {
     "id_plaza": 23,
@@ -1411,7 +1455,7 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1193101660",
     "encargo_nombre": "MARIA GABRIELA TREJO CHAVES",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E22",
     "peldano_escalera": 2,
@@ -1446,7 +1490,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA GABRIELA TREJO CHAVES",
+    "servidor_activo_cedula": "1193101660"
   },
   {
     "id_plaza": 24,
@@ -1468,10 +1514,10 @@
     "asignacion_basica": "3212811.00",
     "estado_cargo": "OCUPADO",
     "titular_cedula": "79048737",
-    "titular_nombre": "PABLO DANIEL PULIDO SALAMANCA",
+    "titular_nombre": "PABLO  DANIEL PULIDO SALAMANCA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1509,7 +1555,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "PABLO  DANIEL PULIDO SALAMANCA",
+    "servidor_activo_cedula": "79048737"
   },
   {
     "id_plaza": 25,
@@ -1534,7 +1582,7 @@
     "titular_nombre": "CLAUDIA BEATRIZ CASTILLA OLAYA",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1572,7 +1620,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 26,
@@ -1597,7 +1647,7 @@
     "titular_nombre": "ACENETH TORRES ROJAS",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1635,7 +1685,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 27,
@@ -1657,10 +1709,10 @@
     "asignacion_basica": "3115016.00",
     "estado_cargo": "OCUPADO",
     "titular_cedula": "79262614",
-    "titular_nombre": "OSCAR ERNESTO LOPEZ ACUÑA",
+    "titular_nombre": "OSCAR  ERNESTO LOPEZ ACUÑA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1698,7 +1750,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "OSCAR  ERNESTO LOPEZ ACUÑA",
+    "servidor_activo_cedula": "79262614"
   },
   {
     "id_plaza": 28,
@@ -1723,14 +1777,14 @@
     "titular_nombre": "CARMEN ALICIA FORERO FORERO",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "situacion_administrativa": "[object Object]",
+    "encargo_cedula": "",
+    "encargo_nombre": "VACANTE TEMPORAL",
     "es_encargo": false,
     "opec": "220285",
     "id_escalera": "E17",
     "peldano_escalera": 3,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -1761,7 +1815,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 29,
@@ -1786,7 +1842,7 @@
     "titular_nombre": "LUIS DAUVINY DUARTE ROA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1824,7 +1880,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUIS DAUVINY DUARTE ROA",
+    "servidor_activo_cedula": "79417068"
   },
   {
     "id_plaza": 30,
@@ -1849,7 +1907,7 @@
     "titular_nombre": "JAUMI MANFRED MARROQUIN",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1887,7 +1945,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JAUMI MANFRED MARROQUIN",
+    "servidor_activo_cedula": "79769334"
   },
   {
     "id_plaza": 31,
@@ -1912,7 +1972,7 @@
     "titular_nombre": "EDUARDO ALEJANDRO URREGO BECERRA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -1950,7 +2010,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "EDUARDO ALEJANDRO URREGO BECERRA",
+    "servidor_activo_cedula": "80100027"
   },
   {
     "id_plaza": 32,
@@ -1975,7 +2037,7 @@
     "titular_nombre": "EDGAR ANDRES GARCIA GARAVITO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2013,7 +2075,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "EDGAR ANDRES GARCIA GARAVITO",
+    "servidor_activo_cedula": "79468462"
   },
   {
     "id_plaza": 33,
@@ -2038,7 +2102,7 @@
     "titular_nombre": "ERIKA MARCELA MEDINA SANTANA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2076,7 +2140,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ERIKA MARCELA MEDINA SANTANA",
+    "servidor_activo_cedula": "42163264"
   },
   {
     "id_plaza": 34,
@@ -2102,13 +2168,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1030548160",
+    "encargo_nombre": "FREDY ESTEBAN JAIMES CASTILLO",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2139,7 +2205,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "FREDY ESTEBAN JAIMES CASTILLO",
+    "servidor_activo_cedula": "1030548160"
   },
   {
     "id_plaza": 35,
@@ -2165,13 +2233,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1033718483",
+    "encargo_nombre": "ANYELA PAOLA PULIDO GUTIERREZ",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2202,7 +2270,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANYELA PAOLA PULIDO GUTIERREZ",
+    "servidor_activo_cedula": "1033718483"
   },
   {
     "id_plaza": 36,
@@ -2227,7 +2297,7 @@
     "titular_nombre": "OMAR ANDRES ORTIZ PAEZ",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2265,7 +2335,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 37,
@@ -2293,11 +2365,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1122727530",
     "encargo_nombre": "JESSE JOSE VILLEGAS CABRERA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "220287",
     "id_escalera": "E03",
     "peldano_escalera": 3,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2328,7 +2400,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JESSE JOSE VILLEGAS CABRERA",
+    "servidor_activo_cedula": "1122727530"
   },
   {
     "id_plaza": 38,
@@ -2356,11 +2430,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1030572725",
     "encargo_nombre": "MARIA ALEJANDRA BASTIDAS PADILLA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E09",
     "peldano_escalera": 5,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2391,7 +2465,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA ALEJANDRA BASTIDAS PADILLA",
+    "servidor_activo_cedula": "1030572725"
   },
   {
     "id_plaza": 39,
@@ -2417,13 +2493,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "33368317",
+    "encargo_nombre": "ZULY NATALIA NANDAR CASTAÑEDA",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2454,7 +2530,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ZULY NATALIA NANDAR CASTAÑEDA",
+    "servidor_activo_cedula": "33368317"
   },
   {
     "id_plaza": 40,
@@ -2480,13 +2558,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1075256570",
+    "encargo_nombre": "DURLEY SOTELO HOYOS",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2517,7 +2595,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DURLEY SOTELO HOYOS",
+    "servidor_activo_cedula": "1075256570"
   },
   {
     "id_plaza": 41,
@@ -2542,7 +2622,7 @@
     "titular_nombre": "GABRIELINA VELASQUEZ CABRERA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2580,7 +2660,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GABRIELINA VELASQUEZ CABRERA",
+    "servidor_activo_cedula": "41732503"
   },
   {
     "id_plaza": 42,
@@ -2606,13 +2688,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "35415925",
+    "encargo_nombre": "MARTHA CLAUDIA ALDANA AVELINO",
     "es_encargo": false,
     "opec": "203205",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -2643,7 +2725,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARTHA CLAUDIA ALDANA AVELINO",
+    "servidor_activo_cedula": "35415925"
   },
   {
     "id_plaza": 43,
@@ -2668,7 +2752,7 @@
     "titular_nombre": "MAURICIO ALEJANDRO MONCAYO VALENCIA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2706,7 +2790,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MAURICIO ALEJANDRO MONCAYO VALENCIA",
+    "servidor_activo_cedula": "80872961"
   },
   {
     "id_plaza": 44,
@@ -2769,7 +2855,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CAMILO ALFONSO GUARIN PRIETO",
+    "servidor_activo_cedula": "80197320"
   },
   {
     "id_plaza": 45,
@@ -2794,7 +2882,7 @@
     "titular_nombre": "MARIA FERNANDA QUIJANO VASQUEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2832,7 +2920,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA FERNANDA QUIJANO VASQUEZ",
+    "servidor_activo_cedula": "1018423025"
   },
   {
     "id_plaza": 46,
@@ -2857,7 +2947,7 @@
     "titular_nombre": "MARINA LUZ ORTEGA MONTERO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2895,7 +2985,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARINA LUZ ORTEGA MONTERO",
+    "servidor_activo_cedula": "1032360948"
   },
   {
     "id_plaza": 47,
@@ -2920,7 +3012,7 @@
     "titular_nombre": "ANDRES MAURICIO ORTIZ MAYA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -2958,7 +3050,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANDRES MAURICIO ORTIZ MAYA",
+    "servidor_activo_cedula": "1015406682"
   },
   {
     "id_plaza": 48,
@@ -2983,7 +3077,7 @@
     "titular_nombre": "ANDRES FELIPE PUENTES DIAZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "LIBRE NOMBRAMIENTO Y REMOCIÓN",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3021,7 +3115,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANDRES FELIPE PUENTES DIAZ",
+    "servidor_activo_cedula": "1098810694"
   },
   {
     "id_plaza": 49,
@@ -3084,7 +3180,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA FERNANDA FUENTES TUTA",
+    "servidor_activo_cedula": "52966706"
   },
   {
     "id_plaza": 50,
@@ -3147,7 +3245,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CAMILO ALFONSO GUARIN PRIETO",
+    "servidor_activo_cedula": "80197320"
   },
   {
     "id_plaza": 51,
@@ -3172,7 +3272,7 @@
     "titular_nombre": "LEIDY YULIETH PEREA RAMIREZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO FIJO",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3210,7 +3310,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LEIDY YULIETH PEREA RAMIREZ",
+    "servidor_activo_cedula": "1075208323"
   },
   {
     "id_plaza": 52,
@@ -3273,7 +3375,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "NELSON JULIAN SALAZAR URRUTIA",
+    "servidor_activo_cedula": "79569642"
   },
   {
     "id_plaza": 53,
@@ -3298,7 +3402,7 @@
     "titular_nombre": "ADRIANA PATRICIA GUZMAN CONTRERAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3336,7 +3440,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ADRIANA PATRICIA GUZMAN CONTRERAS",
+    "servidor_activo_cedula": "52282454"
   },
   {
     "id_plaza": 54,
@@ -3361,7 +3467,7 @@
     "titular_nombre": "DEYSI YANIRA MORENO GUERRERO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3399,7 +3505,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DEYSI YANIRA MORENO GUERRERO",
+    "servidor_activo_cedula": "52236487"
   },
   {
     "id_plaza": 55,
@@ -3424,7 +3532,7 @@
     "titular_nombre": "GERMAN ALBERTO PULIDO PULIDO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3462,7 +3570,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GERMAN ALBERTO PULIDO PULIDO",
+    "servidor_activo_cedula": "80222608"
   },
   {
     "id_plaza": 56,
@@ -3487,7 +3597,7 @@
     "titular_nombre": "ESTHER PINILLA SERRANO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3525,7 +3635,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ESTHER PINILLA SERRANO",
+    "servidor_activo_cedula": "28496885"
   },
   {
     "id_plaza": 57,
@@ -3550,7 +3662,7 @@
     "titular_nombre": "RUBEN DARIO GALLEGO GONZALEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3588,7 +3700,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "RUBEN DARIO GALLEGO GONZALEZ",
+    "servidor_activo_cedula": "80850931"
   },
   {
     "id_plaza": 58,
@@ -3613,7 +3727,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "VACANTE DEFINITIVA",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3651,7 +3765,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE DEFINITIVA",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 59,
@@ -3714,7 +3830,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+    "servidor_activo_cedula": "3085860"
   },
   {
     "id_plaza": 60,
@@ -3739,7 +3857,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "VACANTE DEFINITIVA",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3777,7 +3895,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE DEFINITIVA",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 61,
@@ -3802,7 +3922,7 @@
     "titular_nombre": "PEDRO ALFONSO MEJIA SIERRA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3840,7 +3960,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "PEDRO ALFONSO MEJIA SIERRA",
+    "servidor_activo_cedula": "79575101"
   },
   {
     "id_plaza": 62,
@@ -3865,7 +3987,7 @@
     "titular_nombre": "ALVARO ARDILA MORA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3903,7 +4025,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALVARO ARDILA MORA",
+    "servidor_activo_cedula": "79709902"
   },
   {
     "id_plaza": 63,
@@ -3928,7 +4052,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "VACANTE DEFINITIVA",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -3966,7 +4090,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE DEFINITIVA",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 64,
@@ -3991,7 +4117,7 @@
     "titular_nombre": "ALVARO CAMILO BERNATE NAVARRO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4029,7 +4155,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALVARO CAMILO BERNATE NAVARRO",
+    "servidor_activo_cedula": "79802044"
   },
   {
     "id_plaza": 65,
@@ -4054,7 +4182,7 @@
     "titular_nombre": "MARTHA YANETH ORTIZ LEON",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4092,7 +4220,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARTHA YANETH ORTIZ LEON",
+    "servidor_activo_cedula": "46677766"
   },
   {
     "id_plaza": 66,
@@ -4117,7 +4247,7 @@
     "titular_nombre": "MAGDA EDITH GUERRERO BONILLA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4155,7 +4285,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MAGDA EDITH GUERRERO BONILLA",
+    "servidor_activo_cedula": "23582747"
   },
   {
     "id_plaza": 67,
@@ -4180,7 +4312,7 @@
     "titular_nombre": "ELVIRA LILIANA HERNANDEZ LIBREROS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4218,7 +4350,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ELVIRA LILIANA HERNANDEZ LIBREROS",
+    "servidor_activo_cedula": "52363895"
   },
   {
     "id_plaza": 68,
@@ -4243,7 +4377,7 @@
     "titular_nombre": "MARIA CAMILA COTAMO JAIMES",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4281,7 +4415,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA CAMILA COTAMO JAIMES",
+    "servidor_activo_cedula": "52146157"
   },
   {
     "id_plaza": 69,
@@ -4306,7 +4442,7 @@
     "titular_nombre": "LINA MARCELA MELO RODRIGUEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4344,7 +4480,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LINA MARCELA MELO RODRIGUEZ",
+    "servidor_activo_cedula": "52033530"
   },
   {
     "id_plaza": 70,
@@ -4369,7 +4507,7 @@
     "titular_nombre": "ZULMA ROJAS SUAREZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4407,7 +4545,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ZULMA ROJAS SUAREZ",
+    "servidor_activo_cedula": "24179106"
   },
   {
     "id_plaza": 71,
@@ -4470,7 +4610,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALMA ROSA RAMOS MARIA",
+    "servidor_activo_cedula": "64586540"
   },
   {
     "id_plaza": 72,
@@ -4495,7 +4637,7 @@
     "titular_nombre": "JORGE ELIECER HERNANDEZ ALBARRACIN",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4533,7 +4675,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JORGE ELIECER HERNANDEZ ALBARRACIN",
+    "servidor_activo_cedula": "19347862"
   },
   {
     "id_plaza": 73,
@@ -4558,7 +4702,7 @@
     "titular_nombre": "MARTHA LILIANA BARRERA DIAZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4596,7 +4740,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARTHA LILIANA BARRERA DIAZ",
+    "servidor_activo_cedula": "51937185"
   },
   {
     "id_plaza": 74,
@@ -4621,7 +4767,7 @@
     "titular_nombre": "YUDY ZULEYMA RODRIGUEZ BLANCO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4659,7 +4805,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "YUDY ZULEYMA RODRIGUEZ BLANCO",
+    "servidor_activo_cedula": "52380066"
   },
   {
     "id_plaza": 75,
@@ -4684,7 +4832,7 @@
     "titular_nombre": "OCTAVIO QUINTERO LARA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4722,7 +4870,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "OCTAVIO QUINTERO LARA",
+    "servidor_activo_cedula": "19444915"
   },
   {
     "id_plaza": 76,
@@ -4785,7 +4935,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "FERNANDO PACHON PIÑEROS",
+    "servidor_activo_cedula": "79567977"
   },
   {
     "id_plaza": 77,
@@ -4810,7 +4962,7 @@
     "titular_nombre": "ANGELA MARCELA RODRIGUEZ DIAZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4848,7 +5000,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANGELA MARCELA RODRIGUEZ DIAZ",
+    "servidor_activo_cedula": "42161948"
   },
   {
     "id_plaza": 78,
@@ -4873,7 +5027,7 @@
     "titular_nombre": "CAMILO ANDRES RODRIGUEZ RODRIGUEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -4911,7 +5065,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CAMILO ANDRES RODRIGUEZ RODRIGUEZ",
+    "servidor_activo_cedula": "79954654"
   },
   {
     "id_plaza": 79,
@@ -4974,7 +5130,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "IAM ALEXANDER OJEDA CARDENAS",
+    "servidor_activo_cedula": "86058268"
   },
   {
     "id_plaza": 80,
@@ -4999,7 +5157,7 @@
     "titular_nombre": "EDGAR ENRIQUE OVALLE CUERVO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5037,7 +5195,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "EDGAR ENRIQUE OVALLE CUERVO",
+    "servidor_activo_cedula": "79349710"
   },
   {
     "id_plaza": 81,
@@ -5062,7 +5222,7 @@
     "titular_nombre": "GLORIA ESTHER SALCEDO TAMAYO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5100,7 +5260,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GLORIA ESTHER SALCEDO TAMAYO",
+    "servidor_activo_cedula": "28963444"
   },
   {
     "id_plaza": 82,
@@ -5125,7 +5287,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "VACANTE DEFINITIVA",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5163,7 +5325,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE DEFINITIVA",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 83,
@@ -5188,7 +5352,7 @@
     "titular_nombre": "LUZ ANDREA CUBILLOS GUALDRON",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5226,7 +5390,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUZ ANDREA CUBILLOS GUALDRON",
+    "servidor_activo_cedula": "52430229"
   },
   {
     "id_plaza": 84,
@@ -5289,7 +5455,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JOHANA PATRICIA GAMEZ GOMEZ",
+    "servidor_activo_cedula": "53015269"
   },
   {
     "id_plaza": 85,
@@ -5352,7 +5520,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DIEGO ALEJANDRO SOLANO FERNANDEZ",
+    "servidor_activo_cedula": "1019058729"
   },
   {
     "id_plaza": 86,
@@ -5377,7 +5547,7 @@
     "titular_nombre": "CAROLINA LOZANO ARDILA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5415,7 +5585,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CAROLINA LOZANO ARDILA",
+    "servidor_activo_cedula": "52454621"
   },
   {
     "id_plaza": 87,
@@ -5440,7 +5612,7 @@
     "titular_nombre": "JOSE ORLANDO ALVARADO HERREÑO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5478,7 +5650,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JOSE ORLANDO ALVARADO HERREÑO",
+    "servidor_activo_cedula": "79316619"
   },
   {
     "id_plaza": 88,
@@ -5541,7 +5715,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "SONIA TERESA ROA SILVA",
+    "servidor_activo_cedula": "1018435583"
   },
   {
     "id_plaza": 89,
@@ -5604,7 +5780,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CHEILA ALEXANDRA ALVARADO ROJAS",
+    "servidor_activo_cedula": "52337438"
   },
   {
     "id_plaza": 90,
@@ -5667,7 +5845,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALEXANDRA AVILA MARIN",
+    "servidor_activo_cedula": "30333406"
   },
   {
     "id_plaza": 91,
@@ -5692,7 +5872,7 @@
     "titular_nombre": "DORA BELEN GUTIERREZ HERNANDEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5730,7 +5910,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DORA BELEN GUTIERREZ HERNANDEZ",
+    "servidor_activo_cedula": "51649014"
   },
   {
     "id_plaza": 92,
@@ -5755,7 +5937,7 @@
     "titular_nombre": "SAMUEL ARTURO HERNANDEZ MURCIA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5793,7 +5975,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "SAMUEL ARTURO HERNANDEZ MURCIA",
+    "servidor_activo_cedula": "80022321"
   },
   {
     "id_plaza": 93,
@@ -5818,7 +6002,7 @@
     "titular_nombre": "YOMAIRA AMPARO ALARCON ACERO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5856,7 +6040,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "YOMAIRA AMPARO ALARCON ACERO",
+    "servidor_activo_cedula": "52391785"
   },
   {
     "id_plaza": 94,
@@ -5919,7 +6105,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "HENRY ALBERTO GONZALEZ MOLINA",
+    "servidor_activo_cedula": "79450267"
   },
   {
     "id_plaza": 95,
@@ -5944,7 +6132,7 @@
     "titular_nombre": "MARIA XIMENA CUBIDES AMAYA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -5982,7 +6170,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA XIMENA CUBIDES AMAYA",
+    "servidor_activo_cedula": "52818411"
   },
   {
     "id_plaza": 96,
@@ -6007,7 +6197,7 @@
     "titular_nombre": "LUZ DARY MERCHAN LARA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6045,7 +6235,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUZ DARY MERCHAN LARA",
+    "servidor_activo_cedula": "52176512"
   },
   {
     "id_plaza": 97,
@@ -6070,7 +6262,7 @@
     "titular_nombre": "VACANTE DEFINITIVA",
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "VACANTE DEFINITIVA",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6108,7 +6300,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE DEFINITIVA",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 98,
@@ -6171,7 +6365,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CARLOS ANDRES NIÑO SOCHA",
+    "servidor_activo_cedula": "6765913"
   },
   {
     "id_plaza": 99,
@@ -6234,7 +6430,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "EURANIO JOSE MANOTAS MALDONADO",
+    "servidor_activo_cedula": "8526853"
   },
   {
     "id_plaza": 100,
@@ -6297,7 +6495,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LEIDY JOHANNA HERRERA MENDEZ",
+    "servidor_activo_cedula": "53165390"
   },
   {
     "id_plaza": 101,
@@ -6322,7 +6522,7 @@
     "titular_nombre": "ANDREA DEL PILAR CARDENAS SARMIENTO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6360,7 +6560,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+    "servidor_activo_cedula": "52429411"
   },
   {
     "id_plaza": 102,
@@ -6385,7 +6587,7 @@
     "titular_nombre": "ANGELICA DIAZ RINCON",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6423,7 +6625,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANGELICA DIAZ RINCON",
+    "servidor_activo_cedula": "52258032"
   },
   {
     "id_plaza": 103,
@@ -6448,7 +6652,7 @@
     "titular_nombre": "LEIDY VANESSA NIETO ROJAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6486,7 +6690,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LEIDY VANESSA NIETO ROJAS",
+    "servidor_activo_cedula": "1010213468"
   },
   {
     "id_plaza": 104,
@@ -6511,7 +6717,7 @@
     "titular_nombre": "LUZ ESTELLA MORENO PEREZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6549,7 +6755,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUZ ESTELLA MORENO PEREZ",
+    "servidor_activo_cedula": "52868519"
   },
   {
     "id_plaza": 105,
@@ -6612,7 +6820,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA TERESA VALDERRAMA PEREIRA",
+    "servidor_activo_cedula": "41059054"
   },
   {
     "id_plaza": 106,
@@ -6637,7 +6847,7 @@
     "titular_nombre": "BRICEIDA ALVARADO ROJAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6675,7 +6885,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "BRICEIDA ALVARADO ROJAS",
+    "servidor_activo_cedula": "60348229"
   },
   {
     "id_plaza": 107,
@@ -6700,7 +6912,7 @@
     "titular_nombre": "GIOVANNY ALEXANDER CORTES PACHON",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6738,7 +6950,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GIOVANNY ALEXANDER CORTES PACHON",
+    "servidor_activo_cedula": "79967554"
   },
   {
     "id_plaza": 108,
@@ -6763,7 +6977,7 @@
     "titular_nombre": "LUZ DARY CORREDOR MORENO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6801,7 +7015,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUZ DARY CORREDOR MORENO",
+    "servidor_activo_cedula": "52174173"
   },
   {
     "id_plaza": 109,
@@ -6826,7 +7042,7 @@
     "titular_nombre": "HUGO HERNANDO AGUIRRE CORRALES",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6864,7 +7080,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "HUGO HERNANDO AGUIRRE CORRALES",
+    "servidor_activo_cedula": "75093516"
   },
   {
     "id_plaza": 110,
@@ -6927,7 +7145,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JUAN CARLOS MARTINEZ BERNAL",
+    "servidor_activo_cedula": "1032448684"
   },
   {
     "id_plaza": 111,
@@ -6952,7 +7172,7 @@
     "titular_nombre": "LUISA FERNANDA GARCIA AVILA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -6990,7 +7210,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUISA FERNANDA GARCIA AVILA",
+    "servidor_activo_cedula": "53122985"
   },
   {
     "id_plaza": 112,
@@ -7053,7 +7275,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LEIDY JOHANNA ALONSO GUTIERREZ",
+    "servidor_activo_cedula": "1032489040"
   },
   {
     "id_plaza": 113,
@@ -7078,7 +7302,7 @@
     "titular_nombre": "SANDRA LISETTE NOVOA DUEÑAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7116,7 +7340,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "SANDRA LISETTE NOVOA DUEÑAS",
+    "servidor_activo_cedula": "1049619617"
   },
   {
     "id_plaza": 114,
@@ -7179,7 +7405,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "KATHERINE PAOLA ARAGON CASTIBLANCO",
+    "servidor_activo_cedula": "1030577699"
   },
   {
     "id_plaza": 115,
@@ -7204,7 +7432,7 @@
     "titular_nombre": "NELCY TORRES MARTINEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7242,7 +7470,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "NELCY TORRES MARTINEZ",
+    "servidor_activo_cedula": "40011063"
   },
   {
     "id_plaza": 116,
@@ -7267,7 +7497,7 @@
     "titular_nombre": "SONIA TERESA ROA SILVA",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7305,7 +7535,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 117,
@@ -7368,7 +7600,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CLAUDIA MARCELA CAMARGO CASTRO",
+    "servidor_activo_cedula": "52486713"
   },
   {
     "id_plaza": 118,
@@ -7393,7 +7627,7 @@
     "titular_nombre": "CARLOS JULIO RAMIREZ MUÑOZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7431,7 +7665,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CARLOS JULIO RAMIREZ MUÑOZ",
+    "servidor_activo_cedula": "80267904"
   },
   {
     "id_plaza": 119,
@@ -7456,7 +7692,7 @@
     "titular_nombre": "DUVAN SANDOVAL RODRIGUEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7494,7 +7730,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DUVAN SANDOVAL RODRIGUEZ",
+    "servidor_activo_cedula": "93371977"
   },
   {
     "id_plaza": 120,
@@ -7519,7 +7757,7 @@
     "titular_nombre": "DIANA MARIA MORENO VARGAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7557,7 +7795,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DIANA MARIA MORENO VARGAS",
+    "servidor_activo_cedula": "53001416"
   },
   {
     "id_plaza": 121,
@@ -7620,7 +7860,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CRISTHIAM DAVID JIMENEZ VASQUEZ",
+    "servidor_activo_cedula": "1110573560"
   },
   {
     "id_plaza": 122,
@@ -7645,7 +7887,7 @@
     "titular_nombre": "HUGO ALFONSO CABARCAS AYOLA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7683,7 +7925,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "HUGO ALFONSO CABARCAS AYOLA",
+    "servidor_activo_cedula": "8980601"
   },
   {
     "id_plaza": 123,
@@ -7746,7 +7990,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MONICA JULIANA SANMIGUEL ROJAS",
+    "servidor_activo_cedula": "1013608357"
   },
   {
     "id_plaza": 124,
@@ -7771,7 +8017,7 @@
     "titular_nombre": "MIGUEL PINTO SEGURA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7809,7 +8055,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MIGUEL PINTO SEGURA",
+    "servidor_activo_cedula": "79584810"
   },
   {
     "id_plaza": 125,
@@ -7834,7 +8082,7 @@
     "titular_nombre": "FERNAN ENRIQUE PEREZ FORTICH",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7872,7 +8120,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "FERNAN ENRIQUE PEREZ FORTICH",
+    "servidor_activo_cedula": "73155098"
   },
   {
     "id_plaza": 126,
@@ -7897,7 +8147,7 @@
     "titular_nombre": "IVAN DAVID RAMIREZ VALENCIA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7935,7 +8185,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "IVAN DAVID RAMIREZ VALENCIA",
+    "servidor_activo_cedula": "16077540"
   },
   {
     "id_plaza": 127,
@@ -7960,7 +8212,7 @@
     "titular_nombre": "SANDRA NICOLASA ORGANISTA BUILES",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -7998,7 +8250,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "SANDRA NICOLASA ORGANISTA BUILES",
+    "servidor_activo_cedula": "52646082"
   },
   {
     "id_plaza": 128,
@@ -8023,7 +8277,7 @@
     "titular_nombre": "ANDRES FABIAN NOSSA GUZMAN",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -8061,7 +8315,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANDRES FABIAN NOSSA GUZMAN",
+    "servidor_activo_cedula": "80826518"
   },
   {
     "id_plaza": 129,
@@ -8124,7 +8380,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DANIELA RODRIGUEZ NARVAEZ",
+    "servidor_activo_cedula": "1018482333"
   },
   {
     "id_plaza": 130,
@@ -8187,7 +8445,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "HELVER MANUEL MORA MONTOYA",
+    "servidor_activo_cedula": "1015419295"
   },
   {
     "id_plaza": 131,
@@ -8212,7 +8472,7 @@
     "titular_nombre": "JUAN CAMILO RUIZ ZAMUDIO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -8250,7 +8510,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JUAN CAMILO RUIZ ZAMUDIO",
+    "servidor_activo_cedula": "80154878"
   },
   {
     "id_plaza": 132,
@@ -8275,7 +8537,7 @@
     "titular_nombre": "ELIANA STEPHANIE ASTAIZA CHAVES",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -8313,7 +8575,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ELIANA STEPHANIE ASTAIZA CHAVES",
+    "servidor_activo_cedula": "1085273461"
   },
   {
     "id_plaza": 133,
@@ -8338,7 +8602,7 @@
     "titular_nombre": "MAGDA PATRICIA PUENTES PARDO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -8376,7 +8640,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MAGDA PATRICIA PUENTES PARDO",
+    "servidor_activo_cedula": "52519358"
   },
   {
     "id_plaza": 134,
@@ -8439,7 +8705,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VICTOR HERNANDO MURILLO HURTADO",
+    "servidor_activo_cedula": "79361343"
   },
   {
     "id_plaza": 135,
@@ -8502,7 +8770,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARY DAYANA SANCHEZ ROJAS",
+    "servidor_activo_cedula": "37625914"
   },
   {
     "id_plaza": 136,
@@ -8530,11 +8800,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1019071696",
     "encargo_nombre": "CRISTIAN ANDREY SALINAS FORERO",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E02",
     "peldano_escalera": 2,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -8565,7 +8835,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CRISTIAN ANDREY SALINAS FORERO",
+    "servidor_activo_cedula": "1019071696"
   },
   {
     "id_plaza": 137,
@@ -8628,7 +8900,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "GLORIA INES MARTINEZ ORTIZ",
+    "servidor_activo_cedula": "52171949"
   },
   {
     "id_plaza": 138,
@@ -8653,7 +8927,7 @@
     "titular_nombre": "JUAN CARLOS MARTINEZ BERNAL",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -8691,7 +8965,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 139,
@@ -8754,7 +9030,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALEJANDRA NATALY CASALLAS MARTINEZ",
+    "servidor_activo_cedula": "1015425376"
   },
   {
     "id_plaza": 140,
@@ -8782,11 +9060,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1140857415",
     "encargo_nombre": "ARMANDO JAVIER CALVO ALONSO",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E16",
     "peldano_escalera": 2,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -8817,7 +9095,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ARMANDO JAVIER CALVO ALONSO",
+    "servidor_activo_cedula": "1140857415"
   },
   {
     "id_plaza": 141,
@@ -8843,13 +9123,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1136880003",
+    "encargo_nombre": "JEIMMY JOHANNA PAEZ GIL",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -8880,7 +9160,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JEIMMY JOHANNA PAEZ GIL",
+    "servidor_activo_cedula": "1136880003"
   },
   {
     "id_plaza": 142,
@@ -8943,7 +9225,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "LUIS CARLOS GAONA FARIAS",
+    "servidor_activo_cedula": "1022362951"
   },
   {
     "id_plaza": 143,
@@ -9006,7 +9290,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ROSA ISABEL SIERRA LABORDE",
+    "servidor_activo_cedula": "22446641"
   },
   {
     "id_plaza": 144,
@@ -9034,11 +9320,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "79894605",
     "encargo_nombre": "JHON ALEXANDER TIBADUIZA CASTAÑEDA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E06",
     "peldano_escalera": 5,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -9069,7 +9355,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JHON ALEXANDER TIBADUIZA CASTAÑEDA",
+    "servidor_activo_cedula": "79894605"
   },
   {
     "id_plaza": 145,
@@ -9094,7 +9382,7 @@
     "titular_nombre": "ALEXANDRA AVILA MARIN",
     "situacion_titular": "EN ENCARGO",
     "tipo_vinculacion": "",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9132,7 +9420,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "VACANTE TEMPORAL",
+    "servidor_activo_cedula": null
   },
   {
     "id_plaza": 146,
@@ -9195,7 +9485,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "CAROLINA ANAYA SARMIENTO",
+    "servidor_activo_cedula": "28488940"
   },
   {
     "id_plaza": 147,
@@ -9220,7 +9512,7 @@
     "titular_nombre": "DAVID ALEJANDRO MORA BERMUDEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9258,7 +9550,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DAVID ALEJANDRO MORA BERMUDEZ",
+    "servidor_activo_cedula": "1032479676"
   },
   {
     "id_plaza": 148,
@@ -9286,11 +9580,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "79296576",
     "encargo_nombre": "JOSE JAVIER PINTO CASTAÑEDA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E13",
     "peldano_escalera": 3,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -9321,7 +9615,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JOSE JAVIER PINTO CASTAÑEDA",
+    "servidor_activo_cedula": "79296576"
   },
   {
     "id_plaza": 149,
@@ -9347,13 +9643,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1020837889",
+    "encargo_nombre": "NICOLAS SANTIAGO SOTO ALBA",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -9384,7 +9680,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "NICOLAS SANTIAGO SOTO ALBA",
+    "servidor_activo_cedula": "1020837889"
   },
   {
     "id_plaza": 150,
@@ -9409,7 +9707,7 @@
     "titular_nombre": "DALIDA VILLANUEVA SANCHEZ",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9447,7 +9745,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DALIDA VILLANUEVA SANCHEZ",
+    "servidor_activo_cedula": "52151785"
   },
   {
     "id_plaza": 151,
@@ -9510,7 +9810,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DANIEL FERNANDO BUITRAGO DIAZ",
+    "servidor_activo_cedula": "1072493406"
   },
   {
     "id_plaza": 152,
@@ -9535,7 +9837,7 @@
     "titular_nombre": "RODRIGO DIDIER MUÑOZ CONTRERAS",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "PERÍODO DE PRUEBA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9573,7 +9875,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "RODRIGO DIDIER MUÑOZ CONTRERAS",
+    "servidor_activo_cedula": "79994178"
   },
   {
     "id_plaza": 153,
@@ -9598,7 +9902,7 @@
     "titular_nombre": "WILLIAM FONSECA APERADOR",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9636,7 +9940,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "WILLIAM FONSECA APERADOR",
+    "servidor_activo_cedula": "79538698"
   },
   {
     "id_plaza": 154,
@@ -9661,7 +9967,7 @@
     "titular_nombre": "MARTHA RUBIELA CRUZ PARDO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -9699,7 +10005,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARTHA RUBIELA CRUZ PARDO",
+    "servidor_activo_cedula": "52277284"
   },
   {
     "id_plaza": 155,
@@ -9762,7 +10070,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "AZULA URIBE CABALLERO",
+    "servidor_activo_cedula": "51961579"
   },
   {
     "id_plaza": 156,
@@ -9825,7 +10135,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JENNIFER LIZBETH GOMEZ AREVALO",
+    "servidor_activo_cedula": "1030618681"
   },
   {
     "id_plaza": 157,
@@ -9888,7 +10200,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "WALTER OSPINA ZAPATA",
+    "servidor_activo_cedula": "79431243"
   },
   {
     "id_plaza": 158,
@@ -9951,7 +10265,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ANA JULIETH GIL HERRERA",
+    "servidor_activo_cedula": "52281297"
   },
   {
     "id_plaza": 159,
@@ -9976,7 +10292,7 @@
     "titular_nombre": "MARIA VICTORIA TORRES BECERRA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -10014,7 +10330,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA VICTORIA TORRES BECERRA",
+    "servidor_activo_cedula": "53100696"
   },
   {
     "id_plaza": 160,
@@ -10039,7 +10357,7 @@
     "titular_nombre": "WENDY PAOLA LEON CITA",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -10077,7 +10395,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "WENDY PAOLA LEON CITA",
+    "servidor_activo_cedula": "1073159399"
   },
   {
     "id_plaza": 161,
@@ -10140,7 +10460,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ACENETH TORRES ROJAS",
+    "servidor_activo_cedula": "51732443"
   },
   {
     "id_plaza": 162,
@@ -10166,13 +10488,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1085338624",
+    "encargo_nombre": "JUAN DIEGO ACOSTA TORRES",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10203,7 +10525,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JUAN DIEGO ACOSTA TORRES",
+    "servidor_activo_cedula": "1085338624"
   },
   {
     "id_plaza": 163,
@@ -10231,11 +10555,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1005488395",
     "encargo_nombre": "JEFFERSON JOSE OSUNA BERRIO",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E26",
     "peldano_escalera": 2,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10266,7 +10590,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JEFFERSON JOSE OSUNA BERRIO",
+    "servidor_activo_cedula": "1005488395"
   },
   {
     "id_plaza": 164,
@@ -10294,11 +10620,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1015438831",
     "encargo_nombre": "ESTEBAN RAMIREZ CARDENAS",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E12",
     "peldano_escalera": 7,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10329,7 +10655,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ESTEBAN RAMIREZ CARDENAS",
+    "servidor_activo_cedula": "1015438831"
   },
   {
     "id_plaza": 165,
@@ -10357,11 +10685,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1001170136",
     "encargo_nombre": "DIANA YURANY MARTINEZ MARTINEZ",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E11",
     "peldano_escalera": 3,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10392,7 +10720,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DIANA YURANY MARTINEZ MARTINEZ",
+    "servidor_activo_cedula": "1001170136"
   },
   {
     "id_plaza": 166,
@@ -10420,11 +10750,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1007538666",
     "encargo_nombre": "MARIA PAULA ROCHA VEGA",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "220274",
     "id_escalera": "E15",
     "peldano_escalera": 5,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10455,7 +10785,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "MARIA PAULA ROCHA VEGA",
+    "servidor_activo_cedula": "1007538666"
   },
   {
     "id_plaza": 167,
@@ -10483,11 +10815,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1014976247",
     "encargo_nombre": "JUAN ANDRES GUERRERO RAMOS",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E20",
     "peldano_escalera": 3,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10518,7 +10850,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JUAN ANDRES GUERRERO RAMOS",
+    "servidor_activo_cedula": "1014976247"
   },
   {
     "id_plaza": 168,
@@ -10543,7 +10877,7 @@
     "titular_nombre": "JOAN SEBASTIAN FLECHAS ALONSO",
     "situacion_titular": "EN PROPIEDAD",
     "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
-    "situacion_administrativa": "",
+    "situacion_administrativa": "[object Object]",
     "encargo_cedula": null,
     "encargo_nombre": null,
     "es_encargo": false,
@@ -10581,7 +10915,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "JOAN SEBASTIAN FLECHAS ALONSO",
+    "servidor_activo_cedula": "1010176886"
   },
   {
     "id_plaza": 169,
@@ -10607,13 +10943,13 @@
     "situacion_titular": "VACANTE DEFINITIVA",
     "tipo_vinculacion": "PROVISIONALIDAD",
     "situacion_administrativa": "PROVISIONALIDAD",
-    "encargo_cedula": null,
-    "encargo_nombre": null,
+    "encargo_cedula": "1024566898",
+    "encargo_nombre": "ALVARO FELIPE ALEJO CASTIBLANCO",
     "es_encargo": false,
     "opec": "",
     "id_escalera": null,
     "peldano_escalera": null,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10644,7 +10980,9 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "ALVARO FELIPE ALEJO CASTIBLANCO",
+    "servidor_activo_cedula": "1024566898"
   },
   {
     "id_plaza": 170,
@@ -10672,11 +11010,11 @@
     "situacion_administrativa": "PROVISIONALIDAD",
     "encargo_cedula": "1030597508",
     "encargo_nombre": "DORA RAQUEL BARRERA PALACIO",
-    "es_encargo": true,
+    "es_encargo": false,
     "opec": "",
     "id_escalera": "E23",
     "peldano_escalera": 2,
-    "pv": null,
+    "pv": "PV",
     "pp_oe": null,
     "vt_lm": null,
     "vt_lnr": null,
@@ -10707,6 +11045,8 @@
     "fecha_vacancia": null,
     "fecha_reporte_simo": null,
     "proceso_seleccion_simo": null,
-    "notas_peticion": null
+    "notas_peticion": null,
+    "servidor_activo_nombre": "DORA RAQUEL BARRERA PALACIO",
+    "servidor_activo_cedula": "1030597508"
   }
 ]

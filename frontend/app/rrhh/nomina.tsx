@@ -368,11 +368,17 @@ export default function NominaScreen() {
           (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
           (String(p.situacion_titular || m?.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
-        // Solo es encargo si la plaza realmente tiene encargo asignado
-        const tieneEncargo = Boolean(
+        const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
+        const sitAdmin = String(p.situacion_administrativa || m?.situacion_administrativa || '').toUpperCase();
+        const esProvActivo = tipoVincCargo.includes('PROVISIONAL') || sitAdmin.includes('PROVISIONAL') || p.pv === 'PV' || m?.pv === 'PV';
+
+        // Solo es encargo si la plaza realmente tiene encargo asignado y NO es un provisional
+        const tieneEncargo = !esProvActivo && Boolean(
           p.es_encargo ||
-          (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
-          (p.encargo_cedula && String(p.encargo_cedula).trim() !== '')
+          m?.es_encargo ||
+          (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== titularNombreFinal) ||
+          (p.encargo_cedula && String(p.encargo_cedula).trim() !== '' && String(p.encargo_cedula).trim() !== String(titularCedulaFinal)) ||
+          tipoVincCargo.includes('ENCARGO')
         );
 
         const encargoNombreFinal = tieneEncargo
@@ -385,12 +391,14 @@ export default function NominaScreen() {
         const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
         const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
 
-        // Persona física que desempeña activamente el empleo (encargo si hay encargo real, titular si no)
+        // Servidor activo físico que desempeña el empleo (encargo si hay encargo, provisional si es provisional, titular si no)
         const cedulaActiva = esEncargoFinal && encargoCedulaFinal
           ? String(encargoCedulaFinal).replace(/\D/g, '')
-          : (!esVacanteDefinitiva && titularCedulaFinal)
-            ? String(titularCedulaFinal).replace(/\D/g, '')
-            : null;
+          : (esProvActivo && (p.servidor_activo_cedula || m?.servidor_activo_cedula || p.encargo_cedula || m?.encargo_cedula))
+            ? String(p.servidor_activo_cedula || m?.servidor_activo_cedula || p.encargo_cedula || m?.encargo_cedula).replace(/\D/g, '')
+            : (!esVacanteDefinitiva && titularCedulaFinal)
+              ? String(titularCedulaFinal).replace(/\D/g, '')
+              : null;
 
         // Búsqueda ESTRICTA por documento de identidad de la persona física activa
         const funcionarioActivo = cedulaActiva
@@ -401,6 +409,8 @@ export default function NominaScreen() {
           ...p,
           titular_nombre: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : titularNombreFinal,
           titular_cedula: esVacanteDefinitiva ? null : titularCedulaFinal,
+          servidor_activo_nombre: p.servidor_activo_nombre || m?.servidor_activo_nombre || (esProvActivo ? (p.encargo_nombre || m?.encargo_nombre) : null),
+          servidor_activo_cedula: p.servidor_activo_cedula || m?.servidor_activo_cedula || (esProvActivo ? (p.encargo_cedula || m?.encargo_cedula) : null),
           estado_cargo: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : estadoCargoFinal,
           id_escalera: idEscaleraFinal,
           peldano_escalera: peldanoEscaleraFinal,
@@ -1788,32 +1798,30 @@ export default function NominaScreen() {
       Boolean(plazaModal.pv)
     );
 
-    // Detección estricta de vacante definitiva en la titularidad
+    // Detección estricta de vacante definitiva en la titularidad (Columna 13 o 15)
     const esTitularVacante = Boolean(
-      esProvisionalModal ||
       !plazaModal.titular_nombre ||
       String(plazaModal.titular_nombre).trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
       String(plazaModal.titular_nombre).trim().toUpperCase().includes('VACANTE') ||
       String(plazaModal.situacion_titular || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
-      String(plazaModal.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA'
+      (String(plazaModal.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' && !plazaModal.titular_nombre)
     );
 
-    // Cédulas limpias para búsqueda en PERNO (si es provisional, el funcionario activo es el titular_cedula)
-    const provisionalCedulaLimpia = esProvisionalModal && plazaModal.titular_cedula
+    // Cédulas limpias para búsqueda en PERNO
+    const titularCedulaLimpia = (!esTitularVacante && plazaModal.titular_cedula)
       ? String(plazaModal.titular_cedula).replace(/\D/g, '')
+      : (!esTitularVacante && mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
+
+    // Cédula del servidor activo provisional (si la plaza está provista por provisionalidad)
+    const provisionalCedulaLimpia = esProvisionalModal
+      ? String(plazaModal.servidor_activo_cedula || mockMatch?.servidor_activo_cedula || plazaModal.encargo_cedula || mockMatch?.encargo_cedula || (esTitularVacante ? plazaModal.titular_cedula : '') || '').replace(/\D/g, '')
       : '';
 
-    const titularCedulaLimpia = (!esProvisionalModal && !esTitularVacante)
-      ? (plazaModal.titular_cedula
-          ? String(plazaModal.titular_cedula).replace(/\D/g, '')
-          : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : ''))
-      : '';
-
-    // Verificamos si realmente la plaza tiene encargo asignado (no hereda encargo de otra plaza)
-    const tieneEncargoReal = Boolean(
+    // Verificamos si realmente el servidor activo tiene encargo asignado (NUNCA si es provisional)
+    const tieneEncargoReal = !esProvisionalModal && Boolean(
       plazaModal.es_encargo ||
-      (plazaModal.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ||
-      (plazaModal.encargo_cedula && String(plazaModal.encargo_cedula).trim() !== '')
+      (plazaModal.encargo_nombre && plazaModal.encargo_nombre.trim() !== '' && plazaModal.encargo_nombre.trim() !== plazaModal.titular_nombre) ||
+      (plazaModal.encargo_cedula && String(plazaModal.encargo_cedula).trim() !== '' && String(plazaModal.encargo_cedula).trim() !== String(plazaModal.titular_cedula))
     );
 
     const encargoCedulaLimpia = tieneEncargoReal && plazaModal.encargo_cedula
@@ -2751,44 +2759,19 @@ export default function NominaScreen() {
       sortable: true,
       getSortValue: (p) => {
         if (!p) return '';
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
-        if (esProvisional) return 'VACANTE DEFINITIVA';
+        const titularNombre = String(p.titular_nombre || '').trim();
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre;
+        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
       render: (p) => {
         if (!p) return null;
-        const estadoNorm = (p.estado_cargo || '').toUpperCase();
         const nombreTitular = String(p.titular_nombre || '').trim();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincEntidadNorm = String(p.tipo_vinculacion_entidad || '').toUpperCase();
-
-        const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincEntidadNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          String(p.tipo_nombramiento || '').toUpperCase().includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
 
         const esVacanteDefinitiva = Boolean(
-          esProvisional ||
-          estadoNorm.includes('VACANTE DEFINITIVA') ||
-          situacionTitularNorm.includes('VACANTE DEFINITIVA') ||
+          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
           nombreTitular.toUpperCase().includes('VACANTE')
@@ -2810,10 +2793,33 @@ export default function NominaScreen() {
             <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
               {p.titular_nombre || 'Servidor Titular'}
             </Text>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500 }}>
-              {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
-              {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
+                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
+              </Text>
+              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
+                <Pressable
+                  onPress={() => {
+                    setPlazaModal(p);
+                    setModalTab('escalera');
+                  }}
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    paddingHorizontal: 4,
+                    paddingVertical: 0.5,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
+                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         );
       },
@@ -2826,63 +2832,54 @@ export default function NominaScreen() {
       sortable: true,
       getSortValue: (p) => {
         if (!p) return '';
-        const tieneEncargo = Boolean(
-          p.es_encargo ||
-          (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
-          (p.tipo_vinculacion_cargo || '').toUpperCase().includes('ENCARGO')
-        );
-        if (tieneEncargo && p.encargo_nombre) return p.encargo_nombre;
+        if (p.servidor_activo_nombre) return p.servidor_activo_nombre;
+        if (p.encargo_nombre) return p.encargo_nombre;
         return p.titular_nombre || '';
       },
       render: (p) => {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincEntidadNorm = String(p.tipo_vinculacion_entidad || '').toUpperCase();
 
         const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
           tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincEntidadNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
           situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          String(p.tipo_nombramiento || '').toUpperCase().includes('PROVISIONAL') ||
           Boolean(p.pv)
         );
 
-        const tieneEncargo = Boolean(
+        // SOLO tiene encargo el servidor activo si NO es provisional y la vinculación del cargo es de encargo
+        const tieneEncargoActivo = !esProvisional && Boolean(
           p.es_encargo ||
-          (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim()) ||
           tipoVincCargoNorm.includes('ENCARGO') ||
-          situacionAdminNorm.includes('ENCARGO')
+          situacionAdminNorm.includes('ENCARGO') ||
+          (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== nombreTitular)
         );
 
-        // Columna E: APELLIDOS Y NOMBRES
         let nombreActivo = '';
         let cedulaActiva = '';
         let tipoVinculacionCargo = cleanLabel(p.tipo_vinculacion_cargo, p.tipo_vinculacion || '');
 
-        if (tieneEncargo && p.encargo_nombre) {
+        if (p.servidor_activo_nombre) {
+          nombreActivo = p.servidor_activo_nombre;
+          cedulaActiva = p.servidor_activo_cedula ? String(p.servidor_activo_cedula) : '';
+        } else if (tieneEncargoActivo && p.encargo_nombre) {
           nombreActivo = p.encargo_nombre;
           cedulaActiva = p.encargo_cedula ? String(p.encargo_cedula) : '';
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = 'EN ENCARGO';
-          }
         } else if (esProvisional) {
-          nombreActivo = p.titular_nombre || p.encargo_nombre || 'Servidor Provisional';
-          cedulaActiva = p.titular_cedula ? String(p.titular_cedula) : (p.encargo_cedula ? String(p.encargo_cedula) : '');
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = 'EN PROVISIONALIDAD';
-          }
+          nombreActivo = p.encargo_nombre || p.servidor_activo_nombre || (nombreTitular !== 'VACANTE DEFINITIVA' ? nombreTitular : 'Servidor Provisional');
+          cedulaActiva = p.encargo_cedula ? String(p.encargo_cedula) : (p.servidor_activo_cedula ? String(p.servidor_activo_cedula) : '');
         } else if (nombreTitular && nombreTitular.toUpperCase() !== 'VACANTE DEFINITIVA' && !nombreTitular.toUpperCase().includes('VACANTE')) {
           nombreActivo = nombreTitular;
           cedulaActiva = p.titular_cedula ? String(p.titular_cedula) : '';
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = cleanLabel(p.situacion_administrativa, 'EN PROPIEDAD');
-          }
+        }
+
+        if (esProvisional && (!tipoVinculacionCargo || tipoVinculacionCargo === '---')) {
+          tipoVinculacionCargo = 'EN PROVISIONALIDAD';
+        } else if (tieneEncargoActivo && (!tipoVinculacionCargo || tipoVinculacionCargo === '---')) {
+          tipoVinculacionCargo = 'EN ENCARGO';
         }
 
         if (!nombreActivo || nombreActivo.toUpperCase() === 'VACANTE DEFINITIVA' || nombreActivo.toUpperCase().includes('VACANTE')) {
@@ -2903,7 +2900,7 @@ export default function NominaScreen() {
               {nombreActivo}
             </Text>
 
-            {/* Fila 2: Cédula, Label de Encargado, Label de Escaleta (después de cédula) y Columna G TIPO DE VINCULACIÓN AL CARGO/ SIDEAP */}
+            {/* Fila 2: Cédula, Label de Encargado (SOLO si el activo tiene encargo), Label de Escaleta y Columna G */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'nowrap', overflow: 'hidden' }}>
               {cedulaActiva ? (
                 <Text numberOfLines={1} style={{ fontSize: 10.5, color: THEME.slate600, fontWeight: '600', flexShrink: 0 }}>
@@ -2911,8 +2908,8 @@ export default function NominaScreen() {
                 </Text>
               ) : null}
 
-              {/* Label de Encargado (en fila 2, después de cédula) */}
-              {tieneEncargo ? (
+              {/* Label de Encargado: ÚNICAMENTE si el servidor activo está en encargo */}
+              {tieneEncargoActivo ? (
                 <View
                   style={{
                     backgroundColor: '#FEF3C7',
@@ -2930,8 +2927,8 @@ export default function NominaScreen() {
                 </View>
               ) : null}
 
-              {/* Label de Escaleta (en fila 2, después de cédula y encargado) */}
-              {tieneEncargo && p.id_escalera ? (
+              {/* Label de Escaleta (en activo SOLO si el activo está encargado en escaleta) */}
+              {tieneEncargoActivo && p.id_escalera ? (
                 <Pressable
                   onPress={() => {
                     setPlazaModal(p);
@@ -2960,7 +2957,7 @@ export default function NominaScreen() {
                   ellipsizeMode="tail"
                   style={{
                     fontSize: 10,
-                    color: esProvisional ? '#B45309' : (tieneEncargo ? '#92400E' : THEME.slate500),
+                    color: esProvisional ? '#B45309' : (tieneEncargoActivo ? '#92400E' : THEME.slate500),
                     fontWeight: esProvisional ? '700' : '500',
                     flexShrink: 1,
                   }}
@@ -3125,44 +3122,19 @@ export default function NominaScreen() {
       minWidth: 180,
       sortValue: (p) => {
         if (!p) return '';
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
-        if (esProvisional) return 'VACANTE DEFINITIVA';
+        const titularNombre = String(p.titular_nombre || '').trim();
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre;
+        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
       render: (p) => {
         if (!p) return null;
-        const estadoNorm = (p.estado_cargo || '').toUpperCase();
         const nombreTitular = String(p.titular_nombre || '').trim();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincEntidadNorm = String(p.tipo_vinculacion_entidad || '').toUpperCase();
-
-        const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincEntidadNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          String(p.tipo_nombramiento || '').toUpperCase().includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
 
         const esVacanteDefinitiva = Boolean(
-          esProvisional ||
-          estadoNorm.includes('VACANTE DEFINITIVA') ||
-          situacionTitularNorm.includes('VACANTE DEFINITIVA') ||
+          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
           nombreTitular.toUpperCase().includes('VACANTE')
@@ -3184,10 +3156,33 @@ export default function NominaScreen() {
             <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
               {p.titular_nombre || 'Servidor Titular'}
             </Text>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500 }}>
-              {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
-              {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
+                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
+              </Text>
+              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
+                <Pressable
+                  onPress={() => {
+                    setPlazaModal(p);
+                    setModalTab('escalera');
+                  }}
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    paddingHorizontal: 4,
+                    paddingVertical: 0.5,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
+                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         );
       },
@@ -3198,63 +3193,54 @@ export default function NominaScreen() {
       minWidth: 185,
       sortValue: (p) => {
         if (!p) return '';
-        const tieneEncargo = Boolean(
-          p.es_encargo ||
-          (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
-          (p.tipo_vinculacion_cargo || '').toUpperCase().includes('ENCARGO')
-        );
-        if (tieneEncargo && p.encargo_nombre) return p.encargo_nombre;
+        if (p.servidor_activo_nombre) return p.servidor_activo_nombre;
+        if (p.encargo_nombre) return p.encargo_nombre;
         return p.titular_nombre || '';
       },
       render: (p) => {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincEntidadNorm = String(p.tipo_vinculacion_entidad || '').toUpperCase();
 
         const esProvisional = Boolean(
-          tipoVincNorm.includes('PROVISIONAL') ||
           tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincEntidadNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
           situacionAdminNorm.includes('PROVISIONAL') ||
-          situacionTitularNorm.includes('PROVISIONAL') ||
-          String(p.tipo_nombramiento || '').toUpperCase().includes('PROVISIONAL') ||
           Boolean(p.pv)
         );
 
-        const tieneEncargo = Boolean(
+        // SOLO tiene encargo el servidor activo si NO es provisional y la vinculación del cargo es de encargo
+        const tieneEncargoActivo = !esProvisional && Boolean(
           p.es_encargo ||
-          (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim()) ||
           tipoVincCargoNorm.includes('ENCARGO') ||
-          situacionAdminNorm.includes('ENCARGO')
+          situacionAdminNorm.includes('ENCARGO') ||
+          (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== nombreTitular)
         );
 
-        // Columna E: APELLIDOS Y NOMBRES
         let nombreActivo = '';
         let cedulaActiva = '';
         let tipoVinculacionCargo = cleanLabel(p.tipo_vinculacion_cargo, p.tipo_vinculacion || '');
 
-        if (tieneEncargo && p.encargo_nombre) {
+        if (p.servidor_activo_nombre) {
+          nombreActivo = p.servidor_activo_nombre;
+          cedulaActiva = p.servidor_activo_cedula ? String(p.servidor_activo_cedula) : '';
+        } else if (tieneEncargoActivo && p.encargo_nombre) {
           nombreActivo = p.encargo_nombre;
           cedulaActiva = p.encargo_cedula ? String(p.encargo_cedula) : '';
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = 'EN ENCARGO';
-          }
         } else if (esProvisional) {
-          nombreActivo = p.titular_nombre || p.encargo_nombre || 'Servidor Provisional';
-          cedulaActiva = p.titular_cedula ? String(p.titular_cedula) : (p.encargo_cedula ? String(p.encargo_cedula) : '');
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = 'EN PROVISIONALIDAD';
-          }
+          nombreActivo = p.encargo_nombre || p.servidor_activo_nombre || (nombreTitular !== 'VACANTE DEFINITIVA' ? nombreTitular : 'Servidor Provisional');
+          cedulaActiva = p.encargo_cedula ? String(p.encargo_cedula) : (p.servidor_activo_cedula ? String(p.servidor_activo_cedula) : '');
         } else if (nombreTitular && nombreTitular.toUpperCase() !== 'VACANTE DEFINITIVA' && !nombreTitular.toUpperCase().includes('VACANTE')) {
           nombreActivo = nombreTitular;
           cedulaActiva = p.titular_cedula ? String(p.titular_cedula) : '';
-          if (!tipoVinculacionCargo || tipoVinculacionCargo === '---') {
-            tipoVinculacionCargo = cleanLabel(p.situacion_administrativa, 'EN PROPIEDAD');
-          }
+        }
+
+        if (esProvisional && (!tipoVinculacionCargo || tipoVinculacionCargo === '---')) {
+          tipoVinculacionCargo = 'EN PROVISIONALIDAD';
+        } else if (tieneEncargoActivo && (!tipoVinculacionCargo || tipoVinculacionCargo === '---')) {
+          tipoVinculacionCargo = 'EN ENCARGO';
         }
 
         if (!nombreActivo || nombreActivo.toUpperCase() === 'VACANTE DEFINITIVA' || nombreActivo.toUpperCase().includes('VACANTE')) {
@@ -3275,7 +3261,7 @@ export default function NominaScreen() {
               {nombreActivo}
             </Text>
 
-            {/* Fila 2: Cédula, Label de Encargado, Label de Escaleta (después de cédula) y Columna G TIPO DE VINCULACIÓN AL CARGO/ SIDEAP */}
+            {/* Fila 2: Cédula, Label de Encargado (SOLO si el activo tiene encargo), Label de Escaleta y Columna G */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'nowrap', overflow: 'hidden' }}>
               {cedulaActiva ? (
                 <Text numberOfLines={1} style={{ fontSize: 10.5, color: THEME.slate600, fontWeight: '600', flexShrink: 0 }}>
@@ -3283,8 +3269,8 @@ export default function NominaScreen() {
                 </Text>
               ) : null}
 
-              {/* Label de Encargado (en fila 2, después de cédula) */}
-              {tieneEncargo ? (
+              {/* Label de Encargado: ÚNICAMENTE si el servidor activo está en encargo */}
+              {tieneEncargoActivo ? (
                 <View
                   style={{
                     backgroundColor: '#FEF3C7',
@@ -3302,8 +3288,8 @@ export default function NominaScreen() {
                 </View>
               ) : null}
 
-              {/* Label de Escaleta (en fila 2, después de cédula y encargado) */}
-              {tieneEncargo && p.id_escalera ? (
+              {/* Label de Escaleta (en activo SOLO si el activo está encargado en escaleta) */}
+              {tieneEncargoActivo && p.id_escalera ? (
                 <Pressable
                   onPress={() => {
                     setPlazaModal(p);
@@ -3332,7 +3318,7 @@ export default function NominaScreen() {
                   ellipsizeMode="tail"
                   style={{
                     fontSize: 10,
-                    color: esProvisional ? '#B45309' : (tieneEncargo ? '#92400E' : THEME.slate500),
+                    color: esProvisional ? '#B45309' : (tieneEncargoActivo ? '#92400E' : THEME.slate500),
                     fontWeight: esProvisional ? '700' : '500',
                     flexShrink: 1,
                   }}

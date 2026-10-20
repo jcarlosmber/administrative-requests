@@ -95,6 +95,8 @@ export interface PlazaNomina {
   encargo_cedula?: string | null;
   encargo_nombre?: string | null;
   es_encargo?: boolean;
+  servidor_activo_cedula?: string | null;
+  servidor_activo_nombre?: string | null;
   tipo_vinculacion?: string;
   tipo_vinculacion_entidad?: string | null;
   tipo_vinculacion_cargo?: string | null;
@@ -510,10 +512,16 @@ export const nominaService = {
               (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
               (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
-            const tieneEncargo = Boolean(
+            const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
+            const sitAdmin = String(p.situacion_administrativa || m?.situacion_administrativa || '').toUpperCase();
+            const esProv = tipoVincCargo.includes('PROVISIONAL') || sitAdmin.includes('PROVISIONAL') || p.pv === 'PV' || m?.pv === 'PV';
+
+            const tieneEncargo = !esProv && Boolean(
               p.es_encargo ||
+              m?.es_encargo ||
               (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
-              (p.encargo_cedula && String(p.encargo_cedula).trim() !== '')
+              (p.encargo_cedula && String(p.encargo_cedula).trim() !== '') ||
+              tipoVincCargo.includes('ENCARGO')
             );
 
             const encargoNombreFinal = tieneEncargo
@@ -530,6 +538,8 @@ export const nominaService = {
               ...p,
               titular_nombre: esVacDef ? 'VACANTE DEFINITIVA' : (p.titular_nombre || m?.titular_nombre || null),
               titular_cedula: esVacDef ? null : (p.titular_cedula || m?.titular_cedula || null),
+              servidor_activo_nombre: p.servidor_activo_nombre || m?.servidor_activo_nombre || p.encargo_nombre || m?.encargo_nombre || null,
+              servidor_activo_cedula: p.servidor_activo_cedula || m?.servidor_activo_cedula || p.encargo_cedula || m?.encargo_cedula || null,
               estado_cargo: esVacDef ? 'VACANTE DEFINITIVA' : (p.estado_cargo || m?.estado_cargo || 'OCUPADO'),
               id_escalera: idEscaleraFinal,
               peldano_escalera: peldanoEscaleraFinal,

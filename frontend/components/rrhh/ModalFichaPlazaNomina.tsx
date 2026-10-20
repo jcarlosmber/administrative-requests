@@ -187,34 +187,31 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       (plazaActiva.tipo_vinculacion_cargo || '').toUpperCase().includes('PROVISIONAL') ||
       (plazaActiva.tipo_vinculacion_entidad || '').toUpperCase().includes('PROVISIONAL') ||
       (plazaActiva.situacion_administrativa || '').toUpperCase().includes('PROVISIONAL') ||
-      (plazaActiva.situacion_titular || '').toUpperCase().includes('PROVISIONAL') ||
       Boolean(plazaActiva.pv)
     );
 
-    // Detección estricta de vacante definitiva en la titularidad
+    // Detección estricta de vacante definitiva en la titularidad (Columna 13 o 15)
     const esTitularVacante = Boolean(
-      esProvisional ||
       !plazaActiva.titular_nombre ||
       String(plazaActiva.titular_nombre).trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
       String(plazaActiva.titular_nombre).trim().toUpperCase().includes('VACANTE') ||
       String(plazaActiva.situacion_titular || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
-      String(plazaActiva.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA'
+      (String(plazaActiva.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' && !plazaActiva.titular_nombre)
     );
 
-    const provisionalCedulaLimpia = esProvisional && plazaActiva.titular_cedula
+    const titularCedulaLimpia = (!esTitularVacante && plazaActiva.titular_cedula)
       ? String(plazaActiva.titular_cedula).replace(/\D/g, '')
+      : (!esTitularVacante && mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
+
+    const provisionalCedulaLimpia = esProvisional
+      ? String(plazaActiva.servidor_activo_cedula || mockMatch?.servidor_activo_cedula || plazaActiva.encargo_cedula || mockMatch?.encargo_cedula || (esTitularVacante ? plazaActiva.titular_cedula : '') || '').replace(/\D/g, '')
       : '';
 
-    const titularCedulaLimpia = (!esProvisional && !esTitularVacante)
-      ? (plazaActiva.titular_cedula
-          ? String(plazaActiva.titular_cedula).replace(/\D/g, '')
-          : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : ''))
-      : '';
-
-    const tieneEncargoReal = Boolean(
+    // Encargo activo: SOLO si NO es provisional
+    const tieneEncargoReal = !esProvisional && Boolean(
       plazaActiva.es_encargo ||
-      (plazaActiva.encargo_nombre && plazaActiva.encargo_nombre.trim() !== '') ||
-      (plazaActiva.encargo_cedula && String(plazaActiva.encargo_cedula).trim() !== '')
+      (plazaActiva.encargo_nombre && plazaActiva.encargo_nombre.trim() !== '' && plazaActiva.encargo_nombre.trim() !== plazaActiva.titular_nombre) ||
+      (plazaActiva.encargo_cedula && String(plazaActiva.encargo_cedula).trim() !== '' && String(plazaActiva.encargo_cedula).trim() !== String(plazaActiva.titular_cedula))
     );
 
     const encargoCedulaLimpia = tieneEncargoReal && plazaActiva.encargo_cedula
