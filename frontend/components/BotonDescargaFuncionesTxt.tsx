@@ -138,7 +138,7 @@ export default function BotonDescargaFuncionesTxt({
           visible: true,
           tipo: 'exito',
           titulo: 'Descarga Iniciada con Éxito',
-          mensaje: `Se ha generado y descargado el archivo .txt en formato UTF-8 listo para cargue oficial (SIDEAP / SIMO / CNSC).`,
+          mensaje: `Se ha generado y descargado el archivo .txt en formato UTF-8 listo para cargue en SIMO (SIDEAP / SIMO / CNSC).`,
           nombreArchivo: nombreArchivoFinal,
           totalFunciones: funcionesProcesadas.length,
           contenidoPreview: funcionesProcesadas,
@@ -249,7 +249,7 @@ export default function BotonDescargaFuncionesTxt({
                     letterSpacing: 0.5,
                   }}
                 >
-                  Descarga para Cargue Oficial (.txt UTF-8)
+                  Descarga para Cargue en SIMO (.txt UTF-8)
                 </Text>
               </View>
 
