@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
-import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideCodigoGrado, aplicarFiltrosPlazas, coincideNivel } from '../../lib/nominaService';
+import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideCodigoGrado, aplicarFiltrosPlazas, coincideNivel, normalizarDependenciaSJD } from '../../lib/nominaService';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
@@ -1564,7 +1564,8 @@ export default function NominaScreen() {
 
     const map = new Map<string, number>();
     base.forEach((p) => {
-      const dep = p.dependencia_cargo ? p.dependencia_cargo.trim() : 'Sin dependencia asignada';
+      const rawDep = p.dependencia_cargo ? p.dependencia_cargo.trim() : 'Sin dependencia asignada';
+      const dep = normalizarDependenciaSJD(rawDep);
       map.set(dep, (map.get(dep) || 0) + 1);
     });
     return Array.from(map.entries())

@@ -213,7 +213,7 @@ module.exports = function (pool) {
       return 'OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES';
     }
     if (dep.includes('CORPORATIVA') || dep.includes('GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
-      return 'SUBDIRECCIÓN DE GESTIÓN CORPORATIVA';
+      return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
     }
 
     return dep;
@@ -429,6 +429,19 @@ module.exports = function (pool) {
           cargo = REPLACE(REPLACE(REPLACE(cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
           titular_nombre = REPLACE(REPLACE(REPLACE(titular_nombre, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA')
         WHERE dependencia_cargo LIKE '%Ã%' OR dependencia_funcional LIKE '%Ã%' OR cargo LIKE '%Ã%' OR titular_nombre LIKE '%Ã%';
+
+        -- Corregir canónicamente la dependencia DIRECCIÓN DE GESTIÓN CORPORATIVA (Columna AC)
+        UPDATE public.planta_personal_sjd SET
+          dependencia_cargo = 'DIRECCIÓN DE GESTIÓN CORPORATIVA'
+        WHERE dependencia_cargo ILIKE '%SUBDIRECCI%CORPORATIVA%' OR dependencia_cargo ILIKE '%SUBDIRECCIÓN DE GESTIÓN CORPORATIVA%';
+
+        UPDATE public.planta_personal_sjd SET
+          dependencia_funcional = 'DIRECCIÓN DE GESTIÓN CORPORATIVA'
+        WHERE dependencia_funcional ILIKE '%SUBDIRECCI%CORPORATIVA%' OR dependencia_funcional ILIKE '%SUBDIRECCIÓN DE GESTIÓN CORPORATIVA%';
+
+        UPDATE public.personal_perno_sjd SET
+          dependencia = 'DIRECCIÓN DE GESTIÓN CORPORATIVA'
+        WHERE dependencia ILIKE '%SUBDIRECCI%CORPORATIVA%' OR dependencia ILIKE '%SUBDIRECCIÓN DE GESTIÓN CORPORATIVA%';
       `);
     } catch (e) {
       console.warn('Advertencia al verificar tablas de nómina:', e.message);
@@ -693,7 +706,12 @@ module.exports = function (pool) {
       query += ' ORDER BY id_plaza ASC';
 
       const result = await pool.query(query, params);
-      res.json({ success: true, total: result.rows.length, plazas: result.rows });
+      const rows = result.rows.map((p) => ({
+        ...p,
+        dependencia_cargo: cleanDependencia(p.dependencia_cargo),
+        dependencia_funcional: cleanDependencia(p.dependencia_funcional || p.dependencia_cargo),
+      }));
+      res.json({ success: true, total: rows.length, plazas: rows });
     } catch (error) {
       console.error('Error al listar plazas de nómina:', error);
       res.status(500).json({ success: false, error: error.message });

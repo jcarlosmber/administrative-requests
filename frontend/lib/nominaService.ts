@@ -302,6 +302,16 @@ export function coincideNivel(nivelItem?: string | null, nivelFiltro?: string | 
   return iNorm === fNorm || iNorm.startsWith(fNorm);
 }
 
+// Normalizador de dependencias de la Secretaría Jurídica Distrital (garantiza DIRECCIÓN DE GESTIÓN CORPORATIVA)
+export function normalizarDependenciaSJD(dep?: string | null): string {
+  if (!dep) return '';
+  const dUpper = dep.toUpperCase().trim();
+  if (dUpper.includes('CORPORATIVA')) {
+    return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
+  }
+  return dep;
+}
+
 // Función pura de filtrado defensivo aplicable a cualquier colección de plazas
 export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPlazasNomina): PlazaNomina[] {
   if (!filtros) return plazas;
@@ -597,6 +607,8 @@ export const nominaService = {
               situacion_titular: situacionTitularFinal,
               tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
               tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
+              dependencia_cargo: normalizarDependenciaSJD(p.dependencia_cargo || m?.dependencia_cargo),
+              dependencia_funcional: normalizarDependenciaSJD(p.dependencia_funcional || m?.dependencia_funcional || p.dependencia_cargo || m?.dependencia_cargo),
               manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
               resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
             };
@@ -611,8 +623,12 @@ export const nominaService = {
       // Fallback local silencioso si la API aún no está disponible
     }
 
-    // Retornar datos precargados reales aplicando filtros
-    const result = ((mockPlazasData as unknown as PlazaNomina[]) || []);
+    // Retornar datos precargados reales aplicando filtros y normalización
+    const result = ((mockPlazasData as unknown as PlazaNomina[]) || []).map((p) => ({
+      ...p,
+      dependencia_cargo: normalizarDependenciaSJD(p.dependencia_cargo),
+      dependencia_funcional: normalizarDependenciaSJD(p.dependencia_funcional || p.dependencia_cargo),
+    }));
     return aplicarFiltrosPlazas(result, filtros);
   },
 
@@ -1005,7 +1021,12 @@ export const nominaService = {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.personal) && data.personal.length > 0) {
-          return data.personal;
+          return data.personal.map((item: PersonaPerno) => ({
+            ...item,
+            dependencia: normalizarDependenciaSJD(item.dependencia),
+            plaza_dependencia_cargo: normalizarDependenciaSJD(item.plaza_dependencia_cargo),
+            plaza_dependencia_funcional: normalizarDependenciaSJD(item.plaza_dependencia_funcional),
+          }));
         }
       }
     } catch {
@@ -1018,25 +1039,36 @@ export const nominaService = {
 
     let result = listPerno.map((per) => {
       const cedLimpia = String(per.cedula || '').replace(/\D/g, '');
-      if (!cedLimpia) return per;
+      if (!cedLimpia) {
+        return {
+          ...per,
+          dependencia: normalizarDependenciaSJD(per.dependencia),
+        };
+      }
 
       const match = listPlazas.find(
         (pl) =>
           (pl.titular_cedula && String(pl.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
           (pl.es_encargo && pl.encargo_cedula && String(pl.encargo_cedula).replace(/\D/g, '') === cedLimpia)
       );
-      if (!match) return per;
+      if (!match) {
+        return {
+          ...per,
+          dependencia: normalizarDependenciaSJD(per.dependencia),
+        };
+      }
 
       return {
         ...per,
+        dependencia: normalizarDependenciaSJD(per.dependencia),
         plaza_id_plaza: match.id_plaza,
         plaza_id_sideap: match.id_sideap,
         plaza_nivel: match.nivel,
         plaza_cargo: match.cargo,
         plaza_codigo: match.codigo,
         plaza_grado: match.grado,
-        plaza_dependencia_cargo: match.dependencia_cargo,
-        plaza_dependencia_funcional: match.dependencia_funcional,
+        plaza_dependencia_cargo: normalizarDependenciaSJD(match.dependencia_cargo),
+        plaza_dependencia_funcional: normalizarDependenciaSJD(match.dependencia_funcional || match.dependencia_cargo),
         plaza_proposito: match.proposito,
         plaza_funciones: match.funciones,
         plaza_requisitos: match.requisitos,
