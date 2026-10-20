@@ -3792,7 +3792,7 @@ app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
 // --- ENDPOINTS PARA CHATBOT ---
 const Groq = require("groq-sdk");
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   const { message } = req.body;
@@ -3801,7 +3801,7 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   }
 
   try {
-    if (!groq.apiKey) {
+    if (!groq || !groq.apiKey) {
       return res.json({ reply: '¡Hola! Para que pueda darte respuestas reales con IA, por favor configura la variable **GROQ_API_KEY** en el archivo `.env` del servidor.' });
     }
 
