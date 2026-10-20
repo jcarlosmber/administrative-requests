@@ -514,15 +514,25 @@ export const nominaService = {
             const sitTitularUpper = String(p.situacion_titular || m?.situacion_titular || '').toUpperCase();
             const titNombreUpper = String(p.titular_nombre || m?.titular_nombre || '').toUpperCase();
 
-            // Si es provisional y la situación del titular es provisionalidad (o no hay titular con carrera registrado), el empleo es VACANTE DEFINITIVA (Columna O)
-            const titularEsProvisional = sitTitularUpper.includes('PROVISIONAL') || (esProv && (!sitTitularUpper || sitTitularUpper === 'PROVISIONALIDAD'));
+            // Plazas con titular en PERIODO DE PRUEBA EN OTRA ENTIDAD o con titular legítimo registrado (ej. Plaza 18 Doris Silva García, Plaza 21 Jenifer Celis Ortega)
+            const tieneTitularPeriodoPrueba = sitTitularUpper.includes('PERIODO DE PRUEBA') || sitTitularUpper.includes('OTRA ENTIDAD');
+            const tieneTitularReal = Boolean(
+              titNombreUpper &&
+              titNombreUpper !== 'VACANTE DEFINITIVA' &&
+              !titNombreUpper.includes('VACANTE') &&
+              (p.titular_cedula || m?.titular_cedula || tieneTitularPeriodoPrueba)
+            );
 
-            const esVacDef = 
+            // Si es provisional y la situación del titular es provisionalidad (o no hay titular con carrera registrado), el empleo es VACANTE DEFINITIVA (Columna O)
+            const titularEsProvisional = !tieneTitularReal && !tieneTitularPeriodoPrueba && (sitTitularUpper.includes('PROVISIONAL') || (esProv && (!sitTitularUpper || sitTitularUpper === 'PROVISIONALIDAD')));
+
+            const esVacDef = !tieneTitularReal && !tieneTitularPeriodoPrueba && (
               (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
               titNombreUpper === 'VACANTE DEFINITIVA' ||
               titNombreUpper.includes('VACANTE') ||
               sitTitularUpper === 'VACANTE DEFINITIVA' ||
-              titularEsProvisional;
+              titularEsProvisional
+            );
 
             const tieneEncargo = !esProv && Boolean(
               p.es_encargo ||
@@ -555,20 +565,36 @@ export const nominaService = {
               }
             }
 
+            const estadoCargoFinal = esVacDef 
+              ? 'VACANTE DEFINITIVA' 
+              : (p.estado_cargo || m?.estado_cargo || 'OCUPADO');
+
+            const titularNombreFinal = (esVacDef && !tieneTitularReal && !tieneTitularPeriodoPrueba)
+              ? 'VACANTE DEFINITIVA'
+              : (p.titular_nombre || m?.titular_nombre || null);
+
+            const titularCedulaFinal = (esVacDef && !tieneTitularReal && !tieneTitularPeriodoPrueba)
+              ? null
+              : (p.titular_cedula || m?.titular_cedula || null);
+
+            const situacionTitularFinal = (esVacDef && !tieneTitularReal && !tieneTitularPeriodoPrueba)
+              ? 'VACANTE DEFINITIVA'
+              : (p.situacion_titular || m?.situacion_titular || (tieneTitularPeriodoPrueba ? 'PERIODO DE PRUEBA EN OTRA ENTIDAD' : 'EN PROPIEDAD'));
+
             let plazaActual: PlazaNomina = {
               ...p,
-              titular_nombre: esVacDef ? 'VACANTE DEFINITIVA' : (p.titular_nombre || m?.titular_nombre || null),
-              titular_cedula: esVacDef ? null : (p.titular_cedula || m?.titular_cedula || null),
+              titular_nombre: titularNombreFinal,
+              titular_cedula: titularCedulaFinal,
               servidor_activo_nombre: servidorActivoNombreFinal,
               servidor_activo_cedula: servidorActivoCedulaFinal,
-              estado_cargo: esVacDef ? 'VACANTE DEFINITIVA' : (p.estado_cargo || m?.estado_cargo || 'OCUPADO'),
+              estado_cargo: estadoCargoFinal,
               id_escalera: idEscaleraFinal,
               peldano_escalera: peldanoEscaleraFinal,
               encargo_cedula: encargoCedulaFinal,
               encargo_nombre: encargoNombreFinal,
               es_encargo: esEncargoFinal,
               opec: p.opec || m?.opec || null,
-              situacion_titular: esVacDef ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
+              situacion_titular: situacionTitularFinal,
               tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
               tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
               manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,

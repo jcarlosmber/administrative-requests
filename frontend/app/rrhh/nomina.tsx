@@ -363,10 +363,19 @@ export default function NominaScreen() {
         const titularCedulaFinal = p.titular_cedula !== undefined ? p.titular_cedula : (m?.titular_cedula || null);
         const estadoCargoFinal = p.estado_cargo || m?.estado_cargo || 'OCUPADO';
 
-        const esVacanteDefinitiva = 
+        const sitTitularNorm = String(p.situacion_titular || m?.situacion_titular || '').toUpperCase();
+        const tienePeriodoPrueba = sitTitularNorm.includes('PERIODO DE PRUEBA') || sitTitularNorm.includes('OTRA ENTIDAD');
+        const titularRealValido = Boolean(
+          titularNombreFinal &&
+          String(titularNombreFinal).trim().toUpperCase() !== 'VACANTE DEFINITIVA' &&
+          !String(titularNombreFinal).trim().toUpperCase().includes('VACANTE')
+        );
+
+        const esVacanteDefinitiva = !tienePeriodoPrueba && !titularRealValido && (
           (String(estadoCargoFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
           (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-          (String(p.situacion_titular || m?.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
+          sitTitularNorm === 'VACANTE DEFINITIVA'
+        );
 
         const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
         const sitAdmin = String(p.situacion_administrativa || m?.situacion_administrativa || '').toUpperCase();
@@ -418,7 +427,7 @@ export default function NominaScreen() {
           encargo_nombre: encargoNombreFinal,
           es_encargo: esEncargoFinal,
           opec: p.opec !== undefined ? p.opec : (m?.opec || null),
-          situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
+          situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || (tienePeriodoPrueba ? 'PERIODO DE PRUEBA EN OTRA ENTIDAD' : 'EN PROPIEDAD')),
           tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
           tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
           manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
@@ -1300,17 +1309,19 @@ export default function NominaScreen() {
           titNom === 'VACANTE DEFINITIVA' ||
           vinc === 'VACANTE DEFINITIVA'
         );
+        if (sitTit.includes('PERIODO DE PRUEBA') || estCargo === 'OCUPADO') return false;
         if (!esDef) return false;
       } else if (estFiltro === 'VACANTE TEMPORAL') {
+        if (estCargo === 'OCUPADO') return false;
         const esTemp = (
           estCargo === 'VACANTE TEMPORAL' ||
           sitTit.includes('TEMPORAL') ||
           sitTit.includes('LICENCIA') ||
-          sitTit.includes('PERIODO DE PRUEBA') ||
           titNom.includes('TEMPORAL')
         );
         if (!esTemp) return false;
       } else if (estFiltro === 'OCUPADO') {
+        if (estCargo === 'OCUPADO') return true;
         if (sitTit === 'VACANTE DEFINITIVA' || titNom === 'VACANTE DEFINITIVA') return false;
       } else {
         if (estCargo !== estFiltro) return false;
@@ -1393,17 +1404,19 @@ export default function NominaScreen() {
           titNom === 'VACANTE DEFINITIVA' ||
           vinc === 'VACANTE DEFINITIVA'
         );
+        if (sitTit.includes('PERIODO DE PRUEBA') || estCargo === 'OCUPADO') return false;
         if (!esDef) return false;
       } else if (estFiltro === 'VACANTE TEMPORAL') {
+        if (estCargo === 'OCUPADO') return false;
         const esTemp = (
           estCargo === 'VACANTE TEMPORAL' ||
           sitTit.includes('TEMPORAL') ||
           sitTit.includes('LICENCIA') ||
-          sitTit.includes('PERIODO DE PRUEBA') ||
           titNom.includes('TEMPORAL')
         );
         if (!esTemp) return false;
       } else if (estFiltro === 'OCUPADO') {
+        if (estCargo === 'OCUPADO') return true;
         if (sitTit === 'VACANTE DEFINITIVA' || titNom === 'VACANTE DEFINITIVA') return false;
       } else {
         if (estCargo !== estFiltro) return false;
@@ -1788,7 +1801,16 @@ export default function NominaScreen() {
       (m) => Number(m.id_plaza) === idPlazaNum
     );
 
-    const esProvisionalModal = Boolean(
+    const situacionTitularModalNorm = String(plazaModal.situacion_titular || mockMatch?.situacion_titular || '').trim().toUpperCase();
+    const tienePeriodoPruebaModal = situacionTitularModalNorm.includes('PERIODO DE PRUEBA') || situacionTitularModalNorm.includes('OTRA ENTIDAD');
+    const titularNombreModal = String(plazaModal.titular_nombre || mockMatch?.titular_nombre || '').trim();
+    const tieneTitularRealModal = Boolean(
+      titularNombreModal &&
+      titularNombreModal.toUpperCase() !== 'VACANTE DEFINITIVA' &&
+      !titularNombreModal.toUpperCase().includes('VACANTE')
+    );
+
+    const esProvisionalModal = !tienePeriodoPruebaModal && Boolean(
       (plazaModal.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') ||
       (plazaModal.tipo_vinculacion_cargo || '').toUpperCase().includes('PROVISIONAL') ||
       (plazaModal.tipo_vinculacion_entidad || '').toUpperCase().includes('PROVISIONAL') ||
@@ -1799,11 +1821,11 @@ export default function NominaScreen() {
     );
 
     // Detección estricta de vacante definitiva en la titularidad (Columna 13 o 15)
-    const esTitularVacante = Boolean(
+    const esTitularVacante = !tienePeriodoPruebaModal && !tieneTitularRealModal && Boolean(
       !plazaModal.titular_nombre ||
       String(plazaModal.titular_nombre).trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
       String(plazaModal.titular_nombre).trim().toUpperCase().includes('VACANTE') ||
-      String(plazaModal.situacion_titular || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
+      situacionTitularModalNorm === 'VACANTE DEFINITIVA' ||
       (String(plazaModal.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' && !plazaModal.titular_nombre)
     );
 
@@ -2002,6 +2024,9 @@ export default function NominaScreen() {
       es_provisional_activo: esProvisionalActivo,
       es_ordinario_activo: esOrdinarioActivo,
       es_titular_vacante: esTitularVacante,
+      nombre_titular: titularNombreModal || plazaModal.titular_nombre || null,
+      cedula_titular: titularCedulaLimpia || plazaModal.titular_cedula || null,
+      situacion_titular: situacionTitularModalNorm || plazaModal.situacion_titular || null,
       tipo_vinculacion_entidad: plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || (pernoActivo as any)?.tipo_vinculacion || pernoActivo?.tipo_funcionario || (esTitularVacante ? 'No aplica (Vacante Definitiva)' : null),
       tipo_vinculacion_cargo: plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
       proposito: propositoTexto,
@@ -2912,10 +2937,11 @@ export default function NominaScreen() {
         if (!p) return '';
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const titularNombre = String(p.titular_nombre || '').trim();
+        const esPeriodoPrueba = situacionTitularNorm.includes('PERIODO DE PRUEBA') || situacionTitularNorm.includes('OTRA ENTIDAD');
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
         const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
-        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
+        const titularEsProv = !esPeriodoPrueba && (situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD')));
+        const esVacanteDefinitiva = !esPeriodoPrueba && (situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv);
         if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
@@ -2923,6 +2949,7 @@ export default function NominaScreen() {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const esPeriodoPrueba = situacionTitularNorm.includes('PERIODO DE PRUEBA') || situacionTitularNorm.includes('OTRA ENTIDAD');
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
         const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
         const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
@@ -2934,9 +2961,9 @@ export default function NominaScreen() {
           Boolean(p.pv)
         );
 
-        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const titularEsProvisional = !esPeriodoPrueba && (situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD')));
 
-        const esVacanteDefinitiva = Boolean(
+        const esVacanteDefinitiva = !esPeriodoPrueba && Boolean(
           situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
@@ -3289,10 +3316,11 @@ export default function NominaScreen() {
         if (!p) return '';
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const titularNombre = String(p.titular_nombre || '').trim();
+        const esPeriodoPrueba = situacionTitularNorm.includes('PERIODO DE PRUEBA') || situacionTitularNorm.includes('OTRA ENTIDAD');
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
         const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
-        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
+        const titularEsProv = !esPeriodoPrueba && (situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD')));
+        const esVacanteDefinitiva = !esPeriodoPrueba && (situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv);
         if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
@@ -3300,6 +3328,7 @@ export default function NominaScreen() {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const esPeriodoPrueba = situacionTitularNorm.includes('PERIODO DE PRUEBA') || situacionTitularNorm.includes('OTRA ENTIDAD');
         const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
         const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
         const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
@@ -3311,9 +3340,9 @@ export default function NominaScreen() {
           Boolean(p.pv)
         );
 
-        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const titularEsProvisional = !esPeriodoPrueba && (situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD')));
 
-        const esVacanteDefinitiva = Boolean(
+        const esVacanteDefinitiva = !esPeriodoPrueba && Boolean(
           situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
@@ -10210,7 +10239,13 @@ export default function NominaScreen() {
 
                     <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={{ fontSize: 11, color: THEME.slate500 }}>Estado de la Plaza</Text>
-                      <View style={{ marginTop: 4 }}>{renderBadgeEstado(plazaModal?.estado_cargo)}</View>
+                      <View style={{ marginTop: 4 }}>
+                        {renderBadgeEstado(
+                          String(plazaModal?.situacion_titular || '').toUpperCase().includes('PERIODO DE PRUEBA') 
+                            ? 'OCUPADO' 
+                            : plazaModal?.estado_cargo
+                        )}
+                      </View>
                     </View>
 
                     <View style={{ flex: 1, minWidth: 140 }}>
@@ -10512,7 +10547,9 @@ export default function NominaScreen() {
                         </View>
 
                         <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                          {plazaModalEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaModal.titular_nombre || 'VACANTE DEFINITIVA')}
+                          {plazaModalEnriquecida?.es_titular_vacante 
+                            ? 'VACANTE DEFINITIVA' 
+                            : (plazaModalEnriquecida?.nombre_titular || plazaModal.titular_nombre || 'VACANTE DEFINITIVA')}
                         </Text>
 
                         {plazaModalEnriquecida?.es_titular_vacante ? (
@@ -10558,7 +10595,9 @@ export default function NominaScreen() {
                             <View>
                               <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                                {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
+                                {plazaModalEnriquecida?.cedula_titular || plazaModal.titular_cedula 
+                                  ? `C.C. ${plazaModalEnriquecida?.cedula_titular || plazaModal.titular_cedula}` 
+                                  : 'No registrada'}
                               </Text>
                             </View>
 
@@ -10584,7 +10623,7 @@ export default function NominaScreen() {
                             <View>
                               <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
-                                {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
+                                {cleanLabel(plazaModalEnriquecida?.situacion_titular || plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
                               </Text>
                             </View>
 
