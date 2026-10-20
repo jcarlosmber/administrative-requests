@@ -216,6 +216,8 @@ export interface EstadisticasNomina {
   vacantes_temporales: number;
   encargos: number;
   masa_salarial_mensual: number;
+  total_devengado_mensual?: number;
+  masa_salarial_basica?: number;
 }
 
 export interface FiltrosPlazasNomina {

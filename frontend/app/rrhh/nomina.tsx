@@ -527,8 +527,9 @@ export default function NominaScreen() {
     const vacantesTemp = listPlazas.filter((p) => p.estado_cargo === 'VACANTE TEMPORAL').length;
     const enEncargo = listPlazas.filter((p) => p.es_encargo === true || p.tipo_vinculacion === 'EN ENCARGO' || p.situacion_administrativa === 'ENCARGO').length;
     
-    // Masa salarial total
-    const masaSalarialMensual = listPlazas.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+    // Masa salarial total (Total Devengado preferente sobre básico)
+    const getCostoPlaza = (p: PlazaNomina) => (Number(p.total_devengado) > 0 ? Number(p.total_devengado) : (Number(p.asignacion_basica) || 0));
+    const masaSalarialMensual = listPlazas.reduce((acc, p) => acc + getCostoPlaza(p), 0);
     const salarioPromedio = totalPlazas > 0 ? masaSalarialMensual / totalPlazas : 0;
 
     // Distribución por Tipo de Vinculación
@@ -539,7 +540,7 @@ export default function NominaScreen() {
         porVinculacion[v] = { cantidad: 0, masaSalarial: 0, provistas: 0, vacantes: 0 };
       }
       porVinculacion[v].cantidad++;
-      porVinculacion[v].masaSalarial += Number(p.asignacion_basica) || 0;
+      porVinculacion[v].masaSalarial += getCostoPlaza(p);
       if (p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')) {
         porVinculacion[v].provistas++;
       } else {
@@ -553,7 +554,7 @@ export default function NominaScreen() {
       const n = (p.nivel || 'SIN NIVEL').toUpperCase().trim();
       if (!porNivel[n]) porNivel[n] = { cantidad: 0, masaSalarial: 0 };
       porNivel[n].cantidad++;
-      porNivel[n].masaSalarial += Number(p.asignacion_basica) || 0;
+      porNivel[n].masaSalarial += getCostoPlaza(p);
     });
 
     // Distribución por Dependencia
@@ -564,7 +565,7 @@ export default function NominaScreen() {
         porDependencia[d] = { cantidad: 0, masaSalarial: 0, provistas: 0, vacantes: 0 };
       }
       porDependencia[d].cantidad++;
-      porDependencia[d].masaSalarial += Number(p.asignacion_basica) || 0;
+      porDependencia[d].masaSalarial += getCostoPlaza(p);
       if (p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')) {
         porDependencia[d].provistas++;
       } else {
@@ -1060,7 +1061,7 @@ export default function NominaScreen() {
         });
       } else if (tipo === 'estructura_niveles') {
         nombreArchivo = 'Reporte_Estructura_Jerarquica_Niveles.csv';
-        const headers = ['Nivel_Jerarquico', 'Plazas_Autorizadas', 'Porcentaje_Planta', 'Plazas_Provistas', 'Vacantes', 'Masa_Salarial_Mensual'];
+        const headers = ['Nivel_Jerarquico', 'Plazas_Autorizadas', 'Porcentaje_Planta', 'Plazas_Provistas', 'Vacantes', 'Total_Devengado_Mensual'];
         csvContent = headers.join(';') + '\n';
         Object.entries(distribucionPorNivel).forEach(([nivel, cant]) => {
           const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
@@ -1070,7 +1071,7 @@ export default function NominaScreen() {
           );
           const prov = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
           const vac = plazasDelNivel.length - prov;
-          const masa = plazasDelNivel.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+          const masa = plazasDelNivel.reduce((acc, p) => acc + (Number(p.total_devengado) > 0 ? Number(p.total_devengado) : (Number(p.asignacion_basica) || 0)), 0);
           csvContent += [
             `"${nivel}"`,
             cant,
@@ -3141,13 +3142,18 @@ export default function NominaScreen() {
                     letterSpacing: 0.8,
                   }}
                 >
-                  Masa Salarial Básica
+                  Total Devengado Mensual
                 </Text>
                 <Text style={{ fontSize: 22, fontWeight: '600', color: THEME.slate900, marginTop: 4 }}>
-                  {formatearDinero(estadisticas?.masa_salarial_mensual || 1789230000)}
+                  {formatearDinero(
+                    estadisticas?.total_devengado_mensual ||
+                    estadisticas?.masa_salarial_mensual ||
+                    metricasReportes.masaSalarialMensual ||
+                    1340341095
+                  )}
                 </Text>
                 <Text style={{ fontSize: 12, color: THEME.slate400, marginTop: 2 }}>
-                  Devengado mensual estimado
+                  Masa salarial total (devengado)
                 </Text>
               </View>
             </View>
@@ -6524,7 +6530,7 @@ export default function NominaScreen() {
                         <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>% PLANTA</Text>
                         <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>PROVISTAS</Text>
                         <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>VACANTES</Text>
-                        <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>MASA SALARIAL MES</Text>
+                        <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>TOTAL DEVENGADO MES</Text>
                       </View>
 
                       {Object.entries(distribucionPorNivel).map(([nivel, cant], idx) => {
@@ -6535,7 +6541,7 @@ export default function NominaScreen() {
                         );
                         const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
                         const vacantesNivel = plazasDelNivel.length - provistasNivel;
-                        const masaNivel = plazasDelNivel.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+                        const masaNivel = plazasDelNivel.reduce((acc, p) => acc + (Number(p.total_devengado) > 0 ? Number(p.total_devengado) : (Number(p.asignacion_basica) || 0)), 0);
 
                         return (
                           <View
@@ -6688,9 +6694,9 @@ export default function NominaScreen() {
                 <View style={{ gap: 16 }}>
                   <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>MASA SALARIAL MENSUAL</Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL DEVENGADO MENSUAL</Text>
                       <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca900, marginTop: 4 }}>{formatMoneda(metricasReportes.masaSalarialMensual)}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Sueldo básico mensual de planta</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Total devengado mensual de nómina</Text>
                     </View>
 
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>

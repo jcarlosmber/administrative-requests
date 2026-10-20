@@ -707,7 +707,9 @@ module.exports = function (pool) {
           COUNT(CASE WHEN estado_cargo = 'VACANTE DEFINITIVA' THEN 1 END) as vacantes_definitivas,
           COUNT(CASE WHEN estado_cargo = 'VACANTE TEMPORAL' THEN 1 END) as vacantes_temporales,
           COUNT(CASE WHEN estado_cargo = 'ENCARGO' THEN 1 END) as encargos,
-          COALESCE(SUM(asignacion_basica), 0) as masa_salarial_mensual
+          COALESCE(SUM(CASE WHEN total_devengado IS NOT NULL AND total_devengado > 0 THEN total_devengado ELSE asignacion_basica END), 0) as masa_salarial_mensual,
+          COALESCE(SUM(total_devengado), 0) as total_devengado_mensual,
+          COALESCE(SUM(asignacion_basica), 0) as masa_salarial_basica
         FROM public.planta_personal_sjd
       `);
 
