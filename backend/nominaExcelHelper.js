@@ -190,7 +190,7 @@ function cleanDependencia(val) {
     return 'OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES';
   }
   if (dep.includes('CORPORATIVA') || dep.includes('GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
-    return 'SUBDIRECCIÓN DE GESTIÓN CORPORATIVA';
+    return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
   }
 
   return dep;
@@ -489,18 +489,10 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     if (!titularEsVacante) {
       // Titular oficial registrado
     } else {
-      if (esEncargoPorSituacion) {
-        titularNombre = situacionTitular || 'VACANTE TEMPORAL';
-        titularCedula = null;
-      } else if (!actualEsVacante) {
-        titularNombre = nombreActual;
-        titularCedula = cedulaActual;
-        if (!situacionTitular || situacionTitular.includes('VACANTE')) {
-          situacionTitular = situacionAdmin || 'EN PROPIEDAD';
-        }
-      } else {
-        titularNombre = 'VACANTE DEFINITIVA';
-        titularCedula = null;
+      titularNombre = 'VACANTE DEFINITIVA';
+      titularCedula = null;
+      if (!situacionTitular || situacionTitular.includes('VACANTE')) {
+        situacionTitular = 'VACANTE DEFINITIVA';
       }
     }
 

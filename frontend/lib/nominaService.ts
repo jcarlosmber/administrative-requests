@@ -334,7 +334,39 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
   }
 
   if (filtros.estado && filtros.estado !== 'TODOS') {
-    result = result.filter((p) => (p.estado_cargo || '').toUpperCase() === filtros.estado?.toUpperCase());
+    const estFiltro = filtros.estado.toUpperCase();
+    result = result.filter((p) => {
+      const estCargo = (p.estado_cargo || '').toUpperCase();
+      const sitTit = (p.situacion_titular || '').toUpperCase();
+      const titNom = (p.titular_nombre || '').toUpperCase();
+      const vinc = (p.tipo_vinculacion || '').toUpperCase();
+
+      if (estFiltro === 'VACANTE DEFINITIVA') {
+        return (
+          estCargo === 'VACANTE DEFINITIVA' ||
+          sitTit === 'VACANTE DEFINITIVA' ||
+          titNom === 'VACANTE DEFINITIVA' ||
+          vinc === 'VACANTE DEFINITIVA'
+        );
+      }
+      if (estFiltro === 'VACANTE TEMPORAL') {
+        return (
+          estCargo === 'VACANTE TEMPORAL' ||
+          sitTit.includes('TEMPORAL') ||
+          sitTit.includes('LICENCIA') ||
+          sitTit.includes('PERIODO DE PRUEBA') ||
+          titNom.includes('TEMPORAL')
+        );
+      }
+      if (estFiltro === 'OCUPADO') {
+        return (
+          (estCargo === 'OCUPADO' || !estCargo) &&
+          sitTit !== 'VACANTE DEFINITIVA' &&
+          titNom !== 'VACANTE DEFINITIVA'
+        );
+      }
+      return estCargo === estFiltro;
+    });
   }
 
   if (filtros.dependencia && filtros.dependencia !== 'TODAS') {
