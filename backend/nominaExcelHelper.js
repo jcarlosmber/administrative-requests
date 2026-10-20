@@ -500,7 +500,12 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     let encargoNombre = null;
     let encargoCedula = null;
 
-    if (!actualEsVacante) {
+    const esProvisionalFila = 
+      tipoVinculacionCargo.includes('PROVISIONAL') || 
+      tipoVinculacion.includes('PROVISIONAL') || 
+      situacionAdmin.includes('PROVISIONAL');
+
+    if (!actualEsVacante && !esProvisionalFila) {
       const hayDiferencia = titularCedula && cedulaActual 
         ? (titularCedula !== cedulaActual) 
         : (titularNombre && normActual !== normTitular);
@@ -511,6 +516,9 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         encargoCedula = cedulaActual;
       }
     }
+
+    const servidorActivoNombreFinal = actualEsVacante ? null : nombreActual;
+    const servidorActivoCedulaFinal = actualEsVacante ? null : cedulaActual;
 
     let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 23)) || '').trim().toUpperCase();
     if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
@@ -597,6 +605,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         fondo_salud, fondo_pension, fondo_cesantias, telefono, direccion, sexo,
         manual_funciones, resolucion_manual, total_devengado,
         fecha_ingreso_entidad, fecha_ingreso_distrito,
+        servidor_activo_nombre, servidor_activo_cedula,
         updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
@@ -609,6 +618,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         $28, $29, $30, $31, $32, $33,
         $34, $35, $36,
         $37, $38,
+        $39, $40,
         NOW()
       )
       ON CONFLICT (id_plaza) DO UPDATE SET
@@ -653,6 +663,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         total_devengado = COALESCE(EXCLUDED.total_devengado, public.planta_personal_sjd.total_devengado),
         fecha_ingreso_entidad = COALESCE(EXCLUDED.fecha_ingreso_entidad, public.planta_personal_sjd.fecha_ingreso_entidad),
         fecha_ingreso_distrito = COALESCE(EXCLUDED.fecha_ingreso_distrito, public.planta_personal_sjd.fecha_ingreso_distrito),
+        servidor_activo_nombre = EXCLUDED.servidor_activo_nombre,
+        servidor_activo_cedula = EXCLUDED.servidor_activo_cedula,
         updated_at = NOW();
     `, [
       idPlaza,
@@ -692,7 +704,9 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       manualFuncionesRaw || null,
       devengadoPlanta || personaMatch?.totalDevengado || null,
       fechaIngresoEntidad || personaMatch?.fechaIngresoEntidad || null,
-      fechaIngresoDistrito || personaMatch?.fechaIngresoDistrito || null
+      fechaIngresoDistrito || personaMatch?.fechaIngresoDistrito || null,
+      servidorActivoNombreFinal,
+      servidorActivoCedulaFinal
     ]);
 
     procesados++;

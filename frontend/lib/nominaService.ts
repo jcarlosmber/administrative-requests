@@ -507,14 +507,22 @@ export const nominaService = {
           const plazasProcesadas = data.plazas.map((p: PlazaNomina) => {
             const idPlazaNum = Number(p.id_plaza);
             const m = (mockPlazasData as any[]).find((mock) => Number(mock.id_plaza) === idPlazaNum);
-            const esVacDef = 
-              (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-              (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-              (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
-
             const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
             const sitAdmin = String(p.situacion_administrativa || m?.situacion_administrativa || '').toUpperCase();
             const esProv = tipoVincCargo.includes('PROVISIONAL') || sitAdmin.includes('PROVISIONAL') || p.pv === 'PV' || m?.pv === 'PV';
+
+            const sitTitularUpper = String(p.situacion_titular || m?.situacion_titular || '').toUpperCase();
+            const titNombreUpper = String(p.titular_nombre || m?.titular_nombre || '').toUpperCase();
+
+            // Si es provisional y la situación del titular es provisionalidad (o no hay titular con carrera registrado), el empleo es VACANTE DEFINITIVA (Columna O)
+            const titularEsProvisional = sitTitularUpper.includes('PROVISIONAL') || (esProv && (!sitTitularUpper || sitTitularUpper === 'PROVISIONALIDAD'));
+
+            const esVacDef = 
+              (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+              titNombreUpper === 'VACANTE DEFINITIVA' ||
+              titNombreUpper.includes('VACANTE') ||
+              sitTitularUpper === 'VACANTE DEFINITIVA' ||
+              titularEsProvisional;
 
             const tieneEncargo = !esProv && Boolean(
               p.es_encargo ||
@@ -534,12 +542,25 @@ export const nominaService = {
             const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
             const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
 
+            let servidorActivoNombreFinal = p.servidor_activo_nombre || m?.servidor_activo_nombre || null;
+            let servidorActivoCedulaFinal = p.servidor_activo_cedula || m?.servidor_activo_cedula || null;
+
+            if (!servidorActivoNombreFinal) {
+              if (tieneEncargo) {
+                servidorActivoNombreFinal = p.encargo_nombre || m?.encargo_nombre || null;
+                servidorActivoCedulaFinal = p.encargo_cedula || m?.encargo_cedula || null;
+              } else if (esProv) {
+                servidorActivoNombreFinal = p.encargo_nombre || m?.encargo_nombre || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_nombre : null) || 'Servidor Provisional';
+                servidorActivoCedulaFinal = p.encargo_cedula || m?.encargo_cedula || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_cedula : null);
+              }
+            }
+
             let plazaActual: PlazaNomina = {
               ...p,
               titular_nombre: esVacDef ? 'VACANTE DEFINITIVA' : (p.titular_nombre || m?.titular_nombre || null),
               titular_cedula: esVacDef ? null : (p.titular_cedula || m?.titular_cedula || null),
-              servidor_activo_nombre: p.servidor_activo_nombre || m?.servidor_activo_nombre || p.encargo_nombre || m?.encargo_nombre || null,
-              servidor_activo_cedula: p.servidor_activo_cedula || m?.servidor_activo_cedula || p.encargo_cedula || m?.encargo_cedula || null,
+              servidor_activo_nombre: servidorActivoNombreFinal,
+              servidor_activo_cedula: servidorActivoCedulaFinal,
               estado_cargo: esVacDef ? 'VACANTE DEFINITIVA' : (p.estado_cargo || m?.estado_cargo || 'OCUPADO'),
               id_escalera: idEscaleraFinal,
               peldano_escalera: peldanoEscaleraFinal,

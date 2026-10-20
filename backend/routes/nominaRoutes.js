@@ -419,6 +419,8 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS numero_acto_encargo TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_acto_encargo DATE;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_efectiva_encargo DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS servidor_activo_nombre TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS servidor_activo_cedula TEXT;
 
         -- Corregir mojibake en registros existentes de la tabla
         UPDATE public.planta_personal_sjd SET
@@ -465,6 +467,8 @@ module.exports = function (pool) {
           cargo ILIKE $${idx} OR 
           titular_nombre ILIKE $${idx} OR 
           titular_cedula ILIKE $${idx} OR 
+          servidor_activo_nombre ILIKE $${idx} OR 
+          servidor_activo_cedula ILIKE $${idx} OR 
           encargo_nombre ILIKE $${idx} OR 
           encargo_cedula ILIKE $${idx} OR 
           dependencia_cargo ILIKE $${idx} OR 
@@ -474,7 +478,7 @@ module.exports = function (pool) {
           (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${idx} OR
           id_plaza::text ILIKE $${idx} OR
           id_sideap::text ILIKE $${idx} OR
-                    id_perno::text ILIKE $${idx} OR
+          id_perno::text ILIKE $${idx} OR
           opec::text ILIKE $${idx} OR
           situacion_administrativa ILIKE $${idx} OR
           situacion_titular ILIKE $${idx} OR

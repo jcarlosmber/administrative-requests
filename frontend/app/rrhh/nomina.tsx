@@ -2761,7 +2761,10 @@ export default function NominaScreen() {
         if (!p) return '';
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const titularNombre = String(p.titular_nombre || '').trim();
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre;
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
+        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
         if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
@@ -2769,12 +2772,25 @@ export default function NominaScreen() {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
+        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
+
+        const esProvisional = Boolean(
+          tipoVincCargoNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
+          situacionAdminNorm.includes('PROVISIONAL') ||
+          Boolean(p.pv)
+        );
+
+        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
 
         const esVacanteDefinitiva = Boolean(
           situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
-          nombreTitular.toUpperCase().includes('VACANTE')
+          nombreTitular.toUpperCase().includes('VACANTE') ||
+          titularEsProvisional
         );
 
         if (esVacanteDefinitiva) {
@@ -3124,7 +3140,10 @@ export default function NominaScreen() {
         if (!p) return '';
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
         const titularNombre = String(p.titular_nombre || '').trim();
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre;
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
+        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
         if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
         return p.titular_nombre || '';
       },
@@ -3132,12 +3151,25 @@ export default function NominaScreen() {
         if (!p) return null;
         const nombreTitular = String(p.titular_nombre || '').trim();
         const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
+        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
+
+        const esProvisional = Boolean(
+          tipoVincCargoNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
+          situacionAdminNorm.includes('PROVISIONAL') ||
+          Boolean(p.pv)
+        );
+
+        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
 
         const esVacanteDefinitiva = Boolean(
           situacionTitularNorm === 'VACANTE DEFINITIVA' ||
           !nombreTitular ||
           nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
-          nombreTitular.toUpperCase().includes('VACANTE')
+          nombreTitular.toUpperCase().includes('VACANTE') ||
+          titularEsProvisional
         );
 
         if (esVacanteDefinitiva) {
