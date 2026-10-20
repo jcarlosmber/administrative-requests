@@ -1721,11 +1721,11 @@ export default function NominaScreen() {
     // Edades calculadas desde la fecha de nacimiento registrada en PERNO
     const edadTitular = pernoTitular?.fecha_nacimiento
       ? calcEdad(pernoTitular.fecha_nacimiento)
-      : (!plazaModal.es_encargo && (plazaModal.edad || mockMatch?.edad) ? Number(plazaModal.edad || mockMatch?.edad) : null);
+      : (!plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
 
     const edadEncargo = pernoEncargo?.fecha_nacimiento
       ? calcEdad(pernoEncargo.fecha_nacimiento)
-      : (plazaModal.es_encargo && (plazaModal.edad || mockMatch?.edad) ? Number(plazaModal.edad || mockMatch?.edad) : null);
+      : (plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
 
     const edadActiva = pernoActivo?.fecha_nacimiento
       ? calcEdad(pernoActivo.fecha_nacimiento)
@@ -2642,12 +2642,13 @@ export default function NominaScreen() {
       width: '14%',
       minWidth: 160,
       sortable: true,
-      getSortValue: (p) => p.encargo_nombre || p.titular_nombre || '',
+      getSortValue: (p) => p?.encargo_nombre || p?.titular_nombre || '',
       render: (p) => {
+        if (!p) return null;
         const estadoNorm = (p.estado_cargo || '').toUpperCase();
         const nombreTitular = String(p.titular_nombre || '').trim();
         const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
-        const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+        const tieneEncargo = p?.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
         if (tieneEncargo && p.encargo_nombre) {
           return (
             <View style={{ gap: 2, paddingRight: 8 }}>
@@ -2900,12 +2901,13 @@ export default function NominaScreen() {
       label: 'Servidor Activo',
       proportion: 14,
       minWidth: 170,
-      sortValue: (p) => p.encargo_nombre || p.titular_nombre || '',
+      sortValue: (p) => p?.encargo_nombre || p?.titular_nombre || '',
       render: (p) => {
+        if (!p) return null;
         const estadoNorm = (p.estado_cargo || '').toUpperCase();
         const nombreTitular = String(p.titular_nombre || '').trim();
         const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
-        const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+        const tieneEncargo = p?.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
         if (tieneEncargo && p.encargo_nombre) {
           return (
             <View style={{ gap: 2, paddingRight: 8 }}>
@@ -4540,7 +4542,7 @@ export default function NominaScreen() {
                   {plazas.map((p, index) => {
                     const estadoNorm = (p.estado_cargo || '').toUpperCase();
                     const esVacante = estadoNorm.includes('VACANTE') || (!p.titular_nombre && !p.encargo_nombre);
-                    const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+                    const tieneEncargo = p?.es_encargo || (p?.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
 
                     return (
                       <Pressable
@@ -9472,7 +9474,8 @@ export default function NominaScreen() {
           animationType="fade"
           onRequestClose={() => setPlazaModal(null)}
         >
-          <View
+          {plazaModal ? (
+            <View
             style={{
               flex: 1,
               backgroundColor: 'rgba(15, 23, 42, 0.55)',
@@ -11392,6 +11395,7 @@ export default function NominaScreen() {
               </View>
             </View>
           </View>
+          ) : null}
         </Modal>
 
         {/* ============================================================== */}
@@ -11403,7 +11407,8 @@ export default function NominaScreen() {
           animationType="fade"
           onRequestClose={() => setPernoModal(null)}
         >
-          <View
+          {pernoModal ? (
+            <View
             style={{
               flex: 1,
               backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -12306,6 +12311,7 @@ export default function NominaScreen() {
               </View>
             </View>
           </View>
+          ) : null}
         </Modal>
 
         {/* ============================================================== */}
