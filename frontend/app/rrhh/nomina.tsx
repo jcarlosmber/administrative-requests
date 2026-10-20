@@ -541,32 +541,39 @@ export default function NominaScreen() {
     let activos = 0;
     let retirados = 0;
     let conPlaza = 0;
-    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const listPlazas = todasLasPlazas;
 
     todoElPerno.forEach((p) => {
       const esRet = p.estado_funcionario === 'R' || !!p.fecha_retiro;
       if (esRet) retirados++;
       else activos++;
 
+      const pCed = String(p.cedula || '').trim();
       const tienePlaza =
         p.plaza_id_plaza ||
         listPlazas.some(
           (pl) =>
-            String(pl.titular_cedula) === String(p.cedula) ||
-            String(pl.encargo_cedula) === String(p.cedula) ||
-            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+            (pCed && (
+              String(pl.titular_cedula || '').trim() === pCed ||
+              String(pl.encargo_cedula || '').trim() === pCed ||
+              String(pl.servidor_activo_cedula || '').trim() === pCed
+            )) ||
+            (p.posicion_planta && (
+              Number(pl.id_perno) === Number(p.posicion_planta) ||
+              Number(pl.id_plaza) === Number(p.posicion_planta)
+            ))
         );
       if (tienePlaza) conPlaza++;
     });
 
     return { total, activos, retirados, conPlaza };
-  }, [todoElPerno, plazas, todasLasPlazas]);
+  }, [todoElPerno, todasLasPlazas]);
 
   // ========================================================================
   // CÁLCULOS ANALÍTICOS Y METRICAS PARA REPORTES DE PLANTA Y NÓMINA
   // ========================================================================
   const metricasReportes = useMemo(() => {
-    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const listPlazas = todasLasPlazas;
     const totalPlazas = listPlazas.length;
     const conSideap = listPlazas.filter((p) => p.id_sideap != null && Number(p.id_sideap) > 0).length;
     const conPerno = listPlazas.filter((p) => p.id_perno != null && Number(p.id_perno) > 0).length;
@@ -823,11 +830,47 @@ export default function NominaScreen() {
       else if (ed <= 60) gruposEdad.de46a60++;
       else gruposEdad.mayor60++;
     });
-    // Conciliación detallada
+    // Conciliación detallada bidireccional (Planta Oficial vs Nómina PERNO)
     const activosPerno = todoElPerno.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
-    const servidoresSinPlaza = activosPerno.filter(
-      (per) => !per.posicion_planta || !listPlazas.some((pl) => pl.id_perno === per.posicion_planta || String(pl.titular_cedula) === String(per.cedula))
-    );
+    const servidoresSinPlaza = activosPerno.filter((per) => {
+      const perCed = String(per.cedula || '').trim();
+      const match = listPlazas.some((pl) => {
+        if (
+          perCed &&
+          (String(pl.titular_cedula || '').trim() === perCed ||
+            String(pl.encargo_cedula || '').trim() === perCed ||
+            String(pl.servidor_activo_cedula || '').trim() === perCed)
+        ) {
+          return true;
+        }
+        if (
+          per.posicion_planta &&
+          (Number(pl.id_perno) === Number(per.posicion_planta) ||
+            Number(pl.id_plaza) === Number(per.posicion_planta))
+        ) {
+          return true;
+        }
+        if (per.plaza_id_plaza && Number(pl.id_plaza) === Number(per.plaza_id_plaza)) {
+          return true;
+        }
+        return false;
+      });
+      return !match;
+    });
+
+    const plazasSinServidorEnPerno = listPlazas.filter((pl) => {
+      if (pl.estado_cargo !== 'OCUPADO' || pl.titular_nombre?.includes('VACANTE')) return false;
+      const titCed = String(pl.titular_cedula || '').trim();
+      const encCed = String(pl.encargo_cedula || '').trim();
+      const actCed = String(pl.servidor_activo_cedula || '').trim();
+      const match = activosPerno.some((per) => {
+        const pCed = String(per.cedula || '').trim();
+        if (pCed && (pCed === titCed || pCed === encCed || pCed === actCed)) return true;
+        if (per.posicion_planta && Number(per.posicion_planta) === Number(pl.id_perno)) return true;
+        return false;
+      });
+      return !match;
+    });
 
     return {
       totalPlazas,
@@ -883,12 +926,13 @@ export default function NominaScreen() {
       porCesantias,
       gruposEdad,
       servidoresSinPlaza,
+      plazasSinServidorEnPerno,
     };
-  }, [plazas, todasLasPlazas, todoElPerno]);
+  }, [todasLasPlazas, todoElPerno]);
 
   // Plazas filtradas para las tablas y analíticas de Reportes
   const plazasFiltradasReporte = useMemo(() => {
-    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const listPlazas = todasLasPlazas;
     let res = listPlazas;
 
     if (filtroVinculacionReporte !== 'TODAS') {
@@ -954,7 +998,7 @@ export default function NominaScreen() {
   // Exportación del reporte activo a CSV (compatible con Excel con UTF-8 BOM y punto y coma)
   const handleExportarReporteCsv = (tipo: SubReporteTipo) => {
     try {
-      const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+      const listPlazas = todasLasPlazas;
       let csvContent = '';
       let nombreArchivo = '';
 
@@ -1100,9 +1144,62 @@ export default function NominaScreen() {
         });
       } else if (tipo === 'conciliacion_perno') {
         nombreArchivo = 'Reporte_Conciliacion_Planta_vs_PERNO.csv';
-        const headers = ['Cedula', 'Nombre_Completo', 'Cargo_PERNO', 'Grado', 'Dependencia_PERNO', 'Estado_Funcionario', 'Posicion_Planta', 'Total_Devengado', 'Fecha_Ingreso', 'Fondo_Salud', 'Fondo_Pension'];
+        const headers = [
+          'Cedula',
+          'Nombre_Completo',
+          'Cargo_PERNO',
+          'Grado_PERNO',
+          'Dependencia_PERNO',
+          'Estado_Funcionario',
+          'Posicion_Planta_PERNO',
+          'Total_Devengado_PERNO',
+          'Fecha_Ingreso',
+          'Fondo_Salud',
+          'Fondo_Pension',
+          'Plaza_Asociada',
+          'Cargo_Planta',
+          'Dependencia_Planta',
+          'Tipo_Vinculacion_Planta',
+          'Estado_Cargo_Planta',
+          'Rol_En_Plaza',
+          'Estado_Conciliacion',
+        ];
         csvContent = headers.join(';') + '\n';
         todoElPerno.forEach((p) => {
+          const pCed = String(p.cedula || '').trim();
+          const matchPlaza = todasLasPlazas.find((pl) => {
+            if (
+              pCed &&
+              (String(pl.titular_cedula || '').trim() === pCed ||
+                String(pl.encargo_cedula || '').trim() === pCed ||
+                String(pl.servidor_activo_cedula || '').trim() === pCed)
+            ) {
+              return true;
+            }
+            if (
+              p.posicion_planta &&
+              (Number(pl.id_perno) === Number(p.posicion_planta) ||
+                Number(pl.id_plaza) === Number(p.posicion_planta))
+            ) {
+              return true;
+            }
+            return false;
+          });
+
+          const esActivo = p.estado_funcionario === 'A' && !p.fecha_retiro;
+          const rolEnPlaza = matchPlaza
+            ? String(matchPlaza.encargo_cedula || '').trim() === pCed
+              ? 'ENCARGADO'
+              : String(matchPlaza.titular_cedula || '').trim() === pCed
+              ? 'TITULAR'
+              : 'SERVIDOR ACTIVO'
+            : 'SIN PLAZA ASOCIADA';
+          const estadoConciliacion = matchPlaza
+            ? 'CONCILIADO'
+            : esActivo
+            ? 'ALERTA: ACTIVO SIN PLAZA'
+            : 'RETIRADO / HISTORICO';
+
           csvContent += [
             p.cedula,
             `"${(p.nombre_completo || '').replace(/"/g, '""')}"`,
@@ -1115,6 +1212,13 @@ export default function NominaScreen() {
             p.fecha_ingreso_entidad || '',
             `"${(p.fondo_salud || '').replace(/"/g, '""')}"`,
             `"${(p.fondo_pension || '').replace(/"/g, '""')}"`,
+            matchPlaza ? `#${matchPlaza.id_plaza}` : '',
+            matchPlaza ? `"${(matchPlaza.cargo || '').replace(/"/g, '""')}"` : '',
+            matchPlaza ? `"${(matchPlaza.dependencia_cargo || '').replace(/"/g, '""')}"` : '',
+            matchPlaza ? `"${(matchPlaza.tipo_vinculacion || '').replace(/"/g, '""')}"` : '',
+            matchPlaza ? `"${(matchPlaza.estado_cargo || '').replace(/"/g, '""')}"` : '',
+            `"${rolEnPlaza}"`,
+            `"${estadoConciliacion}"`,
           ].join(';') + '\n';
         });
       } else if (tipo === 'estructura_niveles') {
@@ -1122,9 +1226,9 @@ export default function NominaScreen() {
         const headers = ['Nivel_Jerarquico', 'Plazas_Autorizadas', 'Porcentaje_Planta', 'Plazas_Provistas', 'Vacantes', 'Total_Devengado_Mensual'];
         csvContent = headers.join(';') + '\n';
         Object.entries(distribucionPorNivel).forEach(([nivel, cant]) => {
-          const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+          const totalBase = metricasReportes.totalPlazas || 170;
           const pct = ((cant / totalBase) * 100).toFixed(1);
-          const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+          const plazasDelNivel = todasLasPlazas.filter(
             (p) => coincideNivel(p.nivel, nivel)
           );
           const prov = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
@@ -1176,7 +1280,7 @@ export default function NominaScreen() {
   // Filtrado de Personal de PERNO
   const pernoFiltrado = useMemo(() => {
     let list = todoElPerno;
-    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const listPlazas = todasLasPlazas;
 
     if (busquedaPerno.trim()) {
       const q = busquedaPerno.trim().toLowerCase();
@@ -1201,27 +1305,41 @@ export default function NominaScreen() {
     if (filtroPlazaPerno === 'CON_PLAZA') {
       list = list.filter((p) => {
         if (p.plaza_id_plaza) return true;
+        const pCed = String(p.cedula || '').trim();
         return listPlazas.some(
           (pl) =>
-            String(pl.titular_cedula) === String(p.cedula) ||
-            String(pl.encargo_cedula) === String(p.cedula) ||
-            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+            (pCed && (
+              String(pl.titular_cedula || '').trim() === pCed ||
+              String(pl.encargo_cedula || '').trim() === pCed ||
+              String(pl.servidor_activo_cedula || '').trim() === pCed
+            )) ||
+            (p.posicion_planta && (
+              Number(pl.id_perno) === Number(p.posicion_planta) ||
+              Number(pl.id_plaza) === Number(p.posicion_planta)
+            ))
         );
       });
     } else if (filtroPlazaPerno === 'SIN_PLAZA') {
       list = list.filter((p) => {
         if (p.plaza_id_plaza) return false;
+        const pCed = String(p.cedula || '').trim();
         return !listPlazas.some(
           (pl) =>
-            String(pl.titular_cedula) === String(p.cedula) ||
-            String(pl.encargo_cedula) === String(p.cedula) ||
-            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+            (pCed && (
+              String(pl.titular_cedula || '').trim() === pCed ||
+              String(pl.encargo_cedula || '').trim() === pCed ||
+              String(pl.servidor_activo_cedula || '').trim() === pCed
+            )) ||
+            (p.posicion_planta && (
+              Number(pl.id_perno) === Number(p.posicion_planta) ||
+              Number(pl.id_plaza) === Number(p.posicion_planta)
+            ))
         );
       });
     }
 
     return list;
-  }, [todoElPerno, busquedaPerno, filtroEstadoPerno, filtroPlazaPerno, plazas, todasLasPlazas]);
+  }, [todoElPerno, busquedaPerno, filtroEstadoPerno, filtroPlazaPerno, todasLasPlazas]);
 
   // Paginación de PERNO
   const totalPaginasPerno = Math.max(1, Math.ceil(pernoFiltrado.length / filasPorPaginaPerno));
@@ -1233,12 +1351,19 @@ export default function NominaScreen() {
   // Enriquecimiento de la persona seleccionada en el Modal
   const pernoModalEnriquecida = useMemo(() => {
     if (!pernoModal) return null;
-    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const listPlazas = todasLasPlazas;
+    const pCed = String(pernoModal.cedula || '').trim();
     const matchPlaza = listPlazas.find(
       (pl) =>
-        String(pl.titular_cedula) === String(pernoModal.cedula) ||
-        String(pl.encargo_cedula) === String(pernoModal.cedula) ||
-        (pernoModal.posicion_planta && pl.id_perno === pernoModal.posicion_planta)
+        (pCed && (
+          String(pl.titular_cedula || '').trim() === pCed ||
+          String(pl.encargo_cedula || '').trim() === pCed ||
+          String(pl.servidor_activo_cedula || '').trim() === pCed
+        )) ||
+        (pernoModal.posicion_planta && (
+          Number(pl.id_perno) === Number(pernoModal.posicion_planta) ||
+          Number(pl.id_plaza) === Number(pernoModal.posicion_planta)
+        ))
     );
 
     if (!matchPlaza) return pernoModal;
@@ -2344,7 +2469,7 @@ export default function NominaScreen() {
       TECNICO: 0,
       ASISTENCIAL: 0,
     };
-    plazas.forEach((p) => {
+    todasLasPlazas.forEach((p) => {
       const niv = (p.nivel || '').toUpperCase();
       if (niv.includes('DIRECTIV')) conteo.DIRECTIVO++;
       else if (niv.includes('ASESOR')) conteo.ASESOR++;
@@ -2353,7 +2478,7 @@ export default function NominaScreen() {
       else if (niv.includes('ASISTENCIAL')) conteo.ASISTENCIAL++;
     });
     return conteo;
-  }, [plazas]);
+  }, [todasLasPlazas]);
 
   // Manejo de carga de Libro Completo (PLANTA SJD + PLANTA PERNO)
   const handleSeleccionarArchivoCompleto = async () => {
@@ -7402,9 +7527,9 @@ export default function NominaScreen() {
                     {/* Tarjetas por cada nivel */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, width: '100%' }}>
                       {Object.entries(distribucionPorNivel).map(([nivel, cant]) => {
-                        const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+                        const totalBase = metricasReportes.totalPlazas || 170;
                         const porcentaje = Math.round((cant / totalBase) * 100);
-                        const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+                        const plazasDelNivel = todasLasPlazas.filter(
                           (p) => coincideNivel(p.nivel, nivel)
                         );
                         const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
@@ -7477,9 +7602,9 @@ export default function NominaScreen() {
                       </View>
 
                       {Object.entries(distribucionPorNivel).map(([nivel, cant], idx) => {
-                        const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+                        const totalBase = metricasReportes.totalPlazas || 170;
                         const pct = ((cant / totalBase) * 100).toFixed(1);
-                        const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+                        const plazasDelNivel = todasLasPlazas.filter(
                           (p) => coincideNivel(p.nivel, nivel)
                         );
                         const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
@@ -7582,7 +7707,7 @@ export default function NominaScreen() {
                             <Text style={{ width: '10%', minWidth: 90, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
                           </View>
 
-                          {(plazas.length > 0 ? plazas : todasLasPlazas)
+                          {todasLasPlazas
                             .filter((p) => p.estado_cargo !== 'OCUPADO' || p.titular_nombre?.includes('VACANTE'))
                             .map((p, idx) => {
                               const esDef = p.estado_cargo === 'VACANTE DEFINITIVA';
@@ -8782,67 +8907,350 @@ export default function NominaScreen() {
 
               {/* SUB-REPORTE 5: CONCILIACIÓN PLANTA VS NÓMINA (PERNO)           */}
               {/* ============================================================== */}
-              {subReporteActivo === 'conciliacion_perno' && (
-                <View style={{ gap: 16 }}>
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL REGISTROS PERNO</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{todoElPerno.length}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Historial consolidado</Text>
-                    </View>
+              {subReporteActivo === 'conciliacion_perno' && (() => {
+                const activosPerno = todoElPerno.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
+                const cruceDetallado = activosPerno.map((per) => {
+                  const pCed = String(per.cedula || '').trim();
+                  const match = todasLasPlazas.find((pl) => {
+                    if (
+                      pCed &&
+                      (String(pl.titular_cedula || '').trim() === pCed ||
+                        String(pl.encargo_cedula || '').trim() === pCed ||
+                        String(pl.servidor_activo_cedula || '').trim() === pCed)
+                    ) {
+                      return true;
+                    }
+                    if (
+                      per.posicion_planta &&
+                      (Number(pl.id_perno) === Number(per.posicion_planta) ||
+                        Number(pl.id_plaza) === Number(per.posicion_planta))
+                    ) {
+                      return true;
+                    }
+                    return false;
+                  });
 
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>ACTIVOS EN NÓMINA</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{estadisticasPerno.activos}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Frente a {metricasReportes.totalPlazas} plazas de estructura</Text>
-                    </View>
+                  const rol = match
+                    ? String(match.encargo_cedula || '').trim() === pCed
+                      ? 'ENCARGO'
+                      : String(match.titular_cedula || '').trim() === pCed
+                      ? 'TITULAR'
+                      : 'SERVIDOR ACTIVO'
+                    : 'SIN PLAZA';
 
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>ALERTAS DE CONCILIACIÓN</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>
-                        {metricasReportes.servidoresSinPlaza.length}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Servidores activos sin plaza fija asociada</Text>
-                    </View>
-                  </View>
+                  return {
+                    per,
+                    plaza: match,
+                    rol,
+                    conciliado: !!match,
+                  };
+                });
 
-                  {/* Tabla de Servidores con Alertas de Conciliación */}
-                  {metricasReportes.servidoresSinPlaza.length > 0 && (
-                    <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                        Servidores Activos en Nómina sin Plaza Oficial Enlazada
-                      </Text>
-                      <View style={{ borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
-                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12 }}>
-                          <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÉDULA</Text>
-                          <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>NOMBRE FUNCIONARIO</Text>
-                          <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO PERNO</Text>
-                          <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
-                        </View>
-                        {metricasReportes.servidoresSinPlaza.map((s: any, idx: number) => (
-                          <View
-                            key={s.cedula}
-                            style={{
-                              flexDirection: 'row',
-                              paddingVertical: 9,
-                              paddingHorizontal: 12,
-                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
-                              borderBottomWidth: 1,
-                              borderBottomColor: THEME.slate100,
-                              alignItems: 'center',
-                            }}
-                          >
-                            <Text style={{ flex: 1, fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>{s.cedula}</Text>
-                            <Text style={{ flex: 2, fontSize: 12, fontWeight: '600', color: THEME.slate900 }}>{s.nombre_completo || `${s.nombres} ${s.primer_apellido}`}</Text>
-                            <Text style={{ flex: 1.5, fontSize: 11.5, color: THEME.slate600 }}>{s.cargo}</Text>
-                            <Text style={{ flex: 2, fontSize: 11.5, color: THEME.slate600 }}>{s.dependencia}</Text>
-                          </View>
-                        ))}
+                const filtradosCruce = cruceDetallado.filter((item) => {
+                  if (!busquedaReporte.trim()) return true;
+                  const q = busquedaReporte.trim().toLowerCase();
+                  return (
+                    String(item.per.cedula || '').includes(q) ||
+                    (item.per.nombre_completo && item.per.nombre_completo.toLowerCase().includes(q)) ||
+                    (item.per.cargo && item.per.cargo.toLowerCase().includes(q)) ||
+                    (item.per.dependencia && item.per.dependencia.toLowerCase().includes(q)) ||
+                    (item.plaza && String(item.plaza.id_plaza).includes(q)) ||
+                    (item.plaza && item.plaza.cargo && item.plaza.cargo.toLowerCase().includes(q))
+                  );
+                });
+
+                return (
+                  <View style={{ gap: 16 }}>
+                    {/* Tarjetas KPI de Conciliación Integral */}
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                      <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL REGISTROS PERNO</Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{todoElPerno.length}</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>{estadisticasPerno.retirados} desvinculados / histórico</Text>
+                      </View>
+
+                      <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>ACTIVOS EN NÓMINA (PERNO)</Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{estadisticasPerno.activos}</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Servidores con pago y relación vigente</Text>
+                      </View>
+
+                      <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11.5, color: THEME.marca800, fontWeight: '700' }}>PLAZAS OFICIALES PLANTA</Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca800, marginTop: 4 }}>{metricasReportes.totalPlazas}</Text>
+                        <Text style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>
+                          {metricasReportes.provistas} provistas • {metricasReportes.vacantesDef + metricasReportes.vacantesTemp} vacantes
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11.5, color: metricasReportes.servidoresSinPlaza.length > 0 ? '#dc2626' : '#16a34a', fontWeight: '700' }}>
+                          {metricasReportes.servidoresSinPlaza.length > 0 ? 'ALERTAS DE CONCILIACIÓN' : 'ESTADO DE CONCILIACIÓN'}
+                        </Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: metricasReportes.servidoresSinPlaza.length > 0 ? '#dc2626' : '#16a34a', marginTop: 4 }}>
+                          {metricasReportes.servidoresSinPlaza.length > 0 ? metricasReportes.servidoresSinPlaza.length : '100%'}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                          {metricasReportes.servidoresSinPlaza.length > 0 ? 'Servidores activos sin plaza oficial' : 'Cruce exacto entre nómina y plazas'}
+                        </Text>
                       </View>
                     </View>
-                  )}
-                </View>
-              )}
+
+                    {/* Banner de Estado Oficial de Conciliación */}
+                    {metricasReportes.servidoresSinPlaza.length === 0 ? (
+                      <View
+                        style={{
+                          backgroundColor: '#F0FDF4',
+                          borderRadius: 12,
+                          padding: 18,
+                          borderWidth: 1.5,
+                          borderColor: '#86EFAC',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Ionicons name="checkmark-done-circle" size={24} color="#16A34A" />
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#14532D' }}>
+                            Conciliación Exitosa: Estructura de Planta Oficial vs Nómina PERNO
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 12.5, color: '#166534', lineHeight: 19 }}>
+                          El <Text style={{ fontWeight: '700' }}>100% de los {estadisticasPerno.activos} servidores públicos activos</Text> registrados en la nómina (PERNO) se encuentran debidamente justificados y enlazados a una plaza formal de la planta autorizada de la Secretaría Jurídica Distrital (como titulares de carrera, nombramiento provisional, periodo de prueba o servidores de carrera en encargo preferente conforme a la Ley 1960 de 2019). No existen pagos en nómina sin cargo de soporte en la planta oficial.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          borderRadius: 12,
+                          padding: 18,
+                          borderWidth: 1.5,
+                          borderColor: '#FCA5A5',
+                          gap: 12,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Ionicons name="alert-circle" size={24} color="#DC2626" />
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#991B1B' }}>
+                            Alertas de Conciliación Detectadas ({metricasReportes.servidoresSinPlaza.length} servidores)
+                          </Text>
+                        </View>
+                        <View style={{ borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', overflow: 'hidden' }}>
+                          <View style={{ flexDirection: 'row', backgroundColor: '#991B1B', paddingVertical: 10, paddingHorizontal: 12 }}>
+                            <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÉDULA</Text>
+                            <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>NOMBRE FUNCIONARIO</Text>
+                            <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO PERNO</Text>
+                            <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                          </View>
+                          {metricasReportes.servidoresSinPlaza.map((s: any, idx: number) => (
+                            <View
+                              key={s.cedula}
+                              style={{
+                                flexDirection: 'row',
+                                paddingVertical: 9,
+                                paddingHorizontal: 12,
+                                backgroundColor: idx % 2 === 0 ? THEME.white : '#FFF5F5',
+                                borderBottomWidth: 1,
+                                borderBottomColor: '#FEE2E2',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Text style={{ flex: 1, fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>{s.cedula}</Text>
+                              <Text style={{ flex: 2, fontSize: 12, fontWeight: '600', color: THEME.slate900 }}>{s.nombre_completo || `${s.nombres} ${s.primer_apellido}`}</Text>
+                              <Text style={{ flex: 1.5, fontSize: 11.5, color: THEME.slate600 }}>{s.cargo}</Text>
+                              <Text style={{ flex: 2, fontSize: 11.5, color: THEME.slate600 }}>{s.dependencia}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Resumen Analítico de Balance de Planta y Provisión */}
+                    <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Balance Institucional de Planta Oficial vs Cobertura de Nómina
+                      </Text>
+                      <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                        <View style={{ flex: 1, backgroundColor: THEME.slate50, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 6 }}>
+                          <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700' }}>PLAZAS AUTORIZADAS</Text>
+                          <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.slate900 }}>{metricasReportes.totalPlazas} plazas</Text>
+                          <Text style={{ fontSize: 11, color: THEME.slate600 }}>Estructura formal vigente SJD</Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#ECFDF5', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0', gap: 6 }}>
+                          <Text style={{ fontSize: 11, color: '#065F46', fontWeight: '700' }}>PROVISTAS EFECTIVAS</Text>
+                          <Text style={{ fontSize: 20, fontWeight: '800', color: '#065F46' }}>{metricasReportes.provistas} plazas</Text>
+                          <Text style={{ fontSize: 11, color: '#047857' }}>
+                            {((metricasReportes.provistas / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% ocupación de planta
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#FEF3C7', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A', gap: 6 }}>
+                          <Text style={{ fontSize: 11, color: '#92400E', fontWeight: '700' }}>VACANTES DEFINITIVAS</Text>
+                          <Text style={{ fontSize: 20, fontWeight: '800', color: '#B45309' }}>{metricasReportes.vacantesDef} plazas</Text>
+                          <Text style={{ fontSize: 11, color: '#92400E' }}>Para concurso CNSC/SIMO o encargo</Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#EFF6FF', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE', gap: 6 }}>
+                          <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '700' }}>VACANTES TEMPORALES</Text>
+                          <Text style={{ fontSize: 20, fontWeight: '800', color: '#1D4ED8' }}>{metricasReportes.vacantesTemp} plazas</Text>
+                          <Text style={{ fontSize: 11, color: '#1E40AF' }}>Por comisión, licencia o encargo</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Tabla de Auditoría Cruzada de Funcionarios en Nómina vs Planta */}
+                    <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <View>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                            Auditoría de Conciliación: Servidores Activos en Nómina ({filtradosCruce.length} servidores)
+                          </Text>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                            Cruce nominal y de cargo con la plaza oficial asignada en la Secretaría Jurídica Distrital
+                          </Text>
+                        </View>
+                        <Pressable
+                          onPress={() => handleExportarReporteCsv('conciliacion_perno')}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            backgroundColor: THEME.marca800,
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Ionicons name="download-outline" size={14} color={THEME.white} />
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.white }}>Exportar Conciliación CSV</Text>
+                        </Pressable>
+                      </View>
+
+                      {/* Buscador de la tabla de conciliación */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          gap: 8,
+                        }}
+                      >
+                        <Ionicons name="search-outline" size={16} color={THEME.slate400} />
+                        <TextInput
+                          value={busquedaReporte}
+                          onChangeText={setBusquedaReporte}
+                          placeholder="Buscar por cédula, nombre, cargo o número de plaza..."
+                          placeholderTextColor={THEME.slate400}
+                          style={{ flex: 1, fontSize: 12.5, color: THEME.slate900, outlineStyle: 'none' } as any}
+                        />
+                        {busquedaReporte.length > 0 && (
+                          <Pressable onPress={() => setBusquedaReporte('')}>
+                            <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                          </Pressable>
+                        )}
+                      </View>
+
+                      {/* Tabla Scrollable con Cruce Conciliado */}
+                      <View style={{ borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ width: '100%', minWidth: 1000 }}>
+                          <View style={{ width: '100%', minWidth: 1000 }}>
+                            <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12 }}>
+                              <Text style={{ width: '10%', minWidth: 90, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÉDULA</Text>
+                              <Text style={{ width: '22%', minWidth: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>SERVIDOR ACTIVO</Text>
+                              <Text style={{ width: '20%', minWidth: 160, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO EN NÓMINA (PERNO)</Text>
+                              <Text style={{ width: '22%', minWidth: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA OFICIAL ASOCIADA</Text>
+                              <Text style={{ width: '14%', minWidth: 120, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>ROL EN PLAZA</Text>
+                              <Text style={{ width: '12%', minWidth: 100, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>ESTADO</Text>
+                            </View>
+
+                            {filtradosCruce.slice(0, 100).map((item, idx) => (
+                              <View
+                                key={item.per.cedula}
+                                style={{
+                                  flexDirection: 'row',
+                                  paddingVertical: 9,
+                                  paddingHorizontal: 12,
+                                  backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: THEME.slate100,
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text style={{ width: '10%', minWidth: 90, fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>
+                                  {item.per.cedula}
+                                </Text>
+                                <Text style={{ width: '22%', minWidth: 180, fontSize: 12, fontWeight: '600', color: THEME.slate900 }}>
+                                  {item.per.nombre_completo || `${item.per.nombres || ''} ${item.per.primer_apellido || ''}`}
+                                </Text>
+                                <Text style={{ width: '20%', minWidth: 160, fontSize: 11.5, color: THEME.slate700 }}>
+                                  {item.per.cargo || '—'}
+                                </Text>
+                                <View style={{ width: '22%', minWidth: 180 }}>
+                                  {item.plaza ? (
+                                    <View>
+                                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>
+                                        Plaza #{item.plaza.id_plaza} • {item.plaza.cargo}
+                                      </Text>
+                                      <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                        Cód. {item.plaza.codigo} Gr. {item.plaza.grado}
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <Text style={{ fontSize: 11.5, color: '#DC2626', fontWeight: '700' }}>Sin plaza enlazada</Text>
+                                  )}
+                                </View>
+                                <View style={{ width: '14%', minWidth: 120, alignItems: 'center' }}>
+                                  <View
+                                    style={{
+                                      backgroundColor: item.rol === 'ENCARGO' ? '#FEF3C7' : item.rol === 'TITULAR' ? '#DCFCE7' : '#E0E7FF',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 10.5,
+                                        fontWeight: '700',
+                                        color: item.rol === 'ENCARGO' ? '#92400E' : item.rol === 'TITULAR' ? '#166534' : '#3730A3',
+                                      }}
+                                    >
+                                      {item.rol}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View style={{ width: '12%', minWidth: 100, alignItems: 'center' }}>
+                                  <View
+                                    style={{
+                                      backgroundColor: item.conciliado ? '#DCFCE7' : '#FEE2E2',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 10.5,
+                                        fontWeight: '700',
+                                        color: item.conciliado ? '#166534' : '#991B1B',
+                                      }}
+                                    >
+                                      {item.conciliado ? 'CONCILIADO' : 'ALERTA'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })()}
 
               {/* ============================================================== */}
               {/* SUB-REPORTE 6: SEGURIDAD SOCIAL & FONDOS (PERNO)               */}
