@@ -6612,6 +6612,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [inputSubtipoConcursoCaso, setInputSubtipoConcursoCaso] = useState<'ABIERTO' | 'ASCENSO'>('ABIERTO');
   const [inputCargoAnteriorCaso, setInputCargoAnteriorCaso] = useState('');
   const [inputFechaPosesionPeriodo, setInputFechaPosesionPeriodo] = useState('');
+  const [inputRadicadoSimoCaso, setInputRadicadoSimoCaso] = useState('');
+  const [inputRadicadoRpcaCaso, setInputRadicadoRpcaCaso] = useState('');
+  const [inputEstadoSimoCaso, setInputEstadoSimoCaso] = useState<'PENDIENTE_REPORTE' | 'REPORTADO_SIMO' | 'RPCA_CANCELADO'>('PENDIENTE_REPORTE');
 
   // Estados y funciones para modificar la Modalidad / Régimen del Caso
   const [modalCambiarModalidadCasoVisible, setModalCambiarModalidadCasoVisible] = useState(false);
@@ -6811,19 +6814,131 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
   const abrirModalEditarOpecCaso = () => {
     if (!casoActivo) return;
-    setInputOpecCaso(opecValorActual);
-    setInputConvocatoriaCaso(convocatoriaValorActual);
+    setInputOpecCaso(opecValorActual || casoActivo.concurso_opec || '');
+    setInputConvocatoriaCaso(convocatoriaValorActual || casoActivo.concurso_convocatoria || '');
     const esAsc = casoActivo.subtipo_concurso === 'ASCENSO' || casoActivo.modalidad === 'ASCENSO';
     setInputSubtipoConcursoCaso(esAsc ? 'ASCENSO' : 'ABIERTO');
     setInputCargoAnteriorCaso(casoActivo.cargo_anterior_carrera || '');
     setInputFechaPosesionPeriodo(
       casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_efectiva || casoActivo.fecha_inicio_tramite || ''
     );
+    // Para desvinculaciones (Paso 6): buscar si ya hay radicado en dc6_1, dp6_1 o dc6_2
+    const reqSimo = casoActivo.etapas
+      .flatMap((e) => e.requisitos || [])
+      .find((r) => r.id === 'dc6_1' || r.id === 'dp6_1');
+    const reqRpca = casoActivo.etapas
+      .flatMap((e) => e.requisitos || [])
+      .find((r) => r.id === 'dc6_2');
+    setInputRadicadoSimoCaso(reqSimo?.radicadoSoporte || '');
+    setInputRadicadoRpcaCaso(reqRpca?.radicadoSoporte || '');
+    setInputEstadoSimoCaso(
+      reqRpca?.cumplido ? 'RPCA_CANCELADO' : reqSimo?.cumplido ? 'REPORTADO_SIMO' : 'PENDIENTE_REPORTE'
+    );
     setModalEditarOpecCasoVisible(true);
   };
 
   const guardarOpecConvocatoriaCaso = () => {
     if (!casoActivo) return;
+
+    // FLUJO EXCLUSIVO DE DESVINCULACIÓN (PASO 6 - SIMO 4.4 / CNSC)
+    if (casoActivo.tipo_proceso === 'DESVINCULACION') {
+      const nuevaOpec = inputOpecCaso.trim();
+      const nuevaConv = inputConvocatoriaCaso.trim() || 'Convocatoria CNSC';
+      const radSimo = inputRadicadoSimoCaso.trim();
+      const radRpca = inputRadicadoRpcaCaso.trim();
+      const estSimo = inputEstadoSimoCaso;
+
+      setCasos((prevCasos) => {
+        const actualizados = prevCasos.map((c) => {
+          if (c.id !== casoActivo.id) return c;
+          const nuevasEtapas = c.etapas.map((et) => {
+            if (et.id === 'd_carr_6' || et.id === 'd_prov_6') {
+              const nuevosReqs = et.requisitos.map((r) => {
+                if (r.id === 'dc6_1' || r.id === 'dp6_1') {
+                  const cumplido = estSimo === 'REPORTADO_SIMO' || estSimo === 'RPCA_CANCELADO' || Boolean(radSimo);
+                  return {
+                    ...r,
+                    cumplido,
+                    radicadoSoporte: radSimo || r.radicadoSoporte,
+                    observaciones: nuevaOpec
+                      ? `OPEC Vacante Liberada: #${nuevaOpec} (${nuevaConv}). Novedad SIMO 4.4 ante CNSC.`
+                      : r.observaciones,
+                  };
+                }
+                if (r.id === 'dc6_2') {
+                  const cumplido = estSimo === 'RPCA_CANCELADO' || Boolean(radRpca);
+                  return {
+                    ...r,
+                    cumplido,
+                    radicadoSoporte: radRpca || r.radicadoSoporte,
+                    observaciones: radRpca
+                      ? `Solicitud de cancelación RPCA radicada ante CNSC: ${radRpca}`
+                      : r.observaciones,
+                  };
+                }
+                return r;
+              });
+
+              const reqsObligatorios = nuevosReqs.filter((r) => r.obligatorio && !r.noAplica);
+              const todosCumplidos = reqsObligatorios.length > 0 && reqsObligatorios.every((r) => r.cumplido);
+              const algunCumplido = nuevosReqs.some((r) => r.cumplido);
+
+              let estadoFinal: EstadoEtapa = 'pending';
+              if (todosCumplidos && nuevosReqs.length > 0) {
+                estadoFinal = 'completed';
+              } else if (algunCumplido) {
+                estadoFinal = 'in_progress';
+              }
+
+              return { ...et, estado: estadoFinal, requisitos: nuevosReqs };
+            }
+            return et;
+          });
+
+          return {
+            ...c,
+            concurso_opec: nuevaOpec || c.concurso_opec,
+            concurso_convocatoria: nuevaConv || c.concurso_convocatoria,
+            fecha_efectiva: inputFechaPosesionPeriodo.trim() || c.fecha_efectiva,
+            etapas: nuevasEtapas,
+          };
+        });
+
+        guardarCasosEnStorage(actualizados);
+        return actualizados;
+      });
+
+      if (casoActivo.id_plaza && nuevaOpec) {
+        setOpecPersonalizadasPlazas((prev) => {
+          const act = {
+            ...prev,
+            [casoActivo.id_plaza!]: {
+              opec: nuevaOpec,
+              convocatoria: nuevaConv,
+              estadoReporte: (estSimo === 'REPORTADO_SIMO' || estSimo === 'RPCA_CANCELADO') ? ('REPORTADO_OPEC' as const) : ('PENDIENTE_REPORTE' as const),
+            },
+          };
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              window.localStorage.setItem('rrhh_opec_plazas_v1', JSON.stringify(act));
+            }
+          } catch (e) {
+            console.warn('Error guardando opec plazas', e);
+          }
+          return act;
+        });
+      }
+
+      setModalEditarOpecCasoVisible(false);
+      mostrarModal(
+        'Novedad de Retiro en SIMO Guardada',
+        `Se registró la OPEC de la vacante liberada (${nuevaOpec || 'S/N'}), Convocatoria y el estado de reporte en SIMO 4.4 ante la CNSC para el Paso 6.`,
+        'success'
+      );
+      return;
+    }
+
+    // FLUJO ORDINARIO DE VINCULACIÓN
     const nuevaOpec = inputOpecCaso.trim() || '203205';
     const nuevaConv = inputConvocatoriaCaso.trim() || 'Distrito Capital 6 - CNSC';
     const nuevoSubtipo = inputSubtipoConcursoCaso;
@@ -11014,8 +11129,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
 
-                            {/* Chip Unificado OPEC + Convocatoria (Derecha) - Solo en Concurso de Carrera o Ascenso */}
-                            {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') && (
+                            {/* Chip Unificado OPEC + Convocatoria (Derecha) - Solo en Concurso de Carrera o Ascenso en VINCULACIÓN */}
+                            {casoActivo.tipo_proceso === 'VINCULACION' && (casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') && (
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
@@ -12662,6 +12777,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const esSimo = reqId.includes('vc1_2') || reqId.includes('simo') || reqId.includes('bnle') || reqLabel.includes('banco nacional de listas') || reqLabel.includes('bnle') || (reqLabel.includes('simo') && reqLabel.includes('elegibles'));
                                       const esFT318 = reqId.includes('ft318') || reqCodigo.includes('FT-318') || reqLabel.includes('ft-318') || reqLabel.includes('validación técnica') || req.tipoAccionEspecial === 'INGRESOS_IA';
                                       const esFT095 = reqId.includes('ft095') || reqCodigo.includes('FT-095') || reqLabel.includes('ft-095') || reqLabel.includes('tomar posesión') || req.tipoAccionEspecial === 'FT095';
+                                      const esSimoRetiro = casoActivo.tipo_proceso === 'DESVINCULACION' && (reqId === 'dc6_1' || reqId === 'dp6_1' || reqId === 'dc6_2' || (reqLabel.includes('simo') && reqLabel.includes('retiro')) || (reqLabel.includes('vacancia definitiva') && reqLabel.includes('simo')));
                                       const esSecop = req.tipoAccionEspecial === 'SECOP' || reqId.includes('secop') || reqLabel.includes('secop');
                                       const esEvaluacionRetiro = reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || (reqLabel.includes('retiro') && reqId.includes('4_3'));
                                       const esCobro = reqId === 'vc2_4' || (req.tipoCobroUsoLista !== undefined && reqId !== 'vc6_pago_cnsc');
@@ -14015,6 +14131,175 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </Pressable>
 
 
+                                              </View>
+                                            </View>
+                                          )}
+
+                                          {/* CASO A2: SIMO 4.4 / REPORTE DE VACANCIA DEFINITIVA & OPEC LIBERADA ANTE CNSC (DESVINCULACIÓN - PASO 6) */}
+                                          {esSimoRetiro && (
+                                            <View
+                                              style={{
+                                                backgroundColor: '#F8FAFC',
+                                                borderWidth: 1.5,
+                                                borderColor: '#0284C7',
+                                                borderRadius: 10,
+                                                padding: 14,
+                                                gap: 10,
+                                                shadowColor: '#0284C7',
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.08,
+                                                shadowRadius: 6,
+                                                elevation: 2,
+                                              }}
+                                            >
+                                              {/* Cabecera del Panel SIMO Paso 6 */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                  <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Ionicons name="barcode-outline" size={18} color="#0284C7" />
+                                                  </View>
+                                                  <View>
+                                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                                      Reporte de Vacancia Definitiva en SIMO 4.4 (CNSC)
+                                                    </Text>
+                                                    <Text style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                      Ley 909 de 2004, Art. 31 • Circular Externa CNSC 011 de 2021
+                                                    </Text>
+                                                  </View>
+                                                </View>
+
+                                                {/* Badge de Término Legal Perentorio */}
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                                                  <Ionicons name="timer-outline" size={13} color="#92400E" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>
+                                                    Término Perentorio: 5 días hábiles
+                                                  </Text>
+                                                </View>
+                                              </View>
+
+                                              {/* Resumen de la OPEC Liberada y Radicado */}
+                                              <View
+                                                style={{
+                                                  backgroundColor: '#FFFFFF',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  borderRadius: 8,
+                                                  padding: 12,
+                                                  gap: 8,
+                                                }}
+                                              >
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                                                  <View style={{ flex: 1, minWidth: 200 }}>
+                                                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                                                      OPEC de la Vacante Liberada:
+                                                    </Text>
+                                                    <Text style={{ fontSize: 14, fontWeight: '900', color: casoActivo.concurso_opec ? '#0369A1' : '#94A3B8', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                                                      {casoActivo.concurso_opec ? `#${casoActivo.concurso_opec}` : '⚠️ OPEC sin registrar en Paso 6'}
+                                                    </Text>
+                                                  </View>
+
+                                                  <View style={{ flex: 1, minWidth: 200 }}>
+                                                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                                                      Convocatoria CNSC Asociada:
+                                                    </Text>
+                                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>
+                                                      {casoActivo.concurso_convocatoria || 'Distrito Capital 6 - CNSC'}
+                                                    </Text>
+                                                  </View>
+
+                                                  <View style={{ minWidth: 140 }}>
+                                                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                                                      Estado de la Novedad:
+                                                    </Text>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                                                      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: req.cumplido ? '#16A34A' : '#EAB308' }} />
+                                                      <Text style={{ fontSize: 11, fontWeight: '800', color: req.cumplido ? '#166534' : '#854D0E' }}>
+                                                        {req.cumplido ? 'REPORTADO ANTE CNSC' : 'PENDIENTE DE CARGUE'}
+                                                      </Text>
+                                                    </View>
+                                                  </View>
+                                                </View>
+
+                                                {/* Detalle normativo y radicado si existe */}
+                                                <View style={{ borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                                  <Text style={{ fontSize: 11, color: '#475569' }}>
+                                                    Radicado / Comprobante SIMO:{' '}
+                                                    <Text style={{ fontWeight: '700', color: req.radicadoSoporte ? '#0F172A' : '#94A3B8' }}>
+                                                      {req.radicadoSoporte || 'Sin radicado registrado'}
+                                                    </Text>
+                                                  </Text>
+                                                  {casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' && (
+                                                    <Text style={{ fontSize: 10.5, color: '#4338CA', fontWeight: '600' }}>
+                                                      • Requiere cancelación de RPCA (Art. 14 Ley 909)
+                                                    </Text>
+                                                  )}
+                                                </View>
+                                              </View>
+
+                                              {/* Barra de Acciones Operativas en Paso 6 */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                <Pressable
+                                                  onPress={abrirModalEditarOpecCaso}
+                                                  style={({ pressed }: any) => ({
+                                                    backgroundColor: pressed ? '#0369A1' : '#0284C7',
+                                                    paddingHorizontal: 12,
+                                                    paddingVertical: 7,
+                                                    borderRadius: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                    cursor: 'pointer',
+                                                    shadowColor: '#0284C7',
+                                                    shadowOffset: { width: 0, height: 1 },
+                                                    shadowOpacity: 0.2,
+                                                    shadowRadius: 2,
+                                                  })}
+                                                >
+                                                  <Ionicons name="settings-outline" size={14} color="#FFFFFF" />
+                                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                                    Gestionar OPEC & Reporte SIMO 4.4
+                                                  </Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                  onPress={handleAbrirPortalSimo}
+                                                  style={({ pressed }: any) => ({
+                                                    backgroundColor: pressed ? '#0F172A' : '#1E293B',
+                                                    paddingHorizontal: 11,
+                                                    paddingVertical: 7,
+                                                    borderRadius: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 5,
+                                                    cursor: 'pointer',
+                                                  })}
+                                                >
+                                                  <Ionicons name="globe-outline" size={13} color="#FFFFFF" />
+                                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                                                    Portal SIMO (simo.cnsc.gov.co)
+                                                  </Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                  onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
+                                                  style={({ pressed }: any) => ({
+                                                    backgroundColor: pressed ? '#E0F2FE' : '#F0F9FF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BAE6FD',
+                                                    paddingHorizontal: 11,
+                                                    paddingVertical: 7,
+                                                    borderRadius: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 5,
+                                                    cursor: 'pointer',
+                                                  })}
+                                                >
+                                                  <Ionicons name="cloud-upload-outline" size={13} color="#0369A1" />
+                                                  <Text style={{ color: '#0369A1', fontSize: 11, fontWeight: '700' }}>
+                                                    Adjuntar Comprobante CNSC
+                                                  </Text>
+                                                </Pressable>
                                               </View>
                                             </View>
                                           )}
@@ -23435,7 +23720,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             {/* Header del Modal */}
             <View
               style={{
-                backgroundColor: THEME.marca900,
+                backgroundColor: casoActivo?.tipo_proceso === 'DESVINCULACION' ? '#0F172A' : THEME.marca900,
                 paddingHorizontal: 20,
                 paddingVertical: 16,
                 flexDirection: 'row',
@@ -23444,13 +23729,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                <Ionicons name="barcode-outline" size={22} color="#93C5FD" />
+                <Ionicons name="barcode-outline" size={22} color={casoActivo?.tipo_proceso === 'DESVINCULACION' ? '#38BDF8' : '#93C5FD'} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '800' }}>
-                    Gestión OPEC (SIMO) & Convocatoria CNSC
+                    {casoActivo?.tipo_proceso === 'DESVINCULACION'
+                      ? 'Gestión OPEC (SIMO 4.4) & Vacancia Definitiva (Paso 6)'
+                      : 'Gestión OPEC (SIMO) & Convocatoria CNSC'}
                   </Text>
                   <Text style={{ color: THEME.marca100, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
-                    {casoActivo?.servidor_nombre} • {casoActivo?.cargo}
+                    {casoActivo?.servidor_nombre} • {casoActivo?.tipo_proceso === 'DESVINCULACION' ? `Retiro del Cargo: ${casoActivo?.cargo}` : casoActivo?.cargo}
                   </Text>
                 </View>
               </View>
@@ -23465,177 +23752,374 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
             {/* Contenido del Formulario */}
             <View style={{ padding: 20, gap: 16 }}>
-              <View
-                style={{
-                  backgroundColor: '#EEF2FF',
-                  borderColor: '#C7D2FE',
-                  borderWidth: 1,
-                  padding: 12,
-                  borderRadius: 8,
-                  gap: 4,
-                }}
-              >
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#3730A3' }}>
-                  🏛️ Parámetros de Mérito Constitucional (Ley 909 de 2004)
-                </Text>
-                <Text style={{ fontSize: 11, color: '#4338CA', lineHeight: 16 }}>
-                  Configure la modalidad del proceso de mérito (Abierto o Ascenso), el código OPEC en SIMO 4.0, la Convocatoria CNSC y la fecha base para el cómputo de términos del período de prueba.
-                </Text>
-              </View>
-
-              {/* Selector de Modalidad: Concurso Abierto vs Concurso Ascenso */}
-              <View style={{ gap: 6 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                  Modalidad del Concurso de Méritos:
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  {/* Opción 1: Concurso Abierto */}
-                  <Pressable
-                    onPress={() => setInputSubtipoConcursoCaso('ABIERTO')}
+              {casoActivo?.tipo_proceso === 'DESVINCULACION' ? (
+                <>
+                  {/* Banner Normativo de Vacancia Definitiva en Retiro */}
+                  <View
                     style={{
-                      flex: 1,
-                      backgroundColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#EFF6FF' : THEME.white,
-                      borderWidth: 1.5,
-                      borderColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate300,
-                      borderRadius: 8,
-                      padding: 10,
-                      gap: 4,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons
-                        name={inputSubtipoConcursoCaso === 'ABIERTO' ? 'radio-button-on' : 'radio-button-off'}
-                        size={16}
-                        color={inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate400}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: '800',
-                          color: inputSubtipoConcursoCaso === 'ABIERTO' ? '#1E40AF' : THEME.slate700,
-                        }}
-                      >
-                        Concurso Abierto
-                      </Text>
-                    </View>
-                    <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
-                      Lista general de elegibles. Provisión ordinaria de vacante definitiva.
-                    </Text>
-                  </Pressable>
-
-                  {/* Opción 2: Concurso de Ascenso */}
-                  <Pressable
-                    onPress={() => setInputSubtipoConcursoCaso('ASCENSO')}
-                    style={{
-                      flex: 1,
-                      backgroundColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#EEF2FF' : THEME.white,
-                      borderWidth: 1.5,
-                      borderColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate300,
-                      borderRadius: 8,
-                      padding: 10,
-                      gap: 4,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons
-                        name={inputSubtipoConcursoCaso === 'ASCENSO' ? 'radio-button-on' : 'radio-button-off'}
-                        size={16}
-                        color={inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate400}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: '800',
-                          color: inputSubtipoConcursoCaso === 'ASCENSO' ? '#3730A3' : THEME.slate700,
-                        }}
-                      >
-                        Concurso de Ascenso
-                      </Text>
-                    </View>
-                    <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
-                      Servidor con derechos de carrera. Deja vacancia temporal en cargo origen.
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Si es Ascenso: Campo Cargo Anterior de Carrera */}
-              {inputSubtipoConcursoCaso === 'ASCENSO' && (
-                <View style={{ gap: 6 }}>
-                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#3730A3' }}>
-                    Empleo Anterior del cual es Titular de Carrera:
-                  </Text>
-                  <TextInput
-                    value={inputCargoAnteriorCaso}
-                    onChangeText={setInputCargoAnteriorCaso}
-                    placeholder="Ej: Profesional Universitario Código 219 Grado 15"
-                    placeholderTextColor={THEME.slate400}
-                    style={{
-                      backgroundColor: '#F1F5F9',
+                      backgroundColor: '#F0F9FF',
+                      borderColor: '#BAE6FD',
                       borderWidth: 1,
-                      borderColor: '#C7D2FE',
+                      padding: 12,
                       borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 9,
-                      fontSize: 13,
-                      color: THEME.slate900,
+                      gap: 4,
                     }}
-                  />
-                  <Text style={{ fontSize: 10.5, color: '#4338CA' }}>
-                    * Al superar el período de prueba de 6 meses, presentará la renuncia formal a este empleo para declarar su vacancia definitiva.
-                  </Text>
-                </View>
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0369A1' }}>
+                        🏛️ Reporte de Vacancia Definitiva (Ley 909/2004, Art. 31 & Circular CNSC 011/2021)
+                      </Text>
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#92400E' }}>PLAZO: 5 DÍAS HÁBILES</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#0284C7', lineHeight: 16 }}>
+                      Al producirse el retiro definitivo del servidor, la entidad dispone de un plazo legal perentorio de cinco (5) días hábiles para reportar la vacancia definitiva en el aplicativo SIMO 4.4 ante la CNSC para habilitar la OPEC liberada y tramitar la cancelación del RPCA.
+                    </Text>
+                  </View>
+
+                  {/* Selector de Estado de Reporte en SIMO 4.4 */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Estado del Trámite en SIMO 4.4 ante la CNSC:
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        { id: 'PENDIENTE_REPORTE', label: '⚠️ Pendiente de Reporte', color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
+                        { id: 'REPORTADO_SIMO', label: '✅ Reportado en SIMO 4.4', color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
+                        ...(casoActivo?.modalidad === 'CARRERA_ADMINISTRATIVA'
+                          ? [{ id: 'RPCA_CANCELADO', label: '🏆 RPCA Cancelado', color: '#3730A3', bg: '#EEF2FF', border: '#C7D2FE' }]
+                          : []),
+                      ].map((item) => {
+                        const sel = inputEstadoSimoCaso === item.id;
+                        return (
+                          <Pressable
+                            key={item.id}
+                            onPress={() => setInputEstadoSimoCaso(item.id as any)}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 7,
+                              borderRadius: 6,
+                              backgroundColor: sel ? item.bg : THEME.white,
+                              borderWidth: 1.5,
+                              borderColor: sel ? item.border : THEME.slate200,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, fontWeight: sel ? '800' : '600', color: sel ? item.color : THEME.slate700 }}>
+                              {item.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Input Número de OPEC de la Vacante Liberada */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Número de OPEC de la Vacante Liberada (SIMO):
+                    </Text>
+                    <TextInput
+                      value={inputOpecCaso}
+                      onChangeText={setInputOpecCaso}
+                      placeholder="Ej: 203205"
+                      placeholderTextColor={THEME.slate400}
+                      keyboardType="numeric"
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        color: THEME.slate900,
+                      }}
+                    />
+                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                      * Código OPEC en SIMO asignado a esta vacante para su futura oferta en concurso de méritos.
+                    </Text>
+                  </View>
+
+                  {/* Input Convocatoria CNSC */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Convocatoria / Proceso de Selección CNSC:
+                    </Text>
+                    <TextInput
+                      value={inputConvocatoriaCaso}
+                      onChangeText={setInputConvocatoriaCaso}
+                      placeholder="Ej: Convocatoria Distrito Capital 6 - CNSC"
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        color: THEME.slate900,
+                      }}
+                    />
+                  </View>
+
+                  {/* Input Radicado de Reporte en SIMO 4.4 */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Radicado / Comprobante de Reporte en SIMO 4.4 ante la CNSC:
+                    </Text>
+                    <TextInput
+                      value={inputRadicadoSimoCaso}
+                      onChangeText={setInputRadicadoSimoCaso}
+                      placeholder="Ej: CNSC-SIMO-2026-04891 o 2026-EE-04812"
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        color: THEME.slate900,
+                      }}
+                    />
+                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                      * Número de radicado oficial o comprobante de cargue expedido por el aplicativo SIMO 4.4.
+                    </Text>
+                  </View>
+
+                  {/* Si es Carrera: Radicado de Solicitud de Cancelación de RPCA */}
+                  {casoActivo?.modalidad === 'CARRERA_ADMINISTRATIVA' && (
+                    <View style={{ gap: 6 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#3730A3' }}>
+                        Radicado de Cancelación de RPCA ante la CNSC:
+                      </Text>
+                      <TextInput
+                        value={inputRadicadoRpcaCaso}
+                        onChangeText={setInputRadicadoRpcaCaso}
+                        placeholder="Ej: 2026-ER-09418 ante CNSC"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderWidth: 1,
+                          borderColor: '#C7D2FE',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 9,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: THEME.slate900,
+                        }}
+                      />
+                      <Text style={{ fontSize: 10.5, color: '#4338CA' }}>
+                        * Cancelación del Registro Público de Carrera Administrativa (Art. 14 Ley 909 de 2004).
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Fecha de Efectividad del Retiro */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Fecha de Efectividad del Retiro (Vacancia Definitiva):
+                    </Text>
+                    <TextInput
+                      value={inputFechaPosesionPeriodo}
+                      onChangeText={setInputFechaPosesionPeriodo}
+                      placeholder="AAAA-MM-DD"
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        color: THEME.slate900,
+                      }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View
+                    style={{
+                      backgroundColor: '#EEF2FF',
+                      borderColor: '#C7D2FE',
+                      borderWidth: 1,
+                      padding: 12,
+                      borderRadius: 8,
+                      gap: 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#3730A3' }}>
+                      🏛️ Parámetros de Mérito Constitucional (Ley 909 de 2004)
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#4338CA', lineHeight: 16 }}>
+                      Configure la modalidad del proceso de mérito (Abierto o Ascenso), el código OPEC en SIMO 4.0, la Convocatoria CNSC y la fecha base para el cómputo de términos del período de prueba.
+                    </Text>
+                  </View>
+
+                  {/* Selector de Modalidad: Concurso Abierto vs Concurso Ascenso */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Modalidad del Concurso de Méritos:
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      {/* Opción 1: Concurso Abierto */}
+                      <Pressable
+                        onPress={() => setInputSubtipoConcursoCaso('ABIERTO')}
+                        style={{
+                          flex: 1,
+                          backgroundColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#EFF6FF' : THEME.white,
+                          borderWidth: 1.5,
+                          borderColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate300,
+                          borderRadius: 8,
+                          padding: 10,
+                          gap: 4,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons
+                            name={inputSubtipoConcursoCaso === 'ABIERTO' ? 'radio-button-on' : 'radio-button-off'}
+                            size={16}
+                            color={inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate400}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: '800',
+                              color: inputSubtipoConcursoCaso === 'ABIERTO' ? '#1E40AF' : THEME.slate700,
+                            }}
+                          >
+                            Concurso Abierto
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
+                          Lista general de elegibles. Provisión ordinaria de vacante definitiva.
+                        </Text>
+                      </Pressable>
+
+                      {/* Opción 2: Concurso de Ascenso */}
+                      <Pressable
+                        onPress={() => setInputSubtipoConcursoCaso('ASCENSO')}
+                        style={{
+                          flex: 1,
+                          backgroundColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#EEF2FF' : THEME.white,
+                          borderWidth: 1.5,
+                          borderColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate300,
+                          borderRadius: 8,
+                          padding: 10,
+                          gap: 4,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons
+                            name={inputSubtipoConcursoCaso === 'ASCENSO' ? 'radio-button-on' : 'radio-button-off'}
+                            size={16}
+                            color={inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate400}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: '800',
+                              color: inputSubtipoConcursoCaso === 'ASCENSO' ? '#3730A3' : THEME.slate700,
+                            }}
+                          >
+                            Concurso de Ascenso
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
+                          Servidor con derechos de carrera. Deja vacancia temporal en cargo origen.
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Si es Ascenso: Campo Cargo Anterior de Carrera */}
+                  {inputSubtipoConcursoCaso === 'ASCENSO' && (
+                    <View style={{ gap: 6 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#3730A3' }}>
+                        Empleo Anterior del cual es Titular de Carrera:
+                      </Text>
+                      <TextInput
+                        value={inputCargoAnteriorCaso}
+                        onChangeText={setInputCargoAnteriorCaso}
+                        placeholder="Ej: Profesional Universitario Código 219 Grado 15"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: '#F1F5F9',
+                          borderWidth: 1,
+                          borderColor: '#C7D2FE',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 9,
+                          fontSize: 13,
+                          color: THEME.slate900,
+                        }}
+                      />
+                      <Text style={{ fontSize: 10.5, color: '#4338CA' }}>
+                        * Al superar el período de prueba de 6 meses, presentará la renuncia formal a este empleo para declarar su vacancia definitiva.
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Input Número de OPEC */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Número de OPEC (SIMO):
+                    </Text>
+                    <TextInput
+                      value={inputOpecCaso}
+                      onChangeText={setInputOpecCaso}
+                      placeholder="Ej: 203205"
+                      placeholderTextColor={THEME.slate400}
+                      keyboardType="numeric"
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        color: THEME.slate900,
+                      }}
+                    />
+                  </View>
+
+                  {/* Input Convocatoria / Proceso de Selección */}
+                  <View style={{ gap: 6 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                      Convocatoria / Proceso de Selección CNSC:
+                    </Text>
+                    <TextInput
+                      value={inputConvocatoriaCaso}
+                      onChangeText={setInputConvocatoriaCaso}
+                      placeholder="Ej: Convocatoria Distrito Capital 6 - CNSC"
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 9,
+                        fontSize: 13,
+                        color: THEME.slate900,
+                      }}
+                    />
+                  </View>
+                </>
               )}
-
-              {/* Input Número de OPEC */}
-              <View style={{ gap: 6 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                  Número de OPEC (SIMO):
-                </Text>
-                <TextInput
-                  value={inputOpecCaso}
-                  onChangeText={setInputOpecCaso}
-                  placeholder="Ej: 203205"
-                  placeholderTextColor={THEME.slate400}
-                  keyboardType="numeric"
-                  style={{
-                    backgroundColor: THEME.white,
-                    borderWidth: 1,
-                    borderColor: THEME.slate300,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 9,
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: THEME.slate900,
-                  }}
-                />
-              </View>
-
-              {/* Input Convocatoria / Proceso de Selección */}
-              <View style={{ gap: 6 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                  Convocatoria / Proceso de Selección CNSC:
-                </Text>
-                <TextInput
-                  value={inputConvocatoriaCaso}
-                  onChangeText={setInputConvocatoriaCaso}
-                  placeholder="Ej: Convocatoria Distrito Capital 6 - CNSC"
-                  placeholderTextColor={THEME.slate400}
-                  style={{
-                    backgroundColor: THEME.white,
-                    borderWidth: 1,
-                    borderColor: THEME.slate300,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 9,
-                    fontSize: 13,
-                    color: THEME.slate900,
-                  }}
-                />
-              </View>
             </View>
 
             {/* Footer con Botones */}
@@ -23670,7 +24154,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               <Pressable
                 onPress={guardarOpecConvocatoriaCaso}
                 style={{
-                  backgroundColor: THEME.marca700,
+                  backgroundColor: casoActivo?.tipo_proceso === 'DESVINCULACION' ? '#0284C7' : THEME.marca700,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 6,
@@ -23681,7 +24165,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               >
                 <Ionicons name="checkmark-circle-outline" size={16} color={THEME.white} />
                 <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
-                  Guardar y Actualizar
+                  {casoActivo?.tipo_proceso === 'DESVINCULACION' ? 'Guardar Reporte SIMO (Paso 6)' : 'Guardar y Actualizar'}
                 </Text>
               </Pressable>
             </View>

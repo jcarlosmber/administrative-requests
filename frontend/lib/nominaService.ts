@@ -544,7 +544,7 @@ export const nominaService = {
               titularEsProvisional
             );
 
-            const tieneEncargo = !esProv && Boolean(
+            const tieneEncargo = Boolean(
               p.es_encargo ||
               m?.es_encargo ||
               (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
@@ -552,26 +552,26 @@ export const nominaService = {
               tipoVincCargo.includes('ENCARGO')
             );
 
-            const encargoNombreFinal = tieneEncargo
-              ? (p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null))
-              : null;
-            const encargoCedulaFinal = tieneEncargo
-              ? (p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null))
-              : null;
-            const esEncargoFinal = tieneEncargo;
+            const encargoNombreFinal = (p.encargo_nombre !== undefined && p.encargo_nombre !== null)
+              ? p.encargo_nombre
+              : (m?.encargo_nombre || null);
+            const encargoCedulaFinal = (p.encargo_cedula !== undefined && p.encargo_cedula !== null)
+              ? p.encargo_cedula
+              : (m?.encargo_cedula || null);
+            const esEncargoFinal = tieneEncargo || Boolean(encargoNombreFinal);
             const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
             const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
 
-            let servidorActivoNombreFinal = p.servidor_activo_nombre || m?.servidor_activo_nombre || null;
-            let servidorActivoCedulaFinal = p.servidor_activo_cedula || m?.servidor_activo_cedula || null;
+            let servidorActivoNombreFinal = p.servidor_activo_nombre || m?.servidor_activo_nombre || encargoNombreFinal || null;
+            let servidorActivoCedulaFinal = p.servidor_activo_cedula || m?.servidor_activo_cedula || encargoCedulaFinal || null;
 
             if (!servidorActivoNombreFinal) {
-              if (tieneEncargo) {
-                servidorActivoNombreFinal = p.encargo_nombre || m?.encargo_nombre || null;
-                servidorActivoCedulaFinal = p.encargo_cedula || m?.encargo_cedula || null;
+              if (tieneEncargo || encargoNombreFinal) {
+                servidorActivoNombreFinal = encargoNombreFinal;
+                servidorActivoCedulaFinal = encargoCedulaFinal;
               } else if (esProv) {
-                servidorActivoNombreFinal = p.encargo_nombre || m?.encargo_nombre || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_nombre : null) || 'Servidor Provisional';
-                servidorActivoCedulaFinal = p.encargo_cedula || m?.encargo_cedula || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_cedula : null);
+                servidorActivoNombreFinal = encargoNombreFinal || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_nombre : null) || 'Servidor Provisional';
+                servidorActivoCedulaFinal = encargoCedulaFinal || (titNombreUpper !== 'VACANTE DEFINITIVA' && !titNombreUpper.includes('VACANTE') ? p.titular_cedula : null);
               }
             }
 
