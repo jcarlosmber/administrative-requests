@@ -1807,80 +1807,89 @@ export default function NominaScreen() {
       (String(plazaModal.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' && !plazaModal.titular_nombre)
     );
 
-    // Cédulas limpias para búsqueda en PERNO
+    // Servidor activo que actualmente desempeña la plaza (Columna 5 o encargo)
+    const nombreActivo = String(
+      plazaModal.servidor_activo_nombre ||
+      plazaModal.encargo_nombre ||
+      (!esTitularVacante ? plazaModal.titular_nombre : '') ||
+      mockMatch?.servidor_activo_nombre ||
+      mockMatch?.encargo_nombre ||
+      ''
+    ).trim();
+
+    const tieneServidorActivo = Boolean(
+      nombreActivo &&
+      !nombreActivo.toUpperCase().includes('VACANTE')
+    );
+
+    const cedulaActiva = tieneServidorActivo
+      ? String(
+          plazaModal.servidor_activo_cedula ||
+          plazaModal.encargo_cedula ||
+          (!esTitularVacante ? plazaModal.titular_cedula : '') ||
+          mockMatch?.servidor_activo_cedula ||
+          mockMatch?.encargo_cedula ||
+          ''
+        ).replace(/\D/g, '')
+      : '';
+
+    // Cédula limpia del titular (si tiene titular real y no es vacante definitiva)
     const titularCedulaLimpia = (!esTitularVacante && plazaModal.titular_cedula)
       ? String(plazaModal.titular_cedula).replace(/\D/g, '')
       : (!esTitularVacante && mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
 
-    // Cédula del servidor activo provisional (si la plaza está provista por provisionalidad)
-    const provisionalCedulaLimpia = esProvisionalModal
-      ? String(plazaModal.servidor_activo_cedula || mockMatch?.servidor_activo_cedula || plazaModal.encargo_cedula || mockMatch?.encargo_cedula || (esTitularVacante ? plazaModal.titular_cedula : '') || '').replace(/\D/g, '')
-      : '';
-
-    // Verificamos si realmente el servidor activo tiene encargo asignado (NUNCA si es provisional)
-    const tieneEncargoReal = !esProvisionalModal && Boolean(
-      plazaModal.es_encargo ||
-      (plazaModal.encargo_nombre && plazaModal.encargo_nombre.trim() !== '' && plazaModal.encargo_nombre.trim() !== plazaModal.titular_nombre) ||
-      (plazaModal.encargo_cedula && String(plazaModal.encargo_cedula).trim() !== '' && String(plazaModal.encargo_cedula).trim() !== String(plazaModal.titular_cedula))
+    // Condición de encargo
+    const esEncargoActivo = Boolean(
+      tieneServidorActivo &&
+      !esProvisionalModal &&
+      (
+        plazaModal.es_encargo ||
+        (plazaModal.encargo_nombre && plazaModal.encargo_nombre.trim() !== '' && plazaModal.encargo_nombre.trim() !== plazaModal.titular_nombre) ||
+        String(plazaModal.tipo_vinculacion_cargo || '').toUpperCase().includes('ENCARGO') ||
+        String(plazaModal.situacion_administrativa || '').toUpperCase().includes('ENCARGO') ||
+        Boolean(plazaModal.id_escalera)
+      )
     );
 
-    const encargoCedulaLimpia = tieneEncargoReal && plazaModal.encargo_cedula
-      ? String(plazaModal.encargo_cedula).replace(/\D/g, '')
-      : '';
+    // Condición de provisionalidad
+    const esProvisionalActivo = Boolean(tieneServidorActivo && esProvisionalModal);
 
-    // Buscar en todoElPerno por cédula estricta
+    // Condición de nombramiento ordinario
+    const esOrdinarioActivo = Boolean(
+      tieneServidorActivo &&
+      !esEncargoActivo &&
+      !esProvisionalActivo &&
+      (
+        String(plazaModal.tipo_vinculacion_cargo || '').toUpperCase().includes('ORDINARIO') ||
+        String(plazaModal.tipo_vinculacion_entidad || '').toUpperCase().includes('LIBRE') ||
+        String(plazaModal.situacion_administrativa || '').toUpperCase().includes('LIBRE')
+      )
+    );
+
+    // Buscar en todoElPerno por cédula
+    const pernoActivo = cedulaActiva
+      ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === cedulaActiva)
+      : (!esTitularVacante && titularCedulaLimpia
+          ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
+          : (plazaModal.id_perno ? todoElPerno.find((p) => Number(p.posicion_planta) === Number(plazaModal.id_perno)) : null));
+
     const pernoTitular = (!esTitularVacante && titularCedulaLimpia)
       ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
       : null;
 
-    const pernoEncargo = encargoCedulaLimpia
-      ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === encargoCedulaLimpia)
-      : null;
+    const pernoEncargo = esEncargoActivo ? pernoActivo : null;
 
-    const pernoProvisional = provisionalCedulaLimpia
-      ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === provisionalCedulaLimpia)
-      : null;
-
-    // Solo buscar por posición si la plaza NO tiene ninguna cédula y NO es vacante definitiva
-    const pernoPorPosicion = (!esTitularVacante && !titularCedulaLimpia && !encargoCedulaLimpia && !provisionalCedulaLimpia && plazaModal.id_perno)
-      ? todoElPerno.find((p) => Number(p.posicion_planta) === Number(plazaModal.id_perno))
-      : null;
-
-    // Servidor activo principal (el que desempeña el cargo)
-    const pernoActivo = tieneEncargoReal
-      ? (pernoEncargo || pernoTitular)
-      : (esProvisionalModal
-          ? (pernoProvisional || pernoPorPosicion)
-          : (esTitularVacante ? null : (pernoTitular || pernoPorPosicion)));
-
-    // Fechas de nacimiento reales (si el titular es vacante y no provisional, no asignar titular)
-    const fechaNacProvisional = esProvisionalModal ? (pernoProvisional?.fecha_nacimiento || plazaModal.fecha_nacimiento || null) : null;
+    // Fechas de nacimiento
+    const fechaNacActiva = pernoActivo?.fecha_nacimiento || (tieneServidorActivo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento || null) : null);
     const fechaNacTitular = esTitularVacante
       ? null
-      : (pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null));
-    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || null) : null;
-    const fechaNacActiva = tieneEncargoReal
-      ? (fechaNacEncargo || null)
-      : (esProvisionalModal
-          ? (fechaNacProvisional || null)
-          : (esTitularVacante ? null : (fechaNacTitular || null)));
+      : (pernoTitular?.fecha_nacimiento || (!esEncargoActivo && !esProvisionalActivo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null));
+    const fechaNacEncargo = esEncargoActivo ? fechaNacActiva : null;
 
-    // Edades calculadas desde la fecha de nacimiento oficial registrada en PERNO o BD
-    const edadProvisional = esProvisionalModal
-      ? (fechaNacProvisional ? calcEdad(fechaNacProvisional) : (plazaModal?.edad ? Number(plazaModal.edad) : null))
-      : null;
-
-    const edadTitular = esTitularVacante
-      ? null
-      : (fechaNacTitular
-          ? calcEdad(fechaNacTitular)
-          : (!tieneEncargoReal && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null));
-
-    const edadEncargo = tieneEncargoReal
-      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : null)
-      : null;
-
-    const edadActiva = tieneEncargoReal ? edadEncargo : (esProvisionalModal ? edadProvisional : (esTitularVacante ? null : edadTitular));
+    // Edades calculadas
+    const edadActiva = fechaNacActiva ? calcEdad(fechaNacActiva) : (tieneServidorActivo && plazaModal?.edad ? Number(plazaModal.edad) : null);
+    const edadTitular = esTitularVacante ? null : (fechaNacTitular ? calcEdad(fechaNacTitular) : (plazaModal?.edad ? Number(plazaModal.edad) : null));
+    const edadEncargo = esEncargoActivo ? edadActiva : null;
 
     // Manual de Funciones textual del Archivo de Planta Oficial (Columna AH: Páginas Manual de Funciones)
     const manualOficial =
@@ -1986,13 +1995,15 @@ export default function NominaScreen() {
 
     return {
       ...plazaModal,
+      nombre_activo: nombreActivo,
+      cedula_activa: cedulaActiva,
+      tiene_servidor_activo: tieneServidorActivo,
+      es_encargo_activo: esEncargoActivo,
+      es_provisional_activo: esProvisionalActivo,
+      es_ordinario_activo: esOrdinarioActivo,
       es_titular_vacante: esTitularVacante,
-      tipo_vinculacion_entidad: esTitularVacante
-        ? 'No aplica (Vacante Definitiva)'
-        : (plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null),
-      tipo_vinculacion_cargo: esTitularVacante
-        ? 'No aplica (Vacante)'
-        : (plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null),
+      tipo_vinculacion_entidad: plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || (pernoActivo as any)?.tipo_vinculacion || pernoActivo?.tipo_funcionario || (esTitularVacante ? 'No aplica (Vacante Definitiva)' : null),
+      tipo_vinculacion_cargo: plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
@@ -2017,17 +2028,13 @@ export default function NominaScreen() {
       fondo_cesantias: pernoActivo?.fondo_cesantias || plazaModal.fondo_cesantias || mockMatch?.fondo_cesantias || 'No reportado',
       telefono: pernoActivo?.telefono || plazaModal.telefono || mockMatch?.telefono || 'No registrado',
       direccion: pernoActivo?.direccion || plazaModal.direccion || mockMatch?.direccion || 'No registrada',
-      sexo: esTitularVacante ? (pernoActivo?.sexo || '---') : (pernoTitular?.sexo || pernoActivo?.sexo || plazaModal.sexo || mockMatch?.sexo || '---'),
-      tipo_funcionario: esTitularVacante ? 'EMPLEO VACANTE' : (pernoTitular?.tipo_funcionario || pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA'),
-      acto_nombramiento: esTitularVacante
-        ? 'No aplica (Vacante)'
-        : (pernoTitular?.acto_nombramiento || plazaModal.acto_nombramiento || mockMatch?.acto_nombramiento || plazaModal.numero_acto_nombramiento || 'Resolución institucional'),
-      numero_acto_nombramiento: esTitularVacante
-        ? '---'
-        : (pernoTitular?.numero_acto_nombramiento || plazaModal.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---'),
-      fecha_acto_nombramiento: esTitularVacante
-        ? null
-        : (pernoTitular?.fecha_acto_nombramiento || plazaModal.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null),
+      sexo: pernoActivo?.sexo || pernoTitular?.sexo || plazaModal.sexo || mockMatch?.sexo || '---',
+      tipo_funcionario: tieneServidorActivo
+        ? (pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA')
+        : 'EMPLEO VACANTE',
+      acto_nombramiento: pernoActivo?.acto_nombramiento || pernoTitular?.acto_nombramiento || plazaModal.acto_nombramiento || mockMatch?.acto_nombramiento || plazaModal.numero_acto_nombramiento || (tieneServidorActivo ? 'Resolución institucional' : 'No aplica (Vacante)'),
+      numero_acto_nombramiento: pernoActivo?.numero_acto_nombramiento || pernoTitular?.numero_acto_nombramiento || plazaModal.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---',
+      fecha_acto_nombramiento: pernoActivo?.fecha_acto_nombramiento || pernoTitular?.fecha_acto_nombramiento || plazaModal.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null,
       numero_acto_encargo:
         pernoEncargo?.numero_acto_encargo ||
         (plazaModal as any)?.numero_acto_encargo ||
@@ -2046,20 +2053,18 @@ export default function NominaScreen() {
         (mockMatch as any)?.fecha_efectiva_encargo ||
         pernoActivo?.fecha_efectiva_encargo ||
         null,
-      fecha_ingreso_entidad: (esTitularVacante && !tieneEncargoReal)
-        ? null
-        : (pernoTitular?.fecha_ingreso_entidad ||
-           pernoActivo?.fecha_ingreso_entidad ||
-           (plazaModal as any).fecha_ingreso_entidad ||
-           mockMatch?.fecha_ingreso_entidad ||
-           null),
-      fecha_ingreso_distrito: (esTitularVacante && !tieneEncargoReal)
-        ? null
-        : (pernoTitular?.fecha_ingreso_distrito ||
-           pernoActivo?.fecha_ingreso_distrito ||
-           (plazaModal as any).fecha_ingreso_distrito ||
-           mockMatch?.fecha_ingreso_distrito ||
-           null),
+      fecha_ingreso_entidad:
+        pernoActivo?.fecha_ingreso_entidad ||
+        pernoTitular?.fecha_ingreso_entidad ||
+        (plazaModal as any).fecha_ingreso_entidad ||
+        mockMatch?.fecha_ingreso_entidad ||
+        null,
+      fecha_ingreso_distrito:
+        pernoActivo?.fecha_ingreso_distrito ||
+        pernoTitular?.fecha_ingreso_distrito ||
+        (plazaModal as any).fecha_ingreso_distrito ||
+        mockMatch?.fecha_ingreso_distrito ||
+        null,
       total_devengado:
         pernoActivo?.total_devengado ||
         plazaModal.total_devengado ||
@@ -2752,95 +2757,6 @@ export default function NominaScreen() {
       ),
     },
     {
-      id: 'titular',
-      label: 'Titular del Empleo',
-      width: '15%',
-      minWidth: 175,
-      sortable: true,
-      getSortValue: (p) => {
-        if (!p) return '';
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const titularNombre = String(p.titular_nombre || '').trim();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
-        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
-        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
-        return p.titular_nombre || '';
-      },
-      render: (p) => {
-        if (!p) return null;
-        const nombreTitular = String(p.titular_nombre || '').trim();
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
-
-        const esProvisional = Boolean(
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
-
-        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-
-        const esVacanteDefinitiva = Boolean(
-          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
-          !nombreTitular ||
-          nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
-          nombreTitular.toUpperCase().includes('VACANTE') ||
-          titularEsProvisional
-        );
-
-        if (esVacanteDefinitiva) {
-          return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '100%', overflow: 'hidden' }}>
-              <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
-                VACANTE DEFINITIVA
-              </Text>
-            </View>
-          );
-        }
-
-        return (
-          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
-              {p.titular_nombre || 'Servidor Titular'}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
-                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
-                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
-              </Text>
-              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
-                <Pressable
-                  onPress={() => {
-                    setPlazaModal(p);
-                    setModalTab('escalera');
-                  }}
-                  style={{
-                    backgroundColor: '#FEF3C7',
-                    borderColor: '#F59E0B',
-                    borderWidth: 1,
-                    paddingHorizontal: 4,
-                    paddingVertical: 0.5,
-                    borderRadius: 3,
-                    flexShrink: 0,
-                  }}
-                >
-                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
-                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        );
-      },
-    },
-    {
       id: 'encargo',
       label: 'Servidor Activo',
       width: '16%',
@@ -2980,6 +2896,95 @@ export default function NominaScreen() {
                 >
                   • {tipoVinculacionCargo}
                 </Text>
+              ) : null}
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      id: 'titular',
+      label: 'Titular del Empleo',
+      width: '15%',
+      minWidth: 175,
+      sortable: true,
+      getSortValue: (p) => {
+        if (!p) return '';
+        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const titularNombre = String(p.titular_nombre || '').trim();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
+        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
+        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
+        return p.titular_nombre || '';
+      },
+      render: (p) => {
+        if (!p) return null;
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
+        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
+
+        const esProvisional = Boolean(
+          tipoVincCargoNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
+          situacionAdminNorm.includes('PROVISIONAL') ||
+          Boolean(p.pv)
+        );
+
+        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+
+        const esVacanteDefinitiva = Boolean(
+          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
+          !nombreTitular ||
+          nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
+          nombreTitular.toUpperCase().includes('VACANTE') ||
+          titularEsProvisional
+        );
+
+        if (esVacanteDefinitiva) {
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '100%', overflow: 'hidden' }}>
+              <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
+                VACANTE DEFINITIVA
+              </Text>
+            </View>
+          );
+        }
+
+        return (
+          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
+              {p.titular_nombre || 'Servidor Titular'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
+                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
+              </Text>
+              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
+                <Pressable
+                  onPress={() => {
+                    setPlazaModal(p);
+                    setModalTab('escalera');
+                  }}
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    paddingHorizontal: 4,
+                    paddingVertical: 0.5,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
+                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
+                  </Text>
+                </Pressable>
               ) : null}
             </View>
           </View>
@@ -3133,93 +3138,6 @@ export default function NominaScreen() {
       ),
     },
     {
-      label: 'Titular del Empleo',
-      proportion: 16,
-      minWidth: 180,
-      sortValue: (p) => {
-        if (!p) return '';
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const titularNombre = String(p.titular_nombre || '').trim();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
-        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
-        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
-        return p.titular_nombre || '';
-      },
-      render: (p) => {
-        if (!p) return null;
-        const nombreTitular = String(p.titular_nombre || '').trim();
-        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
-        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
-        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
-        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
-
-        const esProvisional = Boolean(
-          tipoVincCargoNorm.includes('PROVISIONAL') ||
-          tipoVincNorm.includes('PROVISIONAL') ||
-          situacionAdminNorm.includes('PROVISIONAL') ||
-          Boolean(p.pv)
-        );
-
-        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
-
-        const esVacanteDefinitiva = Boolean(
-          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
-          !nombreTitular ||
-          nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
-          nombreTitular.toUpperCase().includes('VACANTE') ||
-          titularEsProvisional
-        );
-
-        if (esVacanteDefinitiva) {
-          return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '100%', overflow: 'hidden' }}>
-              <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
-                VACANTE DEFINITIVA
-              </Text>
-            </View>
-          );
-        }
-
-        return (
-          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
-              {p.titular_nombre || 'Servidor Titular'}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
-                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
-                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
-              </Text>
-              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
-                <Pressable
-                  onPress={() => {
-                    setPlazaModal(p);
-                    setModalTab('escalera');
-                  }}
-                  style={{
-                    backgroundColor: '#FEF3C7',
-                    borderColor: '#F59E0B',
-                    borderWidth: 1,
-                    paddingHorizontal: 4,
-                    paddingVertical: 0.5,
-                    borderRadius: 3,
-                    flexShrink: 0,
-                  }}
-                >
-                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
-                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        );
-      },
-    },
-    {
       label: 'Servidor Activo',
       proportion: 16,
       minWidth: 185,
@@ -3357,6 +3275,93 @@ export default function NominaScreen() {
                 >
                   • {tipoVinculacionCargo}
                 </Text>
+              ) : null}
+            </View>
+          </View>
+        );
+      },
+    },
+    {
+      label: 'Titular del Empleo',
+      proportion: 16,
+      minWidth: 180,
+      sortValue: (p) => {
+        if (!p) return '';
+        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const titularNombre = String(p.titular_nombre || '').trim();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const esProv = tipoVincCargoNorm.includes('PROVISIONAL') || String(p.tipo_vinculacion || '').toUpperCase().includes('PROVISIONAL') || Boolean(p.pv);
+        const titularEsProv = situacionTitularNorm.includes('PROVISIONAL') || (esProv && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+        const esVacanteDefinitiva = situacionTitularNorm === 'VACANTE DEFINITIVA' || titularNombre === 'VACANTE DEFINITIVA' || !titularNombre || titularEsProv;
+        if (esVacanteDefinitiva) return 'VACANTE DEFINITIVA';
+        return p.titular_nombre || '';
+      },
+      render: (p) => {
+        if (!p) return null;
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const situacionTitularNorm = String(p.situacion_titular || '').toUpperCase();
+        const tipoVincCargoNorm = String(p.tipo_vinculacion_cargo || '').toUpperCase();
+        const tipoVincNorm = String(p.tipo_vinculacion || '').toUpperCase();
+        const situacionAdminNorm = String(p.situacion_administrativa || '').toUpperCase();
+
+        const esProvisional = Boolean(
+          tipoVincCargoNorm.includes('PROVISIONAL') ||
+          tipoVincNorm.includes('PROVISIONAL') ||
+          situacionAdminNorm.includes('PROVISIONAL') ||
+          Boolean(p.pv)
+        );
+
+        const titularEsProvisional = situacionTitularNorm.includes('PROVISIONAL') || (esProvisional && (!situacionTitularNorm || situacionTitularNorm === 'PROVISIONALIDAD'));
+
+        const esVacanteDefinitiva = Boolean(
+          situacionTitularNorm === 'VACANTE DEFINITIVA' ||
+          !nombreTitular ||
+          nombreTitular.toUpperCase() === 'VACANTE DEFINITIVA' ||
+          nombreTitular.toUpperCase().includes('VACANTE') ||
+          titularEsProvisional
+        );
+
+        if (esVacanteDefinitiva) {
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '100%', overflow: 'hidden' }}>
+              <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
+                VACANTE DEFINITIVA
+              </Text>
+            </View>
+          );
+        }
+
+        return (
+          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
+              {p.titular_nombre || 'Servidor Titular'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500, flexShrink: 1 }}>
+                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+                {cleanLabel(p.situacion_titular, p.tipo_vinculacion_entidad || p.tipo_vinculacion || 'En Propiedad')}
+              </Text>
+              {situacionTitularNorm.includes('ENCARGO') && p.id_escalera ? (
+                <Pressable
+                  onPress={() => {
+                    setPlazaModal(p);
+                    setModalTab('escalera');
+                  }}
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    paddingHorizontal: 4,
+                    paddingVertical: 0.5,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#92400E' }}>
+                    🪜 {p.id_escalera}{p.peldano_escalera ? ` #${p.peldano_escalera}` : ''}
+                  </Text>
+                </Pressable>
               ) : null}
             </View>
           </View>
@@ -10268,15 +10273,27 @@ export default function NominaScreen() {
                     2. Servidores Públicos Asignados (Encargo y Titularidad)
                   </Text>
 
-                  {plazaModal?.es_encargo || (plazaModal?.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ? (
+                  {plazaModalEnriquecida?.tiene_servidor_activo ? (
                     <View style={{ gap: 12, marginBottom: 20 }}>
-                      {/* BLOQUE 1: SERVIDOR EN ENCARGO (PRIMERO) */}
+                      {/* BLOQUE 1: SERVIDOR ACTIVO QUE DESEMPEÑA LA PLAZA (PRIMERO) */}
                       <View
                         style={{
-                          backgroundColor: '#FFFBEB',
+                          backgroundColor: plazaModalEnriquecida.es_encargo_activo
+                            ? '#FFFBEB'
+                            : plazaModalEnriquecida.es_provisional_activo
+                            ? '#EFF6FF'
+                            : plazaModalEnriquecida.es_ordinario_activo
+                            ? '#EEF2FF'
+                            : '#F0FDF4',
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: '#FDE68A',
+                          borderColor: plazaModalEnriquecida.es_encargo_activo
+                            ? '#FDE68A'
+                            : plazaModalEnriquecida.es_provisional_activo
+                            ? '#BFDBFE'
+                            : plazaModalEnriquecida.es_ordinario_activo
+                            ? '#C7D2FE'
+                            : '#BBF7D0',
                           padding: 14,
                         }}
                       >
@@ -10284,72 +10301,176 @@ export default function NominaScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <View
                               style={{
-                                backgroundColor: '#F59E0B',
+                                backgroundColor: plazaModalEnriquecida.es_encargo_activo
+                                  ? '#F59E0B'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? '#3B82F6'
+                                  : plazaModalEnriquecida.es_ordinario_activo
+                                  ? '#6366F1'
+                                  : '#059669',
                                 paddingHorizontal: 6,
                                 paddingVertical: 2,
                                 borderRadius: 4,
                               }}
                             >
                               <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
-                                PRIMERO: ENCARGADO(A)
+                                {plazaModalEnriquecida.es_encargo_activo
+                                  ? 'PRIMERO: ENCARGADO(A)'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? 'PRIMERO: EN PROVISIONALIDAD'
+                                  : plazaModalEnriquecida.es_ordinario_activo
+                                  ? 'PRIMERO: NOMBRAMIENTO ORDINARIO (LNR)'
+                                  : 'PRIMERO: SERVIDOR ACTIVO'}
                               </Text>
                             </View>
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400E' }}>
-                              Servidor desempeñando actualmente la plaza
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: '600',
+                                color: plazaModalEnriquecida.es_encargo_activo
+                                  ? '#92400E'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? '#1E40AF'
+                                  : plazaModalEnriquecida.es_ordinario_activo
+                                  ? '#4338CA'
+                                  : '#065F46',
+                              }}
+                            >
+                              {plazaModalEnriquecida.es_encargo_activo
+                                ? 'Servidor desempeñando actualmente la plaza en encargo'
+                                : plazaModalEnriquecida.es_provisional_activo
+                                ? 'Servidor desempeñando la plaza en provisionalidad'
+                                : plazaModalEnriquecida.es_ordinario_activo
+                                ? 'Servidor desempeñando la plaza por nombramiento ordinario'
+                                : 'Servidor vinculado desempeñando activamente el cargo'}
                             </Text>
                           </View>
-                          <Ionicons name="swap-horizontal" size={16} color="#B45309" />
+                          <Ionicons
+                            name={plazaModalEnriquecida.es_encargo_activo ? 'swap-horizontal' : 'person-circle-outline'}
+                            size={16}
+                            color={
+                              plazaModalEnriquecida.es_encargo_activo
+                                ? '#B45309'
+                                : plazaModalEnriquecida.es_provisional_activo
+                                ? '#1D4ED8'
+                                : plazaModalEnriquecida.es_ordinario_activo
+                                ? '#4F46E5'
+                                : '#047857'
+                            }
+                          />
                         </View>
 
                         <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                          {plazaModal.encargo_nombre}
+                          {plazaModalEnriquecida.nombre_activo}
                         </Text>
 
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
                           <View>
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModal.encargo_cedula ? `C.C. ${plazaModal.encargo_cedula}` : 'No registrada'}
+                              {plazaModalEnriquecida.cedula_activa ? `C.C. ${plazaModalEnriquecida.cedula_activa}` : 'No registrada'}
                             </Text>
                           </View>
 
                           <View>
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309' }}>
-                                {plazaModalEnriquecida?.edad_encargo ? `${plazaModalEnriquecida.edad_encargo} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : 'No registrada')}
+                              <Text
+                                style={{
+                                  fontSize: 12.5,
+                                  fontWeight: '700',
+                                  color: plazaModalEnriquecida.es_encargo_activo
+                                    ? '#B45309'
+                                    : plazaModalEnriquecida.es_provisional_activo
+                                    ? '#1E40AF'
+                                    : THEME.slate800,
+                                }}
+                              >
+                                {plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : 'No registrada'}
                               </Text>
-                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#92400E' }}>PERNO</Text>
-                              </View>
+                              {plazaModalEnriquecida?.fecha_nacimiento_activa ? (
+                                <View
+                                  style={{
+                                    backgroundColor: plazaModalEnriquecida.es_encargo_activo
+                                      ? '#FEF3C7'
+                                      : plazaModalEnriquecida.es_provisional_activo
+                                      ? '#DBEAFE'
+                                      : THEME.slate200,
+                                    paddingHorizontal: 5,
+                                    paddingVertical: 1,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '700',
+                                      color: plazaModalEnriquecida.es_encargo_activo
+                                        ? '#92400E'
+                                        : plazaModalEnriquecida.es_provisional_activo
+                                        ? '#1E40AF'
+                                        : THEME.slate700,
+                                    }}
+                                  >
+                                    PERNO
+                                  </Text>
+                                </View>
+                              ) : null}
                             </View>
-                            {plazaModalEnriquecida?.fecha_nacimiento_encargo ? (
+                            {plazaModalEnriquecida?.fecha_nacimiento_activa ? (
                               <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_encargo)}
+                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_activa)}
                               </Text>
                             ) : null}
                           </View>
 
                           <View>
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#B45309', marginTop: 1 }}>
-                              {cleanLabel(plazaModal.situacion_administrativa, 'ENCARGO')}
+                            <Text
+                              style={{
+                                fontSize: 12.5,
+                                fontWeight: '600',
+                                color: plazaModalEnriquecida.es_encargo_activo
+                                  ? '#B45309'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? '#1E40AF'
+                                  : THEME.slate800,
+                                marginTop: 1,
+                              }}
+                            >
+                              {cleanLabel(
+                                plazaModal.situacion_administrativa,
+                                plazaModalEnriquecida.es_encargo_activo
+                                  ? 'ENCARGO'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? 'PROVISIONALIDAD'
+                                  : 'ACTIVO'
+                              )}
                             </Text>
                           </View>
 
                           <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación</Text>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo / SIDEAP</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModal.tipo_vinculacion || 'Planta'}
+                              {plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || 'Planta'}
                             </Text>
                           </View>
 
                           <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Encargo (Col. AN)</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309', marginTop: 1 }}>
-                              {plazaModalEnriquecida?.numero_acto_encargo ? `Acto #${plazaModalEnriquecida.numero_acto_encargo}` : '---'}
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación Entidad</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModal.tipo_vinculacion_entidad || plazaModal.tipo_vinculacion || 'Planta'}
                             </Text>
                           </View>
+
+                          {plazaModalEnriquecida?.numero_acto_encargo ? (
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Encargo (Col. AN)</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309', marginTop: 1 }}>
+                                {`Acto #${plazaModalEnriquecida.numero_acto_encargo}`}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                       </View>
 
@@ -10384,7 +10505,7 @@ export default function NominaScreen() {
                             </Text>
                           </View>
                           <Ionicons
-                            name={plazaModalEnriquecida?.es_titular_vacante ? "information-circle-outline" : "ribbon-outline"}
+                            name={plazaModalEnriquecida?.es_titular_vacante ? 'information-circle-outline' : 'ribbon-outline'}
                             size={16}
                             color={THEME.slate500}
                           />
@@ -10413,14 +10534,22 @@ export default function NominaScreen() {
                             <View>
                               <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Provisión</Text>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                                Provista transitoriamente por encargo
+                                {plazaModalEnriquecida.es_encargo_activo
+                                  ? 'Provista transitoriamente por encargo'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? 'Provista transitoriamente mediante nombramiento en provisionalidad'
+                                  : 'Provista transitoriamente por nombramiento'}
                               </Text>
                             </View>
 
                             <View>
                               <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                                Empleo en vacancia definitiva provisto por servidor encargado
+                                {plazaModalEnriquecida.es_encargo_activo
+                                  ? 'Empleo en vacancia definitiva provisto por servidor encargado'
+                                  : plazaModalEnriquecida.es_provisional_activo
+                                  ? 'Empleo de carrera en vacancia definitiva provisto en provisionalidad'
+                                  : 'Empleo en vacancia definitiva desempeñado por servidor activo'}
                               </Text>
                             </View>
                           </View>
@@ -10485,7 +10614,7 @@ export default function NominaScreen() {
                             <View>
                               <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                                Plaza en encargo activo
+                                Plaza en desempeño activo
                               </Text>
                             </View>
                           </View>
@@ -10493,7 +10622,7 @@ export default function NominaScreen() {
                       </View>
                     </View>
                   ) : (
-                    /* CUANDO NO HAY ENCARGO (TITULAR DIRECTO O VACANTE) */
+                    /* CUANDO LA PLAZA NO TIENE SERVIDOR ACTIVO NI TITULAR (DESOCUPADA / VACANTE DEFINITIVA TOTAL) */
                     <View
                       style={{
                         backgroundColor: THEME.slate50,
@@ -10509,163 +10638,40 @@ export default function NominaScreen() {
                     >
                       <View style={{ width: '100%' }}>
                         <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                          {plazaModalEnriquecida?.es_provisional
-                            ? 'Servidor Activo en Provisionalidad'
-                            : (plazaModalEnriquecida?.es_titular_vacante ? 'Estado de la Plaza' : 'Servidor Titular Vinculado')}
+                          Estado de la Plaza
                         </Text>
                         <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.es_provisional
-                            ? (plazaModal?.titular_nombre || 'Servidor Provisional')
-                            : (plazaModalEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaModal?.titular_nombre || 'Plaza actualmente Vacante'))}
+                          VACANTE DEFINITIVA
                         </Text>
                       </View>
 
-                      {plazaModalEnriquecida?.es_provisional ? (
-                        <>
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
-                            </Text>
-                          </View>
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
+                          No aplica (Plaza Vacante)
+                        </Text>
+                      </View>
 
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>
-                                {plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : (plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : '---')}
-                              </Text>
-                              {(plazaModalEnriquecida?.edad_activa || plazaModalEnriquecida?.edad_titular) ? (
-                                <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#92400E' }}>PERNO</Text>
-                                </View>
-                              ) : null}
-                            </View>
-                            {(plazaModalEnriquecida?.fecha_nacimiento_activa || plazaModalEnriquecida?.fecha_nacimiento_titular) ? (
-                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_activa || plazaModalEnriquecida.fecha_nacimiento_titular)}
-                              </Text>
-                            ) : null}
-                          </View>
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, marginTop: 2 }}>
+                          VACANTE DEFINITIVA
+                        </Text>
+                      </View>
 
-                          <View style={{ flex: 1, minWidth: 150 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309', marginTop: 2 }}>
-                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion_cargo || 'EN PROVISIONALIDAD'}
-                            </Text>
-                          </View>
+                      <View style={{ flex: 1, minWidth: 150 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Disponibilidad</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          Disponible para provisión definitiva o encargo
+                        </Text>
+                      </View>
 
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {cleanLabel(plazaModal?.situacion_administrativa, 'PROVISIONALIDAD')}
-                            </Text>
-                          </View>
-
-                          <View style={{ width: '100%', backgroundColor: '#EFF6FF', borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE', padding: 10, marginTop: 6 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                              <Ionicons name="information-circle" size={14} color="#1E40AF" />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', textTransform: 'uppercase' }}>
-                                Titularidad del Empleo (Columna O)
-                              </Text>
-                            </View>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.roseText }}>
-                              VACANTE DEFINITIVA
-                            </Text>
-                            <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 1 }}>
-                              Empleo de carrera en vacancia definitiva provisto transitoriamente mediante nombramiento en provisionalidad.
-                            </Text>
-                          </View>
-                        </>
-                      ) : plazaModalEnriquecida?.es_titular_vacante ? (
-                        <>
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
-                              No aplica (Plaza Vacante)
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, marginTop: 2 }}>
-                              VACANTE DEFINITIVA
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 150 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Disponibilidad</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              Disponible para provisión definitiva o encargo
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 150 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nombramiento</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
-                              Sin titular nombrado
-                            </Text>
-                          </View>
-                        </>
-                      ) : (
-                        <>
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
-                                {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---')}
-                              </Text>
-                              {(plazaModalEnriquecida?.edad_titular || plazaModalEnriquecida?.edad_activa) ? (
-                                <View style={{ backgroundColor: THEME.marca50, borderColor: THEME.marca100, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>PERNO</Text>
-                                </View>
-                              ) : null}
-                            </View>
-                            {(plazaModalEnriquecida?.fecha_nacimiento_titular || plazaModalEnriquecida?.fecha_nacimiento_activa) ? (
-                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular || plazaModalEnriquecida.fecha_nacimiento_activa)}
-                              </Text>
-                            ) : null}
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 150 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal?.tipo_vinculacion_entidad || '---'}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 150 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion || '---'}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                              {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, minWidth: 140 }}>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
-                              {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
-                                ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
-                                : (plazaModalEnriquecida?.acto_nombramiento || '---')}
-                            </Text>
-                          </View>
-                        </>
-                      )}
+                      <View style={{ flex: 1, minWidth: 150 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nombramiento</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
+                          Sin titular nombrado
+                        </Text>
+                      </View>
                     </View>
                   )}
 

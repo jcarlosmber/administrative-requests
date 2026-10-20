@@ -12816,6 +12816,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </Text>
                                                     </View>
 
+                                                    {tieneFecha && (
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: '#FFFFFF',
+                                                          borderColor: '#86EFAC',
+                                                          borderWidth: 1,
+                                                          paddingHorizontal: 6,
+                                                          paddingVertical: 1.5,
+                                                          borderRadius: 4,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 3.5,
+                                                        }}
+                                                      >
+                                                        <Ionicons name="calendar-outline" size={11} color="#15803D" />
+                                                        <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#166534' }}>
+                                                          {req.fecha_cumplimiento}
+                                                        </Text>
+                                                      </View>
+                                                    )}
+
                                                     {req.codigoFormato && (
                                                       <View
                                                         style={{
@@ -12882,11 +12903,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               </View>
                                             </View>
 
-                                            {/* Fila Secundaria: Lo Importante (Radicado, Fecha, Soportes, Observaciones, Responsable) */}
+                                            {/* Fila Secundaria: Soportes visibles y seleccionables, Radicado y Observaciones a la izquierda; Responsable al lado derecho */}
                                             <View
                                               style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
+                                                justifyContent: 'space-between',
                                                 gap: 8,
                                                 flexWrap: 'wrap',
                                                 paddingTop: 6,
@@ -12894,102 +12916,132 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 borderTopColor: '#ECFDF5',
                                               }}
                                             >
-                                              {tieneRadicado && (
-                                                <View
-                                                  style={{
-                                                    backgroundColor: '#FFFFFF',
-                                                    borderWidth: 1,
-                                                    borderColor: '#BBF7D0',
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                  }}
-                                                >
-                                                  <Ionicons name="barcode-outline" size={11} color="#15803D" />
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#166534' }}>
-                                                    Rad: {req.radicadoSoporte}
-                                                  </Text>
-                                                </View>
-                                              )}
-
-                                              {tieneFecha && (
-                                                <View
-                                                  style={{
-                                                    backgroundColor: '#FFFFFF',
-                                                    borderWidth: 1,
-                                                    borderColor: '#BBF7D0',
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                  }}
-                                                >
-                                                  <Ionicons name="calendar-outline" size={11} color="#16A34A" />
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '600', color: '#166534' }}>
-                                                    {req.fecha_cumplimiento}
-                                                  </Text>
-                                                </View>
-                                              )}
-
-                                              {tieneDocumentos && (
-                                                <View
-                                                  style={{
-                                                    backgroundColor: '#EFF6FF',
-                                                    borderColor: '#BFDBFE',
-                                                    borderWidth: 1,
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                  }}
-                                                >
-                                                  <Ionicons name="attach" size={11} color="#2563EB" />
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1E40AF' }}>
-                                                    {cantDocs} soporte{cantDocs > 1 ? 's' : ''}
-                                                  </Text>
-                                                </View>
-                                              )}
-
+                                              {/* Lado izquierdo: Radicado, Soportes visibles y seleccionables, Observaciones */}
                                               <View
                                                 style={{
-                                                  backgroundColor: '#F1F5F9',
-                                                  borderWidth: 1,
-                                                  borderColor: '#E2E8F0',
-                                                  paddingHorizontal: 7,
-                                                  paddingVertical: 2,
-                                                  borderRadius: 4,
                                                   flexDirection: 'row',
                                                   alignItems: 'center',
-                                                  gap: 4,
+                                                  gap: 6,
+                                                  flexWrap: 'wrap',
+                                                  flex: 1,
+                                                  minWidth: 200,
                                                 }}
                                               >
-                                                <Ionicons name="person-circle-outline" size={11} color="#64748B" />
-                                                <Text style={{ fontSize: 10, fontWeight: '600', color: '#475569' }}>
-                                                  Resp: {respReq}
-                                                </Text>
+                                                {tieneRadicado && (
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#FFFFFF',
+                                                      borderWidth: 1,
+                                                      borderColor: '#BBF7D0',
+                                                      paddingHorizontal: 7,
+                                                      paddingVertical: 2.5,
+                                                      borderRadius: 4,
+                                                      flexDirection: 'row',
+                                                      alignItems: 'center',
+                                                      gap: 4,
+                                                    }}
+                                                  >
+                                                    <Ionicons name="barcode-outline" size={11} color="#15803D" />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#166534' }}>
+                                                      Rad: {req.radicadoSoporte}
+                                                    </Text>
+                                                  </View>
+                                                )}
+
+                                                {/* Soportes visibles y seleccionables individuales (clic para ver/descargar) */}
+                                                {tieneDocumentos && (
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    {req.documentosAdjuntos!.map((doc) => {
+                                                      const ext = (doc.nombre.split('.').pop() || '').toLowerCase();
+                                                      const esPdf = ext === 'pdf';
+                                                      const esExcel = ext === 'xls' || ext === 'xlsx';
+                                                      const esWord = ext === 'doc' || ext === 'docx';
+                                                      const colorIcono = esPdf ? '#DC2626' : esExcel ? '#16A34A' : esWord ? '#2563EB' : '#0284C7';
+                                                      const colorBg = esPdf ? '#FEF2F2' : esExcel ? '#F0FDF4' : esWord ? '#EFF6FF' : '#F0F9FF';
+                                                      const colorBorder = esPdf ? '#FECACA' : esExcel ? '#BBF7D0' : esWord ? '#BFDBFE' : '#BAE6FD';
+                                                      const iconName: any = esPdf ? 'document-text' : esExcel ? 'grid' : esWord ? 'document' : 'attach';
+
+                                                      return (
+                                                        <Pressable
+                                                          key={doc.id}
+                                                          onPress={() => handleAbrirArchivoAdjunto(doc)}
+                                                          accessibilityLabel={`Visualizar soporte ${doc.nombre}`}
+                                                          style={({ pressed }) => ({
+                                                            backgroundColor: pressed ? '#E0F2FE' : colorBg,
+                                                            borderWidth: 1,
+                                                            borderColor: colorBorder,
+                                                            borderRadius: 5,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 3,
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            gap: 5,
+                                                            cursor: 'pointer',
+                                                            maxWidth: 240,
+                                                            shadowColor: '#000000',
+                                                            shadowOffset: { width: 0, height: 1 },
+                                                            shadowOpacity: 0.04,
+                                                            shadowRadius: 1,
+                                                            elevation: 1,
+                                                          })}
+                                                        >
+                                                          <Ionicons name={iconName} size={12} color={colorIcono} />
+                                                          <Text
+                                                            style={{
+                                                              fontSize: 10.5,
+                                                              fontWeight: '700',
+                                                              color: '#1E293B',
+                                                              flexShrink: 1,
+                                                            }}
+                                                            numberOfLines={1}
+                                                          >
+                                                            {doc.nombre}
+                                                          </Text>
+                                                          <Ionicons name="eye-outline" size={11} color="#0284C7" />
+                                                        </Pressable>
+                                                      );
+                                                    })}
+                                                  </View>
+                                                )}
+
+                                                {tieneObservaciones && (
+                                                  <Text
+                                                    style={{
+                                                      fontSize: 10.5,
+                                                      color: '#15803D',
+                                                      fontStyle: 'italic',
+                                                      flexShrink: 1,
+                                                      minWidth: 140,
+                                                    }}
+                                                    numberOfLines={1}
+                                                  >
+                                                    💬 "{req.observaciones}"
+                                                  </Text>
+                                                )}
                                               </View>
 
-                                              {tieneObservaciones && (
-                                                <Text
-                                                  style={{
-                                                    fontSize: 10.5,
-                                                    color: '#15803D',
-                                                    fontStyle: 'italic',
-                                                    flex: 1,
-                                                    minWidth: 160,
-                                                  }}
-                                                  numberOfLines={1}
-                                                >
-                                                  💬 "{req.observaciones}"
+                                              {/* Lado derecho: Label de Responsable */}
+                                              <View
+                                                style={{
+                                                  marginLeft: 'auto',
+                                                  backgroundColor: '#F8FAFC',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  paddingHorizontal: 8,
+                                                  paddingVertical: 3,
+                                                  borderRadius: 5,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4.5,
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <Ionicons name="person-circle-outline" size={12} color="#475569" />
+                                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
+                                                  Responsable:{' '}
+                                                  <Text style={{ fontWeight: '600', color: '#1E293B' }}>{respReq}</Text>
                                                 </Text>
-                                              )}
+                                              </View>
                                             </View>
                                           </View>
                                         );
