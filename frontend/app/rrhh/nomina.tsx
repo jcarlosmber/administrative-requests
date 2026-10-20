@@ -20,6 +20,7 @@ import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideC
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
+import { PremiumTable, ColumnConfig as PremiumColumnConfig } from '../../components/PremiumTable';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
@@ -2771,6 +2772,258 @@ export default function NominaScreen() {
     },
   ], []);
 
+  // Columnas adaptadas para el componente PremiumTable
+  const columnasPremium: PremiumColumnConfig<PlazaNomina>[] = useMemo(() => [
+    {
+      label: 'Plaza / SIEAP',
+      proportion: 7,
+      minWidth: 90,
+      sortValue: (p) => p.id_plaza,
+      render: (p) => (
+        <View style={{ paddingRight: 6 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+            #{p.id_plaza}
+          </Text>
+          <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+            SIEAP: <Text style={{ fontWeight: '600', color: THEME.marca700 }}>{p.id_sideap || '---'}</Text>
+          </Text>
+          {p.id_perno ? (
+            <Text style={{ fontSize: 9.5, color: '#92400E' }}>
+              PERNO: #{p.id_perno}
+            </Text>
+          ) : null}
+        </View>
+      ),
+    },
+    {
+      label: 'Cargo & Grado',
+      proportion: 18,
+      minWidth: 200,
+      sortValue: (p) => p.cargo || '',
+      render: (p) => (
+        <View style={{ paddingRight: 8 }}>
+          <Text numberOfLines={2} style={{ fontSize: 13, fontWeight: '600', color: THEME.marca700, lineHeight: 17 }}>
+            {p.cargo || 'Sin denominación'}
+          </Text>
+          <Text style={{ fontSize: 10.5, color: THEME.slate500, marginTop: 2 }}>
+            Cód. {p.codigo || '---'} • Gr. {p.grado || '00'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Nivel',
+      proportion: 8,
+      minWidth: 100,
+      sortValue: (p) => p.nivel || '',
+      render: (p) => renderBadgeNivel(p.nivel),
+    },
+    {
+      label: 'OPEC',
+      proportion: 8,
+      minWidth: 90,
+      sortValue: (p) => p.opec || '',
+      render: (p) => (
+        <View style={{ alignItems: 'flex-start', paddingRight: 6 }}>
+          {p.opec ? (
+            <View
+              style={{
+                backgroundColor: '#EEF2FF',
+                borderColor: '#C7D2FE',
+                borderWidth: 1,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#3730A3' }}>
+                {p.opec}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 11, color: THEME.slate400 }}>---</Text>
+          )}
+        </View>
+      ),
+    },
+    {
+      label: 'Dependencia',
+      proportion: 16,
+      minWidth: 180,
+      sortValue: (p) => p.dependencia_cargo || '',
+      render: (p) => (
+        <View style={{ paddingRight: 8 }}>
+          <Text numberOfLines={2} style={{ fontSize: 12, color: THEME.slate800, lineHeight: 16 }}>
+            {p.dependencia_cargo || 'Secretaría Jurídica Distrital'}
+          </Text>
+          {p.dependencia_funcional && p.dependencia_funcional !== p.dependencia_cargo ? (
+            <Text numberOfLines={1} style={{ fontSize: 10, color: THEME.slate400, marginTop: 1 }}>
+              Func: {p.dependencia_funcional}
+            </Text>
+          ) : null}
+        </View>
+      ),
+    },
+    {
+      label: 'Titular del Empleo',
+      proportion: 16,
+      minWidth: 180,
+      sortValue: (p) => p.titular_nombre || '',
+      render: (p) => {
+        const estadoNorm = (p.estado_cargo || '').toUpperCase();
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
+        if (esVacante) {
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
+              <Text style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
+                VACANTE DEFINITIVA (Sin titular)
+              </Text>
+            </View>
+          );
+        }
+        return (
+          <View style={{ gap: 2, paddingRight: 8 }}>
+            <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
+              {p.titular_nombre || 'Servidor Registrado'}
+            </Text>
+            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+              {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+              {cleanLabel(p.situacion_titular, p.tipo_vinculacion || 'En Propiedad')}
+            </Text>
+          </View>
+        );
+      },
+    },
+    {
+      label: 'Servidor Activo',
+      proportion: 14,
+      minWidth: 170,
+      sortValue: (p) => p.encargo_nombre || p.titular_nombre || '',
+      render: (p) => {
+        const estadoNorm = (p.estado_cargo || '').toUpperCase();
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
+        const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+        if (tieneEncargo && p.encargo_nombre) {
+          return (
+            <View style={{ gap: 2, paddingRight: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                <View
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#F59E0B',
+                    borderWidth: 1,
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text style={{ color: '#B45309', fontSize: 9, fontWeight: '700' }}>
+                    ENCARGADO(A)
+                  </Text>
+                </View>
+                {p.id_escalera ? (
+                  <Pressable
+                    onPress={() => {
+                      setPlazaModal(p);
+                      setModalTab('escalera');
+                    }}
+                    style={{
+                      backgroundColor: '#EEF2FF',
+                      borderColor: '#C7D2FE',
+                      borderWidth: 1,
+                      paddingHorizontal: 5,
+                      paddingVertical: 1,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: '#4338CA', fontSize: 9, fontWeight: '800' }}>
+                      🪜 {p.id_escalera} #{p.peldano_escalera || 1}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
+                  {p.encargo_nombre}
+                </Text>
+              </View>
+              {p.encargo_cedula ? (
+                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                  C.C. {p.encargo_cedula} • {cleanLabel(p.situacion_administrativa, 'Encargo')}
+                </Text>
+              ) : null}
+            </View>
+          );
+        }
+        if (esVacante) {
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.roseText }} />
+              <Text style={{ fontSize: 11, color: THEME.roseText, fontStyle: 'italic' }}>
+                Sin encargo / Vacante
+              </Text>
+            </View>
+          );
+        }
+        return (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.slate300 }} />
+            <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+              Sin encargo / Titular activo
+            </Text>
+          </View>
+        );
+      },
+    },
+    {
+      label: 'Estado del Cargo',
+      proportion: 8,
+      minWidth: 110,
+      sortValue: (p) => p.estado_cargo || '',
+      render: (p) => renderBadgeEstado(p.estado_cargo),
+    },
+    {
+      label: 'Total Devengado',
+      proportion: 9,
+      minWidth: 125,
+      align: 'right',
+      sortValue: (p) => (Number(p.total_devengado) > 0 ? Number(p.total_devengado) : (Number(p.asignacion_basica) || 0)),
+      render: (p) => (
+        <View style={{ alignItems: 'flex-end', paddingRight: 6 }}>
+          <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900 }}>
+            {formatearDinero(Number(p.total_devengado) > 0 ? p.total_devengado : p.asignacion_basica)}
+          </Text>
+          <Text style={{ fontSize: 9.5, color: THEME.slate400 }}>COP / Mes</Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Ficha',
+      proportion: 5,
+      minWidth: 65,
+      align: 'center',
+      render: (p) => (
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 6,
+            backgroundColor: THEME.marca50,
+            borderWidth: 1,
+            borderColor: THEME.marca100,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          <Ionicons name="eye-outline" size={13} color={THEME.marca700} />
+          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.marca700 }}>Ver</Text>
+        </View>
+      ),
+    },
+  ], []);
+
   return (
     <View style={{ flex: 1, backgroundColor: THEME.slate50 }}>
       {/* Ocultar el Header nativo del Stack para evitar el doble header */}
@@ -4252,16 +4505,25 @@ export default function NominaScreen() {
                 </View>
               ) : modoVista === 'tabla' ? (
                 /* ============================================================== */
-                /* VISTA TABLA CON COMPONENTE DataTable REUTILIZABLE               */
+                /* VISTA TABLA CON COMPONENTE PremiumTable REUTILIZABLE           */
                 /* ============================================================== */
-                <DataTable
+                <PremiumTable
                   data={plazas}
-                  columns={columnasTabla}
-                  keyExtractor={(p) => String(p.id_plaza)}
-                  onRowPress={(p) => setPlazaModal(p)}
-                  emptyMessage="No se encontraron plazas con los filtros seleccionados"
-                  enableColumnReorder={true}
-                  enableSorting={true}
+                  columns={columnasPremium}
+                  rowKey={(p) => String(p.id_plaza)}
+                  onRowClick={(p) => setPlazaModal(p)}
+                  pageSize={25}
+                  variant="white"
+                  minTableWidth={1250}
+                  tituloTabla="Censo Oficial de Plazas de la Planta SJD"
+                  emptyState={
+                    <View style={{ padding: 40, alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="search-outline" size={32} color={THEME.slate400} />
+                      <Text style={{ fontSize: 13, color: THEME.slate600, fontWeight: '600' }}>
+                        No se encontraron plazas con los filtros seleccionados
+                      </Text>
+                    </View>
+                  }
                 />
               ) : (
                 /* ============================================================== */
