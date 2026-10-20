@@ -353,47 +353,30 @@ export default function NominaScreen() {
 
       const listadoEnriquecido = (listado || []).map((p: PlazaNomina) => {
         const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
-        const titularCed = p.titular_cedula ? String(p.titular_cedula).trim() : (m?.titular_cedula ? String(m.titular_cedula).trim() : null);
-        const titularEstaRetirado = titularCed ? pernoRetirados.has(titularCed) : false;
         const posPlanta = p.id_perno || m?.id_perno;
         const funcionarioActivo = posPlanta ? pernoActivosPorPos.get(posPlanta) : null;
 
-        let titularNombreFinal = p.titular_nombre || m?.titular_nombre || null;
-        let titularCedulaFinal = p.titular_cedula || m?.titular_cedula || null;
-        let estadoCargoFinal = p.estado_cargo || m?.estado_cargo || 'OCUPADO';
+        // La fuente de verdad para la titularidad, encargos y estado es la planta de personal oficial
+        const titularNombreFinal = p.titular_nombre !== undefined ? p.titular_nombre : (m?.titular_nombre || null);
+        const titularCedulaFinal = p.titular_cedula !== undefined ? p.titular_cedula : (m?.titular_cedula || null);
+        const estadoCargoFinal = p.estado_cargo || m?.estado_cargo || 'OCUPADO';
 
         const esVacanteDefinitiva = 
-          (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-          (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-          (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
-
-        if (esVacanteDefinitiva) {
-          titularNombreFinal = 'VACANTE DEFINITIVA';
-          titularCedulaFinal = null;
-          estadoCargoFinal = 'VACANTE DEFINITIVA';
-        } else if (titularEstaRetirado) {
-          if (funcionarioActivo) {
-            titularNombreFinal = funcionarioActivo.nombre_completo || `${funcionarioActivo.nombres} ${funcionarioActivo.primer_apellido}`;
-            titularCedulaFinal = funcionarioActivo.cedula;
-            estadoCargoFinal = 'OCUPADO';
-          } else {
-            titularNombreFinal = null;
-            titularCedulaFinal = null;
-            estadoCargoFinal = 'VACANTE DEFINITIVA';
-          }
-        }
+          (String(estadoCargoFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+          (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+          (String(p.situacion_titular || m?.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
         return {
           ...p,
-          titular_nombre: titularNombreFinal,
-          titular_cedula: titularCedulaFinal,
-          estado_cargo: estadoCargoFinal,
+          titular_nombre: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : titularNombreFinal,
+          titular_cedula: esVacanteDefinitiva ? null : titularCedulaFinal,
+          estado_cargo: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : estadoCargoFinal,
           id_escalera: esVacanteDefinitiva ? null : (p.id_escalera || m?.id_escalera || null),
           peldano_escalera: esVacanteDefinitiva ? null : (p.peldano_escalera || m?.peldano_escalera || null),
           encargo_cedula: esVacanteDefinitiva ? null : (p.encargo_cedula || m?.encargo_cedula || null),
           encargo_nombre: esVacanteDefinitiva ? null : (p.encargo_nombre || m?.encargo_nombre || null),
-          es_encargo: esVacanteDefinitiva ? false : (p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo),
-          opec: p.opec || m?.opec || null,
+          es_encargo: esVacanteDefinitiva ? false : (p.es_encargo !== undefined ? p.es_encargo : (m?.es_encargo ?? false)),
+          opec: p.opec !== undefined ? p.opec : (m?.opec || null),
           situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
           tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
           tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
@@ -2595,13 +2578,14 @@ export default function NominaScreen() {
       getSortValue: (p) => p.titular_nombre || '',
       render: (p) => {
         const estadoNorm = (p.estado_cargo || '').toUpperCase();
-        const esVacante = estadoNorm.includes('VACANTE') || (!p.titular_nombre && !p.encargo_nombre);
-        if (esVacante && !p.titular_nombre) {
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
+        if (esVacante) {
           return (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
-              <Text style={{ fontSize: 12, fontStyle: 'italic', color: THEME.roseText }}>
-                Vacante sin titular
+              <Text style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
+                VACANTE DEFINITIVA (Sin titular)
               </Text>
             </View>
           );
@@ -2621,14 +2605,17 @@ export default function NominaScreen() {
     },
     {
       id: 'encargo',
-      label: 'Servidor en Encargo',
+      label: 'Servidor Activo',
       width: '14%',
       minWidth: 160,
       sortable: true,
-      getSortValue: (p) => p.encargo_nombre || '',
+      getSortValue: (p) => p.encargo_nombre || p.titular_nombre || '',
       render: (p) => {
+        const estadoNorm = (p.estado_cargo || '').toUpperCase();
+        const nombreTitular = String(p.titular_nombre || '').trim();
+        const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
         const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
-        if (tieneEncargo) {
+        if (tieneEncargo && p.encargo_nombre) {
           return (
             <View style={{ gap: 2, paddingRight: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -2678,10 +2665,20 @@ export default function NominaScreen() {
             </View>
           );
         }
+        if (esVacante) {
+          return (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.roseText }} />
+              <Text style={{ fontSize: 11, color: THEME.roseText, fontStyle: 'italic' }}>
+                Sin encargo / Vacante
+              </Text>
+            </View>
+          );
+        }
         return (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.slate300 }} />
-            <Text style={{ fontSize: 11, color: THEME.slate400 }}>
+            <Text style={{ fontSize: 11, color: THEME.slate500 }}>
               Sin encargo / Titular activo
             </Text>
           </View>
@@ -2690,7 +2687,7 @@ export default function NominaScreen() {
     },
     {
       id: 'estado',
-      label: 'Estado',
+      label: 'Estado del Cargo',
       width: '8%',
       minWidth: 100,
       sortable: true,

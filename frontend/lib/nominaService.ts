@@ -469,15 +469,19 @@ export const nominaService = {
             const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
             const esVacDef = 
               (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-              (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA';
+              (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+              (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
             let plazaActual: PlazaNomina = {
               ...p,
+              titular_nombre: esVacDef ? 'VACANTE DEFINITIVA' : (p.titular_nombre || m?.titular_nombre || null),
+              titular_cedula: esVacDef ? null : (p.titular_cedula || m?.titular_cedula || null),
+              estado_cargo: esVacDef ? 'VACANTE DEFINITIVA' : (p.estado_cargo || m?.estado_cargo || 'OCUPADO'),
               id_escalera: esVacDef ? null : (p.id_escalera || m?.id_escalera || null),
               peldano_escalera: esVacDef ? null : (p.peldano_escalera || m?.peldano_escalera || null),
               encargo_cedula: esVacDef ? null : (p.encargo_cedula || m?.encargo_cedula || null),
               encargo_nombre: esVacDef ? null : (p.encargo_nombre || m?.encargo_nombre || null),
-              es_encargo: esVacDef ? false : (p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo),
+              es_encargo: esVacDef ? false : (p.es_encargo !== undefined ? p.es_encargo : (m?.es_encargo ?? false)),
               opec: p.opec || m?.opec || null,
               situacion_titular: esVacDef ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
               tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
