@@ -2624,11 +2624,11 @@ export default function NominaScreen() {
           );
         }
         return (
-          <View style={{ gap: 2, paddingRight: 8 }}>
-            <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
+          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
               {p.titular_nombre || 'Servidor Registrado'}
             </Text>
-            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500 }}>
               {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
               {cleanLabel(p.situacion_titular, p.tipo_vinculacion || 'En Propiedad')}
             </Text>
@@ -2640,7 +2640,7 @@ export default function NominaScreen() {
       id: 'encargo',
       label: 'Servidor Activo',
       width: '14%',
-      minWidth: 160,
+      minWidth: 170,
       sortable: true,
       getSortValue: (p) => p?.encargo_nombre || p?.titular_nombre || '',
       render: (p) => {
@@ -2651,8 +2651,8 @@ export default function NominaScreen() {
         const tieneEncargo = p?.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
         if (tieneEncargo && p.encargo_nombre) {
           return (
-            <View style={{ gap: 2, paddingRight: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
                 <View
                   style={{
                     backgroundColor: '#FEF3C7',
@@ -2661,6 +2661,7 @@ export default function NominaScreen() {
                     paddingHorizontal: 5,
                     paddingVertical: 1,
                     borderRadius: 4,
+                    flexShrink: 0,
                   }}
                 >
                   <Text style={{ color: '#B45309', fontSize: 9, fontWeight: '700' }}>
@@ -2680,6 +2681,7 @@ export default function NominaScreen() {
                       paddingHorizontal: 5,
                       paddingVertical: 1,
                       borderRadius: 4,
+                      flexShrink: 0,
                     }}
                   >
                     <Text style={{ color: '#4338CA', fontSize: 9, fontWeight: '800' }}>
@@ -2687,12 +2689,12 @@ export default function NominaScreen() {
                     </Text>
                   </Pressable>
                 ) : null}
-                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
                   {p.encargo_nombre}
                 </Text>
               </View>
               {p.encargo_cedula ? (
-                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10, color: THEME.slate500 }}>
                   C.C. {p.encargo_cedula} • {cleanLabel(p.situacion_administrativa, 'Encargo')}
                 </Text>
               ) : null}
@@ -2867,8 +2869,8 @@ export default function NominaScreen() {
     },
     {
       label: 'Titular del Empleo',
-      proportion: 16,
-      minWidth: 180,
+      proportion: 17,
+      minWidth: 195,
       sortValue: (p) => p.titular_nombre || '',
       render: (p) => {
         const estadoNorm = (p.estado_cargo || '').toUpperCase();
@@ -2876,20 +2878,20 @@ export default function NominaScreen() {
         const esVacante = estadoNorm.includes('VACANTE') || !nombreTitular || nombreTitular.toUpperCase().includes('VACANTE');
         if (esVacante) {
           return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, width: '100%', overflow: 'hidden' }}>
               <Ionicons name="ellipse-outline" size={10} color={THEME.roseText} />
-              <Text style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: '600', color: THEME.roseText }}>
                 VACANTE DEFINITIVA (Sin titular)
               </Text>
             </View>
           );
         }
         return (
-          <View style={{ gap: 2, paddingRight: 8 }}>
-            <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
+          <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
               {p.titular_nombre || 'Servidor Registrado'}
             </Text>
-            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: THEME.slate500 }}>
               {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
               {cleanLabel(p.situacion_titular, p.tipo_vinculacion || 'En Propiedad')}
             </Text>
@@ -2899,8 +2901,8 @@ export default function NominaScreen() {
     },
     {
       label: 'Servidor Activo',
-      proportion: 14,
-      minWidth: 170,
+      proportion: 15,
+      minWidth: 180,
       sortValue: (p) => p?.encargo_nombre || p?.titular_nombre || '',
       render: (p) => {
         if (!p) return null;
@@ -2910,8 +2912,8 @@ export default function NominaScreen() {
         const tieneEncargo = p?.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
         if (tieneEncargo && p.encargo_nombre) {
           return (
-            <View style={{ gap: 2, paddingRight: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <View style={{ gap: 2, paddingRight: 8, width: '100%', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
                 <View
                   style={{
                     backgroundColor: '#FEF3C7',
@@ -2920,6 +2922,7 @@ export default function NominaScreen() {
                     paddingHorizontal: 5,
                     paddingVertical: 1,
                     borderRadius: 4,
+                    flexShrink: 0,
                   }}
                 >
                   <Text style={{ color: '#B45309', fontSize: 9, fontWeight: '700' }}>
@@ -2939,6 +2942,7 @@ export default function NominaScreen() {
                       paddingHorizontal: 5,
                       paddingVertical: 1,
                       borderRadius: 4,
+                      flexShrink: 0,
                     }}
                   >
                     <Text style={{ color: '#4338CA', fontSize: 9, fontWeight: '800' }}>
@@ -2946,12 +2950,12 @@ export default function NominaScreen() {
                     </Text>
                   </Pressable>
                 ) : null}
-                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
                   {p.encargo_nombre}
                 </Text>
               </View>
               {p.encargo_cedula ? (
-                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10, color: THEME.slate500 }}>
                   C.C. {p.encargo_cedula} • {cleanLabel(p.situacion_administrativa, 'Encargo')}
                 </Text>
               ) : null}
@@ -2960,18 +2964,18 @@ export default function NominaScreen() {
         }
         if (esVacante) {
           return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.roseText }} />
-              <Text style={{ fontSize: 11, color: THEME.roseText, fontStyle: 'italic' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '100%', overflow: 'hidden' }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.roseText, flexShrink: 0 }} />
+              <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 11, color: THEME.roseText, fontStyle: 'italic' }}>
                 Sin encargo / Vacante
               </Text>
             </View>
           );
         }
         return (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.slate300 }} />
-            <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '100%', overflow: 'hidden' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.slate300, flexShrink: 0 }} />
+            <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 11, color: THEME.slate500 }}>
               Sin encargo / Titular activo
             </Text>
           </View>
@@ -3325,12 +3329,12 @@ export default function NominaScreen() {
     },
     {
       label: 'Tipo Vinculación',
-      proportion: 13,
-      minWidth: 130,
+      proportion: 14,
+      minWidth: 160,
       sortValue: (p) => p.tipo_vinculacion || '',
       render: (p) => (
-        <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-          <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }}>
+        <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', maxWidth: '100%', overflow: 'hidden' }}>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }}>
             {p.tipo_vinculacion || 'SIN DEFINIR'}
           </Text>
         </View>
@@ -3338,13 +3342,13 @@ export default function NominaScreen() {
     },
     {
       label: 'Situación',
-      proportion: 9,
-      minWidth: 95,
+      proportion: 11,
+      minWidth: 130,
       sortValue: (p) => p.situacion_titular || p.estado_cargo || '',
       render: (p) => {
         const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
         return (
-          <Text numberOfLines={1} style={{ fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }}>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }}>
             {p.situacion_titular || p.estado_cargo}
           </Text>
         );
@@ -3352,11 +3356,11 @@ export default function NominaScreen() {
     },
     {
       label: 'Titular / Servidor',
-      proportion: 15,
-      minWidth: 150,
+      proportion: 16,
+      minWidth: 175,
       sortValue: (p) => p.titular_nombre || '',
       render: (p) => (
-        <Text numberOfLines={1} style={{ fontSize: 11.5, color: THEME.slate800, fontWeight: '600' }}>
+        <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 11.5, color: THEME.slate800, fontWeight: '600' }}>
           {p.titular_nombre || 'VACANTE'}
         </Text>
       ),
@@ -6941,7 +6945,7 @@ export default function NominaScreen() {
                     }}
                     pageSize={25}
                     variant="white"
-                    minTableWidth={1200}
+                    minTableWidth={1350}
                     tituloTabla="Reporte Oficial: Vinculación & SIDEAP"
                     emptyState={
                       <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>

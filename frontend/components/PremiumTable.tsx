@@ -419,6 +419,9 @@ export function PremiumTable<T>({
                   style={{
                     width: colWidth,
                     minWidth: col.minWidth || 70,
+                    maxWidth: colWidth,
+                    flexShrink: 0,
+                    overflow: 'hidden',
                     position: 'relative',
                     borderRightWidth: dispIdx === columnOrder.length - 1 ? 0 : 1,
                     borderRightColor: '#334155',
@@ -556,6 +559,9 @@ export function PremiumTable<T>({
                         style={{
                           width: colWidth,
                           minWidth: col.minWidth || 70,
+                          maxWidth: colWidth,
+                          flexShrink: 0,
+                          overflow: 'hidden',
                           paddingVertical: 10,
                           paddingHorizontal: 12,
                           borderRightWidth: dispIdx === columnOrder.length - 1 ? 0 : 1,
