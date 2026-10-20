@@ -1724,10 +1724,21 @@ export default function NominaScreen() {
       (m) => Number(m.id_plaza) === idPlazaNum
     );
 
-    // Cédulas limpias para búsqueda en PERNO
-    const titularCedulaLimpia = plazaModal.titular_cedula
-      ? String(plazaModal.titular_cedula).replace(/\D/g, '')
-      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
+    // Detección estricta de vacante definitiva en la titularidad
+    const esTitularVacante = Boolean(
+      !plazaModal.titular_nombre ||
+      String(plazaModal.titular_nombre).trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
+      String(plazaModal.titular_nombre).trim().toUpperCase().includes('VACANTE') ||
+      String(plazaModal.situacion_titular || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
+      String(plazaModal.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA'
+    );
+
+    // Cédulas limpias para búsqueda en PERNO (si es vacante definitiva, NUNCA buscar titular)
+    const titularCedulaLimpia = esTitularVacante
+      ? ''
+      : (plazaModal.titular_cedula
+          ? String(plazaModal.titular_cedula).replace(/\D/g, '')
+          : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : ''));
 
     // Verificamos si realmente la plaza tiene encargo asignado (no hereda encargo de otra plaza)
     const tieneEncargoReal = Boolean(
@@ -1741,7 +1752,7 @@ export default function NominaScreen() {
       : '';
 
     // Buscar en todoElPerno por cédula estricta
-    const pernoTitular = titularCedulaLimpia
+    const pernoTitular = (!esTitularVacante && titularCedulaLimpia)
       ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
       : null;
 
@@ -1749,33 +1760,37 @@ export default function NominaScreen() {
       ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === encargoCedulaLimpia)
       : null;
 
-    // Solo buscar por posición si la plaza NO tiene ninguna cédula registrada para evitar colisiones con terceros
-    const pernoPorPosicion = (!titularCedulaLimpia && !encargoCedulaLimpia && plazaModal.id_perno)
+    // Solo buscar por posición si la plaza NO tiene ninguna cédula y NO es vacante definitiva
+    const pernoPorPosicion = (!esTitularVacante && !titularCedulaLimpia && !encargoCedulaLimpia && plazaModal.id_perno)
       ? todoElPerno.find((p) => Number(p.posicion_planta) === Number(plazaModal.id_perno))
       : null;
 
-    // Servidor activo principal (el que desempeña el cargo: encargo si tiene encargo real, de lo contrario titular)
+    // Servidor activo principal (el que desempeña el cargo: encargo si tiene encargo real, de lo contrario titular si no es vacante)
     const pernoActivo = tieneEncargoReal
-      ? (pernoEncargo || pernoPorPosicion || pernoTitular)
-      : (pernoTitular || pernoPorPosicion);
+      ? (pernoEncargo || pernoTitular)
+      : (esTitularVacante ? null : (pernoTitular || pernoPorPosicion));
 
-    // Fechas de nacimiento reales (prioridad absoluta al registro oficial en PERNO)
-    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
-    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento || null) : null;
+    // Fechas de nacimiento reales (si el titular es vacante, NUNCA asignar fecha ni edad de titular)
+    const fechaNacTitular = esTitularVacante
+      ? null
+      : (pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null));
+    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || null) : null;
     const fechaNacActiva = tieneEncargoReal
-      ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
-      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || null);
+      ? (fechaNacEncargo || null)
+      : (esTitularVacante ? null : (fechaNacTitular || null));
 
     // Edades calculadas desde la fecha de nacimiento oficial registrada en PERNO o BD
-    const edadTitular = fechaNacTitular
-      ? calcEdad(fechaNacTitular)
-      : (!tieneEncargoReal && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
+    const edadTitular = esTitularVacante
+      ? null
+      : (fechaNacTitular
+          ? calcEdad(fechaNacTitular)
+          : (!tieneEncargoReal && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null));
 
     const edadEncargo = tieneEncargoReal
-      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : ((plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null))
+      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : null)
       : null;
 
-    const edadActiva = tieneEncargoReal ? edadEncargo : (edadTitular || (plazaModal.edad ? Number(plazaModal.edad) : null));
+    const edadActiva = tieneEncargoReal ? edadEncargo : (esTitularVacante ? null : edadTitular);
 
     // Manual de Funciones textual del Archivo de Planta Oficial (Columna AH: Páginas Manual de Funciones)
     const manualOficial =
@@ -1881,8 +1896,13 @@ export default function NominaScreen() {
 
     return {
       ...plazaModal,
-      tipo_vinculacion_entidad: plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null,
-      tipo_vinculacion_cargo: plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
+      es_titular_vacante: esTitularVacante,
+      tipo_vinculacion_entidad: esTitularVacante
+        ? 'No aplica (Vacante Definitiva)'
+        : (plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null),
+      tipo_vinculacion_cargo: esTitularVacante
+        ? 'No aplica (Vacante)'
+        : (plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null),
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
@@ -1907,27 +1927,17 @@ export default function NominaScreen() {
       fondo_cesantias: pernoActivo?.fondo_cesantias || plazaModal.fondo_cesantias || mockMatch?.fondo_cesantias || 'No reportado',
       telefono: pernoActivo?.telefono || plazaModal.telefono || mockMatch?.telefono || 'No registrado',
       direccion: pernoActivo?.direccion || plazaModal.direccion || mockMatch?.direccion || 'No registrada',
-      sexo: pernoActivo?.sexo || plazaModal.sexo || mockMatch?.sexo || '---',
-      tipo_funcionario: pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
-      acto_nombramiento:
-        pernoTitular?.acto_nombramiento ||
-        pernoActivo?.acto_nombramiento ||
-        plazaModal.acto_nombramiento ||
-        mockMatch?.acto_nombramiento ||
-        plazaModal.numero_acto_nombramiento ||
-        'Resolución institucional',
-      numero_acto_nombramiento:
-        pernoTitular?.numero_acto_nombramiento ||
-        pernoActivo?.numero_acto_nombramiento ||
-        plazaModal.numero_acto_nombramiento ||
-        mockMatch?.numero_acto_nombramiento ||
-        '---',
-      fecha_acto_nombramiento:
-        pernoTitular?.fecha_acto_nombramiento ||
-        pernoActivo?.fecha_acto_nombramiento ||
-        plazaModal.fecha_acto_nombramiento ||
-        mockMatch?.fecha_acto_nombramiento ||
-        null,
+      sexo: esTitularVacante ? (pernoActivo?.sexo || '---') : (pernoTitular?.sexo || pernoActivo?.sexo || plazaModal.sexo || mockMatch?.sexo || '---'),
+      tipo_funcionario: esTitularVacante ? 'EMPLEO VACANTE' : (pernoTitular?.tipo_funcionario || pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA'),
+      acto_nombramiento: esTitularVacante
+        ? 'No aplica (Vacante)'
+        : (pernoTitular?.acto_nombramiento || plazaModal.acto_nombramiento || mockMatch?.acto_nombramiento || plazaModal.numero_acto_nombramiento || 'Resolución institucional'),
+      numero_acto_nombramiento: esTitularVacante
+        ? '---'
+        : (pernoTitular?.numero_acto_nombramiento || plazaModal.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---'),
+      fecha_acto_nombramiento: esTitularVacante
+        ? null
+        : (pernoTitular?.fecha_acto_nombramiento || plazaModal.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null),
       numero_acto_encargo:
         pernoEncargo?.numero_acto_encargo ||
         (plazaModal as any)?.numero_acto_encargo ||
@@ -1946,18 +1956,20 @@ export default function NominaScreen() {
         (mockMatch as any)?.fecha_efectiva_encargo ||
         pernoActivo?.fecha_efectiva_encargo ||
         null,
-      fecha_ingreso_entidad:
-        pernoTitular?.fecha_ingreso_entidad ||
-        pernoActivo?.fecha_ingreso_entidad ||
-        (plazaModal as any).fecha_ingreso_entidad ||
-        mockMatch?.fecha_ingreso_entidad ||
-        null,
-      fecha_ingreso_distrito:
-        pernoTitular?.fecha_ingreso_distrito ||
-        pernoActivo?.fecha_ingreso_distrito ||
-        (plazaModal as any).fecha_ingreso_distrito ||
-        mockMatch?.fecha_ingreso_distrito ||
-        null,
+      fecha_ingreso_entidad: (esTitularVacante && !tieneEncargoReal)
+        ? null
+        : (pernoTitular?.fecha_ingreso_entidad ||
+           pernoActivo?.fecha_ingreso_entidad ||
+           (plazaModal as any).fecha_ingreso_entidad ||
+           mockMatch?.fecha_ingreso_entidad ||
+           null),
+      fecha_ingreso_distrito: (esTitularVacante && !tieneEncargoReal)
+        ? null
+        : (pernoTitular?.fecha_ingreso_distrito ||
+           pernoActivo?.fecha_ingreso_distrito ||
+           (plazaModal as any).fecha_ingreso_distrito ||
+           mockMatch?.fecha_ingreso_distrito ||
+           null),
       total_devengado:
         pernoActivo?.total_devengado ||
         plazaModal.total_devengado ||
@@ -10032,7 +10044,7 @@ export default function NominaScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <View
                               style={{
-                                backgroundColor: THEME.slate600,
+                                backgroundColor: plazaModalEnriquecida?.es_titular_vacante ? THEME.slate500 : THEME.slate600,
                                 paddingHorizontal: 6,
                                 paddingVertical: 2,
                                 borderRadius: 4,
@@ -10043,78 +10055,118 @@ export default function NominaScreen() {
                               </Text>
                             </View>
                             <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
-                              Servidor titular en propiedad de la plaza
+                              {plazaModalEnriquecida?.es_titular_vacante
+                                ? 'Plaza actualmente sin titular en propiedad'
+                                : 'Servidor titular en propiedad de la plaza'}
                             </Text>
                           </View>
-                          <Ionicons name="ribbon-outline" size={16} color={THEME.slate500} />
+                          <Ionicons
+                            name={plazaModalEnriquecida?.es_titular_vacante ? "information-circle-outline" : "ribbon-outline"}
+                            size={16}
+                            color={THEME.slate500}
+                          />
                         </View>
 
                         <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                          {plazaModal.titular_nombre || 'Plaza Vacante Definitiva'}
+                          {plazaModalEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaModal.titular_nombre || 'VACANTE DEFINITIVA')}
                         </Text>
 
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
-                            </Text>
-                          </View>
-
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                                {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : 'No registrada'}
+                        {plazaModalEnriquecida?.es_titular_vacante ? (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate600, marginTop: 1 }}>
+                                No aplica (Plaza Vacante)
                               </Text>
-                              <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
-                              </View>
                             </View>
-                            {plazaModalEnriquecida?.fecha_nacimiento_titular ? (
-                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular)}
+
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca700, marginTop: 1 }}>
+                                VACANTE DEFINITIVA
                               </Text>
-                            ) : null}
-                          </View>
+                            </View>
 
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
-                              {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
-                            </Text>
-                          </View>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Provisión</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                Provista transitoriamente por encargo
+                              </Text>
+                            </View>
 
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal.tipo_vinculacion_entidad || '---'}
-                            </Text>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                Empleo en vacancia definitiva provisto por servidor encargado
+                              </Text>
+                            </View>
                           </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
+                              </Text>
+                            </View>
 
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || '---'}
-                            </Text>
-                          </View>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                                  {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : 'No registrada'}
+                                </Text>
+                                {plazaModalEnriquecida?.edad_titular ? (
+                                  <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                              {plazaModalEnriquecida?.fecha_nacimiento_titular ? (
+                                <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                  F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular)}
+                                </Text>
+                              ) : null}
+                            </View>
 
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
-                              {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
-                                ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
-                                : '---'}
-                            </Text>
-                          </View>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
+                                {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
+                              </Text>
+                            </View>
 
-                          <View>
-                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
-                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                              Plaza en encargo activo
-                            </Text>
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal.tipo_vinculacion_entidad || '---'}
+                              </Text>
+                            </View>
+
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || '---'}
+                              </Text>
+                            </View>
+
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                                {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                                  ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                                  : '---'}
+                              </Text>
+                            </View>
+
+                            <View>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                Plaza en encargo activo
+                              </Text>
+                            </View>
                           </View>
-                        </View>
+                        )}
                       </View>
                     </View>
                   ) : (
@@ -10133,67 +10185,103 @@ export default function NominaScreen() {
                       }}
                     >
                       <View style={{ width: '100%' }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Servidor Titular Vinculado</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          {plazaModalEnriquecida?.es_titular_vacante ? 'Estado de la Plaza' : 'Servidor Titular Vinculado'}
+                        </Text>
                         <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
-                          {plazaModal?.titular_nombre || 'Plaza actualmente Vacante'}
+                          {plazaModalEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaModal?.titular_nombre || 'Plaza actualmente Vacante')}
                         </Text>
                       </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
-                        </Text>
-                      </View>
+                      {plazaModalEnriquecida?.es_titular_vacante ? (
+                        <>
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
+                              No aplica (Plaza Vacante)
+                            </Text>
+                          </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
-                            {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---')}
-                          </Text>
-                          {(plazaModalEnriquecida?.edad_titular || plazaModalEnriquecida?.edad_activa) ? (
-                            <View style={{ backgroundColor: THEME.marca50, borderColor: THEME.marca100, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                              <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>PERNO</Text>
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, marginTop: 2 }}>
+                              VACANTE DEFINITIVA
+                            </Text>
+                          </View>
+
+                          <View style={{ flex: 1, minWidth: 150 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Disponibilidad</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                              Disponible para provisión definitiva o encargo
+                            </Text>
+                          </View>
+
+                          <View style={{ flex: 1, minWidth: 150 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nombramiento</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate600, marginTop: 2 }}>
+                              Sin titular nombrado
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                              {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
+                            </Text>
+                          </View>
+
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                                {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---')}
+                              </Text>
+                              {(plazaModalEnriquecida?.edad_titular || plazaModalEnriquecida?.edad_activa) ? (
+                                <View style={{ backgroundColor: THEME.marca50, borderColor: THEME.marca100, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>PERNO</Text>
+                                </View>
+                              ) : null}
                             </View>
-                          ) : null}
-                        </View>
-                        {(plazaModalEnriquecida?.fecha_nacimiento_titular || plazaModalEnriquecida?.fecha_nacimiento_activa) ? (
-                          <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                            F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular || plazaModalEnriquecida.fecha_nacimiento_activa)}
-                          </Text>
-                        ) : null}
-                      </View>
+                            {(plazaModalEnriquecida?.fecha_nacimiento_titular || plazaModalEnriquecida?.fecha_nacimiento_activa) ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular || plazaModalEnriquecida.fecha_nacimiento_activa)}
+                              </Text>
+                            ) : null}
+                          </View>
 
-                      <View style={{ flex: 1, minWidth: 150 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal?.tipo_vinculacion_entidad || '---'}
-                        </Text>
-                      </View>
+                          <View style={{ flex: 1, minWidth: 150 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal?.tipo_vinculacion_entidad || '---'}
+                            </Text>
+                          </View>
 
-                      <View style={{ flex: 1, minWidth: 150 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion || '---'}
-                        </Text>
-                      </View>
+                          <View style={{ flex: 1, minWidth: 150 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion || '---'}
+                            </Text>
+                          </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
-                        </Text>
-                      </View>
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                              {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
+                            </Text>
+                          </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
-                            ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
-                            : (plazaModalEnriquecida?.acto_nombramiento || '---')}
-                        </Text>
-                      </View>
+                          <View style={{ flex: 1, minWidth: 140 }}>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                              {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                                ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                                : (plazaModalEnriquecida?.acto_nombramiento || '---')}
+                            </Text>
+                          </View>
+                        </>
+                      )}
                     </View>
                   )}
 

@@ -182,9 +182,20 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       (m) => Number(m.id_plaza) === idPlazaNum
     );
 
-    const titularCedulaLimpia = plazaActiva.titular_cedula
-      ? String(plazaActiva.titular_cedula).replace(/\D/g, '')
-      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
+    // Detección estricta de vacante definitiva en la titularidad
+    const esTitularVacante = Boolean(
+      !plazaActiva.titular_nombre ||
+      String(plazaActiva.titular_nombre).trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
+      String(plazaActiva.titular_nombre).trim().toUpperCase().includes('VACANTE') ||
+      String(plazaActiva.situacion_titular || '').trim().toUpperCase() === 'VACANTE DEFINITIVA' ||
+      String(plazaActiva.estado_cargo || '').trim().toUpperCase() === 'VACANTE DEFINITIVA'
+    );
+
+    const titularCedulaLimpia = esTitularVacante
+      ? ''
+      : (plazaActiva.titular_cedula
+          ? String(plazaActiva.titular_cedula).replace(/\D/g, '')
+          : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : ''));
 
     const tieneEncargoReal = Boolean(
       plazaActiva.es_encargo ||
@@ -196,7 +207,7 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       ? String(plazaActiva.encargo_cedula).replace(/\D/g, '')
       : '';
 
-    const pernoTitular = titularCedulaLimpia
+    const pernoTitular = (!esTitularVacante && titularCedulaLimpia)
       ? listadoPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
       : null;
 
@@ -204,31 +215,35 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       ? listadoPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === encargoCedulaLimpia)
       : null;
 
-    // Solo buscar por posición si la plaza no tiene cédulas identificadas
-    const pernoPorPosicion = (!titularCedulaLimpia && !encargoCedulaLimpia && plazaActiva.id_perno)
+    // Solo buscar por posición si la plaza no tiene cédulas y no es vacante definitiva
+    const pernoPorPosicion = (!esTitularVacante && !titularCedulaLimpia && !encargoCedulaLimpia && plazaActiva.id_perno)
       ? listadoPerno.find((p) => Number(p.posicion_planta) === Number(plazaActiva.id_perno))
       : null;
 
     const pernoActivo = tieneEncargoReal
-      ? (pernoEncargo || pernoPorPosicion || pernoTitular)
-      : (pernoTitular || pernoPorPosicion);
+      ? (pernoEncargo || pernoTitular)
+      : (esTitularVacante ? null : (pernoTitular || pernoPorPosicion));
 
-    // Fechas de nacimiento reales (prioridad absoluta a PERNO)
-    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
-    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento || null) : null;
+    // Fechas de nacimiento reales (si el titular es vacante, NUNCA asignar fecha ni edad de titular)
+    const fechaNacTitular = esTitularVacante
+      ? null
+      : (pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null));
+    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || null) : null;
     const fechaNacActiva = tieneEncargoReal
-      ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
-      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || null);
+      ? (fechaNacEncargo || null)
+      : (esTitularVacante ? null : (fechaNacTitular || null));
 
-    const edadTitular = fechaNacTitular
-      ? calcEdad(fechaNacTitular)
-      : (!tieneEncargoReal && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
+    const edadTitular = esTitularVacante
+      ? null
+      : (fechaNacTitular
+          ? calcEdad(fechaNacTitular)
+          : (!tieneEncargoReal && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null));
 
     const edadEncargo = tieneEncargoReal
-      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : ((plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null))
+      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : null)
       : null;
 
-    const edadActiva = tieneEncargoReal ? edadEncargo : (edadTitular || (plazaActiva.edad ? Number(plazaActiva.edad) : null));
+    const edadActiva = tieneEncargoReal ? edadEncargo : (esTitularVacante ? null : edadTitular);
 
     const manualOficial =
       plazaActiva.manual_funciones ||
@@ -329,8 +344,12 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
 
     return {
       ...plazaActiva,
-      tipo_vinculacion_entidad: plazaActiva.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null,
-      tipo_vinculacion_cargo: plazaActiva.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
+      tipo_vinculacion_entidad: esTitularVacante
+        ? 'No aplica (Vacante Definitiva)'
+        : (plazaActiva.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null),
+      tipo_vinculacion_cargo: esTitularVacante
+        ? 'No aplica (Vacante)'
+        : (plazaActiva.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null),
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
@@ -356,32 +375,28 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       direccion: pernoActivo?.direccion || plazaActiva.direccion || mockMatch?.direccion || 'No registrada',
       sexo: pernoActivo?.sexo || plazaActiva.sexo || mockMatch?.sexo || '---',
       tipo_funcionario: pernoActivo?.tipo_funcionario || plazaActiva.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
-      acto_nombramiento:
-        pernoActivo?.acto_nombramiento ||
-        plazaActiva.acto_nombramiento ||
-        mockMatch?.acto_nombramiento ||
-        plazaActiva.numero_acto_nombramiento ||
-        'Resolución institucional',
-      numero_acto_nombramiento:
-        pernoActivo?.numero_acto_nombramiento ||
-        plazaActiva.numero_acto_nombramiento ||
-        mockMatch?.numero_acto_nombramiento ||
-        '---',
-      fecha_acto_nombramiento:
-        pernoActivo?.fecha_acto_nombramiento ||
-        plazaActiva.fecha_acto_nombramiento ||
-        mockMatch?.fecha_acto_nombramiento ||
-        null,
-      fecha_ingreso_entidad:
-        pernoActivo?.fecha_ingreso_entidad ||
-        (plazaActiva as any).fecha_ingreso_entidad ||
-        mockMatch?.fecha_ingreso_entidad ||
-        null,
-      fecha_ingreso_distrito:
-        pernoActivo?.fecha_ingreso_distrito ||
-        (plazaActiva as any).fecha_ingreso_distrito ||
-        mockMatch?.fecha_ingreso_distrito ||
-        null,
+      es_titular_vacante: esTitularVacante,
+      acto_nombramiento: esTitularVacante
+        ? 'No aplica (Vacante)'
+        : (pernoTitular?.acto_nombramiento || plazaActiva.acto_nombramiento || mockMatch?.acto_nombramiento || plazaActiva.numero_acto_nombramiento || 'Resolución institucional'),
+      numero_acto_nombramiento: esTitularVacante
+        ? '---'
+        : (pernoTitular?.numero_acto_nombramiento || plazaActiva.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---'),
+      fecha_acto_nombramiento: esTitularVacante
+        ? null
+        : (pernoTitular?.fecha_acto_nombramiento || plazaActiva.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null),
+      fecha_ingreso_entidad: (esTitularVacante && !tieneEncargoReal)
+        ? null
+        : (pernoActivo?.fecha_ingreso_entidad ||
+           (plazaActiva as any).fecha_ingreso_entidad ||
+           mockMatch?.fecha_ingreso_entidad ||
+           null),
+      fecha_ingreso_distrito: (esTitularVacante && !tieneEncargoReal)
+        ? null
+        : (pernoActivo?.fecha_ingreso_distrito ||
+           (plazaActiva as any).fecha_ingreso_distrito ||
+           mockMatch?.fecha_ingreso_distrito ||
+           null),
       total_devengado:
         pernoActivo?.total_devengado ||
         plazaActiva.total_devengado ||
@@ -1000,55 +1015,89 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                       </View>
 
                       <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                        {plazaActiva.titular_nombre || 'Plaza Vacante Definitiva'}
+                        {plazaEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaActiva.titular_nombre || 'Plaza Vacante Definitiva')}
                       </Text>
 
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaActiva.titular_cedula ? `C.C. ${plazaActiva.titular_cedula}` : 'No registrada'}
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                              {plazaEnriquecida?.edad_titular ? `${plazaEnriquecida.edad_titular} años` : 'No registrada'}
+                      {plazaEnriquecida?.es_titular_vacante ? (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate600, marginTop: 1 }}>
+                              No aplica (Plaza Vacante)
                             </Text>
-                            <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                              <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
-                            </View>
                           </View>
-                          {plazaEnriquecida?.fecha_nacimiento_titular ? (
-                            <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                              F. Nac: {plazaEnriquecida.fecha_nacimiento_titular}
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca700, marginTop: 1 }}>
+                              VACANTE DEFINITIVA
                             </Text>
-                          ) : null}
-                        </View>
+                          </View>
 
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Titular</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {cleanLabel(plazaActiva.situacion_titular, 'En comisión o encargo en otro empleo')}
-                          </Text>
-                        </View>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Provisión</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Provista transitoriamente por encargo
+                            </Text>
+                          </View>
 
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
-                          </Text>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Empleo en vacancia definitiva provisto por servidor encargado
+                            </Text>
+                          </View>
                         </View>
+                      ) : (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaActiva.titular_cedula ? `C.C. ${plazaActiva.titular_cedula}` : 'No registrada'}
+                            </Text>
+                          </View>
 
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
-                          </Text>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                                {plazaEnriquecida?.edad_titular ? `${plazaEnriquecida.edad_titular} años` : 'No registrada'}
+                              </Text>
+                              {plazaEnriquecida?.edad_titular ? (
+                                <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            {plazaEnriquecida?.fecha_nacimiento_titular ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                F. Nac: {plazaEnriquecida.fecha_nacimiento_titular}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {cleanLabel(plazaActiva.situacion_titular, 'En comisión o encargo en otro empleo')}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
+                      )}
                     </View>
                   </View>
                 ) : (
@@ -1066,73 +1115,111 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <View
                           style={{
-                            backgroundColor: THEME.marca700,
+                            backgroundColor: plazaEnriquecida?.es_titular_vacante ? THEME.slate600 : THEME.marca700,
                             paddingHorizontal: 6,
                             paddingVertical: 2,
                             borderRadius: 4,
                           }}
                         >
                           <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
-                            TITULAR DIRECTO
+                            {plazaEnriquecida?.es_titular_vacante ? 'ESTADO DE LA PLAZA' : 'TITULAR DIRECTO'}
                           </Text>
                         </View>
                         <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
-                          Servidor en ejercicio del cargo
+                          {plazaEnriquecida?.es_titular_vacante ? 'Plaza en vacancia definitiva' : 'Servidor en ejercicio del cargo'}
                         </Text>
                       </View>
-                      <Ionicons name="person-outline" size={16} color={THEME.marca700} />
+                      <Ionicons
+                        name={plazaEnriquecida?.es_titular_vacante ? 'alert-circle-outline' : 'person-outline'}
+                        size={16}
+                        color={plazaEnriquecida?.es_titular_vacante ? THEME.slate600 : THEME.marca700}
+                      />
                     </View>
 
                     <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                      {plazaActiva.titular_nombre || 'Sin Titular Asignado'}
+                      {plazaEnriquecida?.es_titular_vacante ? 'VACANTE DEFINITIVA' : (plazaActiva.titular_nombre || 'Sin Titular Asignado')}
                     </Text>
 
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-                      <View>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
-                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                          {plazaActiva.titular_cedula ? `C.C. ${plazaActiva.titular_cedula}` : 'No registrada'}
-                        </Text>
-                      </View>
-
-                      <View>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
-                          <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                            {plazaEnriquecida?.edad_titular ? `${plazaEnriquecida.edad_titular} años` : (plazaEnriquecida?.edad_activa ? `${plazaEnriquecida.edad_activa} años` : 'No registrada')}
+                    {plazaEnriquecida?.es_titular_vacante ? (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate600, marginTop: 1 }}>
+                            No aplica (Plaza Vacante)
                           </Text>
-                          <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
-                          </View>
                         </View>
-                        {(plazaEnriquecida?.fecha_nacimiento_titular || plazaEnriquecida?.fecha_nacimiento_activa) ? (
-                          <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                            F. Nac: {plazaEnriquecida.fecha_nacimiento_titular || plazaEnriquecida.fecha_nacimiento_activa}
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca700, marginTop: 1 }}>
+                            VACANTE DEFINITIVA
                           </Text>
-                        ) : null}
-                      </View>
+                        </View>
 
-                      <View>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
-                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                          {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
-                        </Text>
-                      </View>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Disponibilidad</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            Disponible para provisión definitiva o encargo
+                          </Text>
+                        </View>
 
-                      <View>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
-                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                          {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
-                        </Text>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nombramiento</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate600, marginTop: 1 }}>
+                            Sin titular nombrado
+                          </Text>
+                        </View>
                       </View>
+                    ) : (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaActiva.titular_cedula ? `C.C. ${plazaActiva.titular_cedula}` : 'No registrada'}
+                          </Text>
+                        </View>
 
-                      <View>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                          {cleanLabel(plazaActiva?.situacion_administrativa, 'Servicio Activo en Propiedad')}
-                        </Text>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                              {plazaEnriquecida?.edad_titular ? `${plazaEnriquecida.edad_titular} años` : (plazaEnriquecida?.edad_activa ? `${plazaEnriquecida.edad_activa} años` : 'No registrada')}
+                            </Text>
+                            {(plazaEnriquecida?.edad_titular || plazaEnriquecida?.edad_activa) ? (
+                              <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          {(plazaEnriquecida?.fecha_nacimiento_titular || plazaEnriquecida?.fecha_nacimiento_activa) ? (
+                            <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                              F. Nac: {plazaEnriquecida.fecha_nacimiento_titular || plazaEnriquecida.fecha_nacimiento_activa}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {cleanLabel(plazaActiva?.situacion_administrativa, 'Servicio Activo en Propiedad')}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
+                    )}
                   </View>
                 )}
 
