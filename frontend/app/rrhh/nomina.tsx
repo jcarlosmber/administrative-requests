@@ -3026,6 +3026,355 @@ export default function NominaScreen() {
     },
   ], []);
 
+  // Columnas adaptadas para el componente PremiumTable en la pestaña PERNO
+  const columnasPernoPremium: PremiumColumnConfig<PersonaPerno>[] = useMemo(() => [
+    {
+      label: 'Identificación',
+      proportion: 11,
+      minWidth: 120,
+      sortValue: (item) => Number(item?.cedula) || 0,
+      render: (item) => (
+        <View style={{ paddingRight: 6 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca800 }}>
+            {item?.cedula}
+          </Text>
+          {item?.posicion_planta ? (
+            <Text style={{ fontSize: 10, color: THEME.slate400, marginTop: 1 }}>
+              Pos. #{item.posicion_planta}
+            </Text>
+          ) : null}
+        </View>
+      ),
+    },
+    {
+      label: 'Servidor(a) / Nombre',
+      proportion: 20,
+      minWidth: 200,
+      sortValue: (item) => (item?.nombre_completo || `${item?.nombres || ''} ${item?.primer_apellido || ''}`).trim(),
+      render: (item) => (
+        <View style={{ paddingRight: 8 }}>
+          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+            {item?.nombre_completo || `${item?.nombres || ''} ${item?.primer_apellido || ''}`}
+          </Text>
+          <Text numberOfLines={1} style={{ fontSize: 10.5, color: THEME.slate500, marginTop: 1 }}>
+            {item?.tipo_funcionario || 'EMPLEADO DE PLANTA'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Estado',
+      proportion: 12,
+      minWidth: 130,
+      sortValue: (item) => (item?.estado_funcionario === 'R' || !!item?.fecha_retiro ? 'RETIRADO' : 'ACTIVO'),
+      render: (item) => {
+        const esRetirado = item?.estado_funcionario === 'R' || !!item?.fecha_retiro;
+        if (esRetirado) {
+          return (
+            <View>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  alignSelf: 'flex-start',
+                  backgroundColor: '#FEE2E2',
+                  borderColor: '#FCA5A5',
+                  borderWidth: 1,
+                  borderRadius: 6,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626', marginRight: 5 }} />
+                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#991B1B' }}>
+                  DESVINCULADO
+                </Text>
+              </View>
+              {item?.fecha_retiro ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                  <Ionicons name="calendar-outline" size={11} color="#B91C1C" style={{ marginRight: 3 }} />
+                  <Text style={{ fontSize: 10.5, fontWeight: '600', color: '#B91C1C' }}>
+                    {formatFecha(item.fecha_retiro)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          );
+        }
+        return (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              alignSelf: 'flex-start',
+              backgroundColor: THEME.emeraldBg,
+              borderColor: THEME.emeraldRing,
+              borderWidth: 1,
+              borderRadius: 6,
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+            }}
+          >
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 5 }} />
+            <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.emeraldText }}>
+              ACTIVO
+            </Text>
+          </View>
+        );
+      },
+    },
+    {
+      label: 'Cargo & Grado',
+      proportion: 17,
+      minWidth: 170,
+      sortValue: (item) => item?.cargo || '',
+      render: (item) => (
+        <View style={{ paddingRight: 8 }}>
+          <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }}>
+            {item?.cargo || 'Sin cargo'}
+          </Text>
+          <Text style={{ fontSize: 10.5, color: THEME.slate500, marginTop: 1 }}>
+            Cód. {item?.cargo_cod || '---'} • Grado {item?.grado || '---'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Dependencia',
+      proportion: 16,
+      minWidth: 160,
+      sortValue: (item) => item?.dependencia || '',
+      render: (item) => (
+        <Text numberOfLines={2} style={{ fontSize: 11.5, color: THEME.slate700 }}>
+          {item?.dependencia || 'Sin dependencia'}
+        </Text>
+      ),
+    },
+    {
+      label: 'Cruce Planta',
+      proportion: 10,
+      minWidth: 110,
+      sortValue: (item) => {
+        const match = item?.plaza_id_plaza || todasLasPlazas.find((p) => String(p.titular_cedula) === String(item?.cedula) || String(p.encargo_cedula) === String(item?.cedula))?.id_plaza;
+        return match || 0;
+      },
+      render: (item) => {
+        const matchPlaza = item?.plaza_id_plaza || todasLasPlazas.find((p) => String(p.titular_cedula) === String(item?.cedula) || String(p.encargo_cedula) === String(item?.cedula))?.id_plaza;
+        if (matchPlaza) {
+          return (
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: '#EFF6FF',
+                borderColor: '#BFDBFE',
+                borderWidth: 1,
+                borderRadius: 6,
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                Plaza #{matchPlaza}
+              </Text>
+              {item?.plaza_es_encargo ? (
+                <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#D97706' }}>
+                  (En Encargo)
+                </Text>
+              ) : null}
+            </View>
+          );
+        }
+        return (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              backgroundColor: THEME.slate100,
+              borderRadius: 6,
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+            }}
+          >
+            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+              Sin plaza
+            </Text>
+          </View>
+        );
+      },
+    },
+    {
+      label: 'Total Devengado',
+      proportion: 9,
+      minWidth: 115,
+      align: 'right',
+      sortValue: (item) => Number(item?.total_devengado || item?.asignacion_basica || 0),
+      render: (item) => (
+        <View style={{ alignItems: 'flex-end', paddingRight: 6 }}>
+          <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900 }}>
+            {formatMoneda(item?.total_devengado || item?.asignacion_basica)}
+          </Text>
+          {item?.asignacion_basica ? (
+            <Text style={{ fontSize: 9.5, color: THEME.slate400, marginTop: 1 }}>
+              Básico: {formatMoneda(item.asignacion_basica)}
+            </Text>
+          ) : null}
+        </View>
+      ),
+    },
+    {
+      label: 'Expediente',
+      proportion: 5,
+      minWidth: 65,
+      align: 'center',
+      render: (item) => (
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 6,
+            backgroundColor: THEME.marca50,
+            borderWidth: 1,
+            borderColor: THEME.marca100,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          <Ionicons name="folder-open-outline" size={13} color={THEME.marca700} />
+          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.marca700 }}>Ver</Text>
+        </View>
+      ),
+    },
+  ], [todasLasPlazas]);
+
+  // Columnas adaptadas para el componente PremiumTable en Reportes de Vinculación y SIDEAP
+  const columnasReportePremium: PremiumColumnConfig<PlazaNomina>[] = useMemo(() => [
+    {
+      label: 'Plaza',
+      proportion: 6,
+      minWidth: 70,
+      sortValue: (p) => p.id_plaza,
+      render: (p) => (
+        <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca800 }}>
+          #{p.id_plaza}
+        </Text>
+      ),
+    },
+    {
+      label: 'ID SIDEAP',
+      proportion: 8,
+      minWidth: 90,
+      sortValue: (p) => p.id_sideap || '',
+      render: (p) => (
+        <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+          <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#3730A3' }}>
+            {p.id_sideap || 'N/A'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'ID PERNO',
+      proportion: 7,
+      minWidth: 80,
+      sortValue: (p) => p.id_perno || '',
+      render: (p) => (
+        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+          <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>
+            {p.id_perno || 'N/A'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Nivel',
+      proportion: 8,
+      minWidth: 90,
+      sortValue: (p) => p.nivel || '',
+      render: (p) => (
+        <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+          {p.nivel}
+        </Text>
+      ),
+    },
+    {
+      label: 'Cargo / Denominación',
+      proportion: 18,
+      minWidth: 190,
+      sortValue: (p) => p.cargo || '',
+      render: (p) => (
+        <View style={{ paddingRight: 6 }}>
+          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
+            {p.cargo}
+          </Text>
+          <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+            Cód. {p.codigo} - Grado {p.grado}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Dependencia',
+      proportion: 16,
+      minWidth: 160,
+      sortValue: (p) => p.dependencia_cargo || '',
+      render: (p) => (
+        <Text numberOfLines={2} style={{ fontSize: 11, color: THEME.slate600 }}>
+          {p.dependencia_cargo || 'Secretaría Jurídica Distrital'}
+        </Text>
+      ),
+    },
+    {
+      label: 'Tipo Vinculación',
+      proportion: 13,
+      minWidth: 130,
+      sortValue: (p) => p.tipo_vinculacion || '',
+      render: (p) => (
+        <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+          <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }}>
+            {p.tipo_vinculacion || 'SIN DEFINIR'}
+          </Text>
+        </View>
+      ),
+    },
+    {
+      label: 'Situación',
+      proportion: 9,
+      minWidth: 95,
+      sortValue: (p) => p.situacion_titular || p.estado_cargo || '',
+      render: (p) => {
+        const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
+        return (
+          <Text numberOfLines={1} style={{ fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }}>
+            {p.situacion_titular || p.estado_cargo}
+          </Text>
+        );
+      },
+    },
+    {
+      label: 'Titular / Servidor',
+      proportion: 15,
+      minWidth: 150,
+      sortValue: (p) => p.titular_nombre || '',
+      render: (p) => (
+        <Text numberOfLines={1} style={{ fontSize: 11.5, color: THEME.slate800, fontWeight: '600' }}>
+          {p.titular_nombre || 'VACANTE'}
+        </Text>
+      ),
+    },
+    {
+      label: 'Asignación',
+      proportion: 9,
+      minWidth: 105,
+      align: 'right',
+      sortValue: (p) => Number(p.asignacion_basica) || 0,
+      render: (p) => (
+        <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right', paddingRight: 4 }}>
+          {formatMoneda(p.asignacion_basica)}
+        </Text>
+      ),
+    },
+  ], []);
+
   return (
     <View style={{ flex: 1, backgroundColor: THEME.slate50 }}>
       {/* Ocultar el Header nativo del Stack para evitar el doble header */}
@@ -6581,119 +6930,28 @@ export default function NominaScreen() {
                     </View>
                   </View>
 
-                  {/* Tabla de Vinculación al Cargo / SIDEAP (Columnas con Porcentajes al 100% de la pantalla) */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden', width: '100%' }}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ width: '100%', minWidth: 1050 }}>
-                      <View style={{ width: '100%', minWidth: 1050 }}>
-                        {/* Cabecera Tabla con Porcentajes que suman 100% */}
-                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate200, width: '100%', alignItems: 'center' }}>
-                          <Text style={{ width: '5%', minWidth: 50, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA</Text>
-                          <Text style={{ width: '7%', minWidth: 70, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID SIDEAP</Text>
-                          <Text style={{ width: '6%', minWidth: 65, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID PERNO</Text>
-                          <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
-                          <Text style={{ width: '18%', minWidth: 160, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
-                          <Text style={{ width: '6%', minWidth: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
-                          <Text style={{ width: '16%', minWidth: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA DEL CARGO</Text>
-                          <Text style={{ width: '12%', minWidth: 110, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VINCULACIÓN</Text>
-                          <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>SITUACIÓN</Text>
-                          <Text style={{ width: '14%', minWidth: 130, fontSize: 11, fontWeight: '700', color: THEME.white }}>TITULAR / SERVIDOR</Text>
-                          <Text style={{ width: '8%', minWidth: 85, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
-                        </View>
-
-                        {/* Filas */}
-                        {plazasFiltradasReporte.length === 0 ? (
-                          <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                            <Ionicons name="search-outline" size={28} color={THEME.slate300} />
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate500, marginTop: 8 }}>
-                              No se encontraron plazas con los filtros seleccionados
-                            </Text>
-                          </View>
-                        ) : (
-                          plazasFiltradasReporte
-                            .slice((paginaReporte - 1) * filasPorPaginaReporte, paginaReporte * filasPorPaginaReporte)
-                            .map((p, idx) => {
-                              const esPar = idx % 2 === 0;
-                              const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
-
-                              return (
-                                <Pressable
-                                  key={p.id_plaza}
-                                  onPress={() => {
-                                    setModalTab('general');
-                                    setPlazaModal(p);
-                                  }}
-                                  style={{
-                                    flexDirection: 'row',
-                                    width: '100%',
-                                    paddingVertical: 10,
-                                    paddingHorizontal: 14,
-                                    backgroundColor: esPar ? THEME.white : THEME.slate50,
-                                    borderBottomWidth: 1,
-                                    borderBottomColor: THEME.slate100,
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  <Text style={{ width: '5%', minWidth: 50, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
-                                  <View style={{ width: '7%', minWidth: 70 }}>
-                                    <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#3730A3' }}>{p.id_sideap || 'N/A'}</Text>
-                                    </View>
-                                  </View>
-                                  <View style={{ width: '6%', minWidth: 65 }}>
-                                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>{p.id_perno || 'N/A'}</Text>
-                                    </View>
-                                  </View>
-                                  <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '600', color: THEME.slate700 }} numberOfLines={1}>{p.nivel}</Text>
-                                  <Text style={{ width: '18%', minWidth: 160, fontSize: 11.5, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
-                                  <Text style={{ width: '6%', minWidth: 60, fontSize: 11, color: THEME.slate600 }}>{p.codigo} - {p.grado}</Text>
-                                  <Text style={{ width: '16%', minWidth: 140, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || 'Secretaría Jurídica Distrital'}</Text>
-                                  <View style={{ width: '12%', minWidth: 110 }}>
-                                    <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>{p.tipo_vinculacion || 'SIN DEFINIR'}</Text>
-                                    </View>
-                                  </View>
-                                  <Text style={{ width: '8%', minWidth: 80, fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }} numberOfLines={1}>
-                                    {p.situacion_titular || p.estado_cargo}
-                                  </Text>
-                                  <Text style={{ width: '14%', minWidth: 130, fontSize: 11, color: THEME.slate800, fontWeight: '600' }} numberOfLines={1}>
-                                    {p.titular_nombre || 'VACANTE'}
-                                  </Text>
-                                  <Text style={{ width: '8%', minWidth: 85, fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
-                                    {formatMoneda(p.asignacion_basica)}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })
-                        )}
-                      </View>
-                    </ScrollView>
-
-                    {/* Paginador */}
-                    {plazasFiltradasReporte.length > filasPorPaginaReporte && (
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: THEME.slate200 }}>
-                        <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
-                          Página {paginaReporte} de {Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte)}
+                  {/* Tabla de Vinculación al Cargo / SIDEAP con PremiumTable */}
+                  <PremiumTable
+                    data={plazasFiltradasReporte}
+                    columns={columnasReportePremium}
+                    rowKey={(p) => String(p.id_plaza)}
+                    onRowClick={(p) => {
+                      setModalTab('general');
+                      setPlazaModal(p);
+                    }}
+                    pageSize={25}
+                    variant="white"
+                    minTableWidth={1200}
+                    tituloTabla="Reporte Oficial: Vinculación & SIDEAP"
+                    emptyState={
+                      <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                        <Ionicons name="search-outline" size={28} color={THEME.slate300} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate500, marginTop: 8 }}>
+                          No se encontraron plazas con los filtros seleccionados
                         </Text>
-                        <View style={{ flexDirection: 'row', gap: 6 }}>
-                          <Pressable
-                            disabled={paginaReporte <= 1}
-                            onPress={() => setPaginaReporte((prev) => Math.max(1, prev - 1))}
-                            style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, backgroundColor: paginaReporte <= 1 ? THEME.slate100 : THEME.white, borderWidth: 1, borderColor: THEME.slate300 }}
-                          >
-                            <Text style={{ fontSize: 11.5, color: paginaReporte <= 1 ? THEME.slate400 : THEME.slate800, fontWeight: '600' }}>Anterior</Text>
-                          </Pressable>
-                          <Pressable
-                            disabled={paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte)}
-                            onPress={() => setPaginaReporte((prev) => Math.min(Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte), prev + 1))}
-                            style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, backgroundColor: paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte) ? THEME.slate100 : THEME.white, borderWidth: 1, borderColor: THEME.slate300 }}
-                          >
-                            <Text style={{ fontSize: 11.5, color: paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte) ? THEME.slate400 : THEME.slate800, fontWeight: '600' }}>Siguiente</Text>
-                          </Pressable>
-                        </View>
                       </View>
-                    )}
-                  </View>
+                    }
+                  />
                 </View>
               )}
 
@@ -8763,372 +9021,31 @@ export default function NominaScreen() {
                 </View>
               </View>
 
-              {/* Mensaje de conteo de resultados */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: 13, color: THEME.slate600, fontWeight: '500' }}>
-                  Mostrando{' '}
-                  <Text style={{ fontWeight: '700', color: THEME.slate800 }}>
-                    {pernoPaginado.length}
-                  </Text>{' '}
-                  de{' '}
-                  <Text style={{ fontWeight: '700', color: THEME.slate800 }}>
-                    {pernoFiltrado.length}
-                  </Text>{' '}
-                  servidores encontrados (Página {paginaPerno} de {totalPaginasPerno})
-                </Text>
-              </View>
-
-              {/* TABLA PRINCIPAL DE PERNO (ADAPTADA A 100% Y PORCENTAJES) */}
-              <View
-                style={{
-                  backgroundColor: THEME.white,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: THEME.slate200,
-                  overflow: 'hidden',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  width: '100%',
+              {/* TABLA PRINCIPAL DE PERNO CON PremiumTable */}
+              <PremiumTable
+                data={pernoFiltrado}
+                columns={columnasPernoPremium}
+                rowKey={(item) => String(item.cedula)}
+                onRowClick={(item) => {
+                  setPernoModal(item);
+                  setModalPernoTab('personal');
                 }}
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={true}
-                  style={{ width: '100%' }}
-                  contentContainerStyle={{
-                    minWidth: '100%',
-                    flexGrow: 1,
-                    flexDirection: 'column',
-                  }}
-                >
-                  <View style={{ width: '100%', minWidth: 1100 }}>
-                    {/* Encabezado de la Tabla con Porcentajes */}
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        backgroundColor: THEME.marca900,
-                        paddingVertical: 12,
-                        paddingHorizontal: 16,
-                        alignItems: 'center',
-                        width: '100%',
-                      }}
-                    >
-                      <View style={{ width: '11%', minWidth: 110, paddingRight: 8 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Identificación
-                        </Text>
-                      </View>
-                      <View style={{ width: '21%', minWidth: 200, paddingRight: 10 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Servidor(a) / Nombre
-                        </Text>
-                      </View>
-                      <View style={{ width: '12%', minWidth: 130, paddingRight: 8 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Estado & Retiro
-                        </Text>
-                      </View>
-                      <View style={{ width: '17%', minWidth: 170, paddingRight: 10 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Cargo & Grado
-                        </Text>
-                      </View>
-                      <View style={{ width: '16%', minWidth: 160, paddingRight: 10 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Dependencia
-                        </Text>
-                      </View>
-                      <View style={{ width: '9%', minWidth: 100, paddingRight: 8 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                          Cruce Planta
-                        </Text>
-                      </View>
-                      <View style={{ width: '8%', minWidth: 95, paddingRight: 10, alignItems: 'flex-end' }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>
-                          Devengado ($)
-                        </Text>
-                      </View>
-                      <View style={{ width: '6%', minWidth: 80, alignItems: 'center' }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
-                          Expediente
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Filas de la Tabla */}
-                    {pernoPaginado.length === 0 ? (
-                      <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="search-outline" size={40} color={THEME.slate300} />
-                        <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate600, marginTop: 10 }}>
-                          No se encontraron funcionarios con los filtros seleccionados
-                        </Text>
-                        <Text style={{ fontSize: 12.5, color: THEME.slate400, marginTop: 4 }}>
-                          Prueba ajustando los términos de búsqueda o el filtro de estado
-                        </Text>
-                      </View>
-                    ) : (
-                      pernoPaginado.map((item, idx) => {
-                        const esRetirado = item.estado_funcionario === 'R' || !!item.fecha_retiro;
-                        const matchPlaza =
-                          item.plaza_id_plaza ||
-                          todasLasPlazas.find(
-                            (p) =>
-                              String(p.titular_cedula) === String(item.cedula) ||
-                              String(p.encargo_cedula) === String(item.cedula)
-                          )?.id_plaza;
-
-                        return (
-                          <View
-                            key={`${item.cedula}-${idx}`}
-                            style={{
-                              flexDirection: 'row',
-                              paddingVertical: 12,
-                              paddingHorizontal: 16,
-                              alignItems: 'center',
-                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
-                              borderBottomWidth: 1,
-                              borderBottomColor: THEME.slate100,
-                              width: '100%',
-                            }}
-                          >
-                            {/* Cédula */}
-                            <View style={{ width: '11%', minWidth: 110, paddingRight: 8 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca800 }}>
-                                {item.cedula}
-                              </Text>
-                              {item.posicion_planta ? (
-                                <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 1 }}>
-                                  Pos. #{item.posicion_planta}
-                                </Text>
-                              ) : null}
-                            </View>
-
-                            {/* Nombre completo */}
-                            <View style={{ width: '21%', minWidth: 200, paddingRight: 10 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800 }}>
-                                {item.nombre_completo || `${item.nombres} ${item.primer_apellido}`}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
-                                {item.tipo_funcionario || 'EMPLEADO DE PLANTA'}
-                              </Text>
-                            </View>
-
-                            {/* Estado y Fecha Retiro */}
-                            <View style={{ width: '12%', minWidth: 130, paddingRight: 8 }}>
-                              {esRetirado ? (
-                                <View>
-                                  <View
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      alignSelf: 'flex-start',
-                                      backgroundColor: '#FEE2E2',
-                                      borderColor: '#FCA5A5',
-                                      borderWidth: 1,
-                                      borderRadius: 6,
-                                      paddingHorizontal: 7,
-                                      paddingVertical: 2,
-                                    }}
-                                  >
-                                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626', marginRight: 5 }} />
-                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#991B1B' }}>
-                                      DESVINCULADO
-                                    </Text>
-                                  </View>
-                                  {item.fecha_retiro ? (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
-                                      <Ionicons name="calendar-outline" size={11} color="#B91C1C" style={{ marginRight: 3 }} />
-                                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#B91C1C' }}>
-                                        {formatFecha(item.fecha_retiro)}
-                                      </Text>
-                                    </View>
-                                  ) : null}
-                                </View>
-                              ) : (
-                                <View
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    alignSelf: 'flex-start',
-                                    backgroundColor: THEME.emeraldBg,
-                                    borderColor: THEME.emeraldRing,
-                                    borderWidth: 1,
-                                    borderRadius: 6,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 2,
-                                  }}
-                                >
-                                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 5 }} />
-                                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.emeraldText }}>
-                                    ACTIVO
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-
-                            {/* Cargo y Grado PERNO */}
-                            <View style={{ width: '17%', minWidth: 170, paddingRight: 10 }}>
-                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }} numberOfLines={2}>
-                                {item.cargo || 'Sin cargo'}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
-                                Código: {item.cargo_cod || 'N/A'} • Grado: {item.grado || 'N/A'}
-                              </Text>
-                            </View>
-
-                            {/* Dependencia */}
-                            <View style={{ width: '16%', minWidth: 160, paddingRight: 10 }}>
-                              <Text style={{ fontSize: 11.5, color: THEME.slate700 }} numberOfLines={2}>
-                                {item.dependencia || 'Sin dependencia'}
-                              </Text>
-                            </View>
-
-                            {/* Cruce Planta */}
-                            <View style={{ width: '9%', minWidth: 100, paddingRight: 8 }}>
-                              {matchPlaza ? (
-                                <View
-                                  style={{
-                                    alignSelf: 'flex-start',
-                                    backgroundColor: '#EFF6FF',
-                                    borderColor: '#BFDBFE',
-                                    borderWidth: 1,
-                                    borderRadius: 6,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 3,
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#1D4ED8' }}>
-                                    Plaza #{matchPlaza}
-                                  </Text>
-                                  {item.plaza_es_encargo ? (
-                                    <Text style={{ fontSize: 10, fontWeight: '600', color: '#D97706' }}>
-                                      (En Encargo)
-                                    </Text>
-                                  ) : null}
-                                </View>
-                              ) : (
-                                <View
-                                  style={{
-                                    alignSelf: 'flex-start',
-                                    backgroundColor: THEME.slate100,
-                                    borderRadius: 6,
-                                    paddingHorizontal: 6,
-                                    paddingVertical: 2,
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                                    Sin plaza activa
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-
-                            {/* Total Devengado */}
-                            <View style={{ width: '8%', minWidth: 95, paddingRight: 10, alignItems: 'flex-end' }}>
-                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca800 }}>
-                                {formatMoneda(item.total_devengado || item.asignacion_basica)}
-                              </Text>
-                              {item.asignacion_basica ? (
-                                <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 1 }}>
-                                  Básico: {formatMoneda(item.asignacion_basica)}
-                                </Text>
-                              ) : null}
-                            </View>
-
-                            {/* Botón Ver Expediente */}
-                            <View style={{ width: '6%', minWidth: 80, alignItems: 'center' }}>
-                              <Pressable
-                                onPress={() => {
-                                  setPernoModal(item);
-                                  setModalPernoTab('personal');
-                                }}
-                                style={({ pressed }) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
-                                  paddingVertical: 6,
-                                  paddingHorizontal: 10,
-                                  borderRadius: 6,
-                                  gap: 5,
-                                })}
-                              >
-                                <Ionicons name="folder-open-outline" size={13} color={THEME.white} />
-                                <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '600' }}>
-                                  Expediente
-                                </Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        );
-                      })
-                    )}
-                  </View>
-                </ScrollView>
-
-                {/* Barra de Paginación */}
-                {totalPaginasPerno > 1 && (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingHorizontal: 16,
-                      paddingVertical: 12,
-                      borderTopWidth: 1,
-                      borderTopColor: THEME.slate200,
-                      backgroundColor: THEME.slate50,
-                    }}
-                  >
-                    <Pressable
-                      disabled={paginaPerno === 1}
-                      onPress={() => setPaginaPerno((prev) => Math.max(1, prev - 1))}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: 6,
-                        paddingHorizontal: 12,
-                        borderRadius: 6,
-                        backgroundColor: paginaPerno === 1 ? THEME.slate100 : THEME.white,
-                        borderWidth: 1,
-                        borderColor: THEME.slate300,
-                        opacity: paginaPerno === 1 ? 0.5 : 1,
-                      }}
-                    >
-                      <Ionicons name="chevron-back" size={14} color={THEME.slate700} style={{ marginRight: 4 }} />
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700 }}>
-                        Anterior
-                      </Text>
-                    </Pressable>
-
-                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate700 }}>
-                      Página {paginaPerno} de {totalPaginasPerno}
+                pageSize={25}
+                variant="white"
+                minTableWidth={1150}
+                tituloTabla="Expediente y Censo Oficial de Personal PERNO"
+                emptyState={
+                  <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="search-outline" size={40} color={THEME.slate300} />
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate600, marginTop: 10 }}>
+                      No se encontraron funcionarios con los filtros seleccionados
                     </Text>
-
-                    <Pressable
-                      disabled={paginaPerno >= totalPaginasPerno}
-                      onPress={() => setPaginaPerno((prev) => Math.min(totalPaginasPerno, prev + 1))}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: 6,
-                        paddingHorizontal: 12,
-                        borderRadius: 6,
-                        backgroundColor: paginaPerno >= totalPaginasPerno ? THEME.slate100 : THEME.white,
-                        borderWidth: 1,
-                        borderColor: THEME.slate300,
-                        opacity: paginaPerno >= totalPaginasPerno ? 0.5 : 1,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700, marginRight: 4 }}>
-                        Siguiente
-                      </Text>
-                      <Ionicons name="chevron-forward" size={14} color={THEME.slate700} />
-                    </Pressable>
+                    <Text style={{ fontSize: 12.5, color: THEME.slate400, marginTop: 4 }}>
+                      Prueba ajustando los términos de búsqueda o el filtro de estado
+                    </Text>
                   </View>
-                )}
-              </View>
+                }
+              />
             </View>
           )}
         </ScrollView>
