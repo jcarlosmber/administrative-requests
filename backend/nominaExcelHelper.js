@@ -937,15 +937,9 @@ async function procesarExtraccionPerno(sheet, pool) {
 
     if (esRetirado) {
       retiradosOSinPlaza++;
-      await pool.query(`
-        UPDATE public.planta_personal_sjd SET
-          titular_cedula = NULL,
-          titular_nombre = 'VACANTE DEFINITIVA',
-          estado_cargo = 'VACANTE DEFINITIVA',
-          situacion_titular = 'VACANTE DEFINITIVA',
-          updated_at = NOW()
-        WHERE titular_cedula = $1
-      `, [cedula]);
+      // NOTA: Un estado 'R' en nómina PERNO representa no-pago en nómina interna (ej. funcionarios en
+      // período de prueba en otra entidad o comisiones temporales). No debe anular al titular oficial
+      // de carrera registrado en la hoja PLANTA SJD, pues conservan sus derechos de titularidad.
       continue;
     }
 

@@ -2286,21 +2286,6 @@ Secretaría Jurídica Distrital
             OR pl.titular_cedula IS NULL
             OR pl.titular_cedula != act.cedula
           );
-
-        UPDATE public.planta_personal_sjd pl
-        SET 
-          titular_cedula = NULL,
-          titular_nombre = 'VACANTE DEFINITIVA',
-          estado_cargo = 'VACANTE DEFINITIVA',
-          situacion_titular = 'VACANTE DEFINITIVA',
-          updated_at = NOW()
-        WHERE pl.titular_cedula IN (
-          SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM public.personal_perno_sjd act 
-          WHERE act.posicion_planta = pl.id_perno AND act.estado_funcionario = 'A' AND act.fecha_retiro IS NULL
-        );
       `);
 
       res.json({
