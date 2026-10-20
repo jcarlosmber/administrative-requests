@@ -772,22 +772,22 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
     }
 
     if (action === 'pull') {
-      console.log(`[GIT] Ejecutando git pull origin main solicitado por ${req.user.email}`);
-      exec('git pull origin main', { cwd: projectRoot, timeout: 90000 }, (error, stdout, stderr) => {
+      console.log(`[GIT] Ejecutando sincronización de repositorio solicitada por ${req.user.email}`);
+      exec('git fetch origin main && git reset --hard origin/main', { cwd: projectRoot, timeout: 90000 }, (error, stdout, stderr) => {
         const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
         if (error) {
-          console.error('[GIT] Error ejecutando git pull:', error);
+          console.error('[GIT] Error ejecutando sincronización:', error);
           return res.status(500).json({
             success: false,
-            error: 'Error al ejecutar git pull origin main.',
+            error: 'Error al sincronizar repositorio con origin/main.',
             output: fullOutput || error.message
           });
         }
-        console.log('[GIT] git pull completado:', stdout);
+        console.log('[GIT] Sincronización completada:', stdout);
         res.json({
           success: true,
-          message: 'Git pull completado exitosamente.',
-          output: fullOutput.trim() || 'Repositorio actualizado.',
+          message: 'Repositorio sincronizado y actualizado exitosamente.',
+          output: fullOutput.trim() || 'Repositorio actualizado a origin/main.',
           timestamp: new Date().toISOString()
         });
       });
@@ -795,13 +795,13 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
     }
 
     if (action === 'pull_and_build') {
-      console.log(`[GIT] Ejecutando git pull y build frontend solicitado por ${req.user.email}`);
+      console.log(`[GIT] Ejecutando git sync y build frontend solicitado por ${req.user.email}`);
       const deploySync = process.platform === 'linux'
         ? ' && if [ -d "/var/www/administrative-requests" ]; then echo \'.Secjur-2026**\' | sudo -S cp -r dist/* /var/www/administrative-requests/ && echo \'.Secjur-2026**\' | sudo -S chown -R nginx:nginx /var/www/administrative-requests/; fi'
         : '';
       const cmd = process.platform === 'win32'
-        ? `git pull origin main && cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web`
-        : `git pull origin main && (cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web${deploySync})`;
+        ? `git fetch origin main && git reset --hard origin/main && cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web`
+        : `git fetch origin main && git reset --hard origin/main && (cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web${deploySync})`;
 
       exec(cmd, { cwd: projectRoot, timeout: 360000 }, (error, stdout, stderr) => {
         const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
