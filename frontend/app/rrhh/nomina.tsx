@@ -366,16 +366,22 @@ export default function NominaScreen() {
           (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
           (String(p.situacion_titular || m?.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
+        const encargoNombreFinal = p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null);
+        const encargoCedulaFinal = p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null);
+        const esEncargoFinal = p.es_encargo !== undefined ? Boolean(p.es_encargo) : (m?.es_encargo ?? false);
+        const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
+        const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
+
         return {
           ...p,
           titular_nombre: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : titularNombreFinal,
           titular_cedula: esVacanteDefinitiva ? null : titularCedulaFinal,
           estado_cargo: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : estadoCargoFinal,
-          id_escalera: esVacanteDefinitiva ? null : (p.id_escalera || m?.id_escalera || null),
-          peldano_escalera: esVacanteDefinitiva ? null : (p.peldano_escalera || m?.peldano_escalera || null),
-          encargo_cedula: esVacanteDefinitiva ? null : (p.encargo_cedula || m?.encargo_cedula || null),
-          encargo_nombre: esVacanteDefinitiva ? null : (p.encargo_nombre || m?.encargo_nombre || null),
-          es_encargo: esVacanteDefinitiva ? false : (p.es_encargo !== undefined ? p.es_encargo : (m?.es_encargo ?? false)),
+          id_escalera: idEscaleraFinal,
+          peldano_escalera: peldanoEscaleraFinal,
+          encargo_cedula: encargoCedulaFinal,
+          encargo_nombre: encargoNombreFinal,
+          es_encargo: esEncargoFinal || !!encargoNombreFinal,
           opec: p.opec !== undefined ? p.opec : (m?.opec || null),
           situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
           tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
