@@ -10255,7 +10255,7 @@ export default function NominaScreen() {
                       </Text>
                     </View>
 
-                    {(plazaModal.es_encargo || !!plazaModalEnriquecida?.numero_acto_encargo) ? (
+                    {(plazaModal?.es_encargo || !!plazaModalEnriquecida?.numero_acto_encargo) ? (
                       <View style={{ flex: 1, minWidth: 160 }}>
                         <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '700' }}>Acto de Encargo (Col. AN)</Text>
                         <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309', marginTop: 2 }}>
