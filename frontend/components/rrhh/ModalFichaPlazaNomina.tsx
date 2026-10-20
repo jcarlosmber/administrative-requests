@@ -177,23 +177,23 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
 
   const plazaEnriquecida = useMemo(() => {
     if (!plazaActiva) return null;
+    const idPlazaNum = Number(plazaActiva.id_plaza);
     const mockMatch = (mockPlazasData as any[]).find(
-      (m) =>
-        m.id_plaza === plazaActiva.id_plaza ||
-        (m.cargo === plazaActiva.cargo &&
-          String(m.codigo) === String(plazaActiva.codigo) &&
-          String(m.grado) === String(plazaActiva.grado))
+      (m) => Number(m.id_plaza) === idPlazaNum
     );
 
     const titularCedulaLimpia = plazaActiva.titular_cedula
       ? String(plazaActiva.titular_cedula).trim()
-      : mockMatch?.titular_cedula
-      ? String(mockMatch.titular_cedula).trim()
-      : '';
-    const encargoCedulaLimpia = plazaActiva.encargo_cedula
+      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).trim() : '');
+
+    const tieneEncargoReal = Boolean(
+      plazaActiva.es_encargo ||
+      (plazaActiva.encargo_nombre && plazaActiva.encargo_nombre.trim() !== '') ||
+      (plazaActiva.encargo_cedula && String(plazaActiva.encargo_cedula).trim() !== '')
+    );
+
+    const encargoCedulaLimpia = tieneEncargoReal && plazaActiva.encargo_cedula
       ? String(plazaActiva.encargo_cedula).trim()
-      : mockMatch?.encargo_cedula
-      ? String(mockMatch.encargo_cedula).trim()
       : '';
 
     const pernoTitular = titularCedulaLimpia
@@ -205,22 +205,30 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       : null;
 
     const pernoPorPosicion = plazaActiva.id_perno
-      ? listadoPerno.find((p) => p.posicion_planta === plazaActiva.id_perno)
+      ? listadoPerno.find((p) => Number(p.posicion_planta) === Number(plazaActiva.id_perno))
       : null;
 
-    const pernoActivo = pernoEncargo || pernoTitular || pernoPorPosicion;
+    const pernoActivo = tieneEncargoReal
+      ? (pernoEncargo || pernoPorPosicion || pernoTitular)
+      : (pernoTitular || pernoPorPosicion);
 
-    const edadTitular = pernoTitular?.fecha_nacimiento
-      ? calcEdad(pernoTitular.fecha_nacimiento)
+    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!plazaActiva.es_encargo ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacEncargo = pernoEncargo?.fecha_nacimiento || (plazaActiva.es_encargo ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacActiva = tieneEncargoReal
+      ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
+      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || plazaActiva.fecha_nacimiento || null);
+
+    const edadTitular = fechaNacTitular
+      ? calcEdad(fechaNacTitular)
       : (!plazaActiva.es_encargo && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
 
-    const edadEncargo = pernoEncargo?.fecha_nacimiento
-      ? calcEdad(pernoEncargo.fecha_nacimiento)
+    const edadEncargo = fechaNacEncargo
+      ? calcEdad(fechaNacEncargo)
       : (plazaActiva.es_encargo && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
 
-    const edadActiva = pernoActivo?.fecha_nacimiento
-      ? calcEdad(pernoActivo.fecha_nacimiento)
-      : (plazaActiva.edad || mockMatch?.edad || (pernoTitular?.fecha_nacimiento ? calcEdad(pernoTitular.fecha_nacimiento) : null));
+    const edadActiva = fechaNacActiva
+      ? calcEdad(fechaNacActiva)
+      : (tieneEncargoReal ? edadEncargo : (edadTitular || (plazaActiva.edad ? Number(plazaActiva.edad) : null)));
 
     const manualOficial =
       plazaActiva.manual_funciones ||
@@ -337,9 +345,9 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       edad_activa: edadActiva,
       edad_titular: edadTitular,
       edad_encargo: edadEncargo,
-      fecha_nacimiento_activa: pernoActivo?.fecha_nacimiento || null,
-      fecha_nacimiento_titular: pernoTitular?.fecha_nacimiento || null,
-      fecha_nacimiento_encargo: pernoEncargo?.fecha_nacimiento || null,
+      fecha_nacimiento_activa: fechaNacActiva,
+      fecha_nacimiento_titular: fechaNacTitular,
+      fecha_nacimiento_encargo: fechaNacEncargo,
       tipo_sangre_activa: pernoActivo?.tipo_sangre ? `${pernoActivo.tipo_sangre} ${pernoActivo.rh || ''}`.trim() : null,
       fondo_salud: pernoActivo?.fondo_salud || plazaActiva.fondo_salud || mockMatch?.fondo_salud || 'No reportada',
       fondo_pension: pernoActivo?.fondo_pension || plazaActiva.fondo_pension || mockMatch?.fondo_pension || 'No reportado',
@@ -1091,15 +1099,15 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                         <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
                           <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                            {plazaEnriquecida?.edad_activa ? `${plazaEnriquecida.edad_activa} años` : 'No registrada'}
+                            {plazaEnriquecida?.edad_titular ? `${plazaEnriquecida.edad_titular} años` : (plazaEnriquecida?.edad_activa ? `${plazaEnriquecida.edad_activa} años` : 'No registrada')}
                           </Text>
                           <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
                             <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
                           </View>
                         </View>
-                        {plazaEnriquecida?.fecha_nacimiento_activa ? (
+                        {(plazaEnriquecida?.fecha_nacimiento_titular || plazaEnriquecida?.fecha_nacimiento_activa) ? (
                           <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                            F. Nac: {plazaEnriquecida.fecha_nacimiento_activa}
+                            F. Nac: {plazaEnriquecida.fecha_nacimiento_titular || plazaEnriquecida.fecha_nacimiento_activa}
                           </Text>
                         ) : null}
                       </View>

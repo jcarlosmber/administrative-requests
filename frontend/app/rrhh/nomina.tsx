@@ -1682,24 +1682,25 @@ export default function NominaScreen() {
   // 9. Datos enriquecidos de la plaza seleccionada con el Manual de Funciones del Archivo de Planta Oficial y PERNO
   const plazaModalEnriquecida = useMemo(() => {
     if (!plazaModal) return null;
+    const idPlazaNum = Number(plazaModal.id_plaza);
     const mockMatch = (mockPlazasData as any[]).find(
-      (m) =>
-        m.id_plaza === plazaModal.id_plaza ||
-        (m.cargo === plazaModal.cargo &&
-          String(m.codigo) === String(plazaModal.codigo) &&
-          String(m.grado) === String(plazaModal.grado))
+      (m) => Number(m.id_plaza) === idPlazaNum
     );
 
     // Cédulas limpias para búsqueda en PERNO
     const titularCedulaLimpia = plazaModal.titular_cedula
       ? String(plazaModal.titular_cedula).trim()
-      : mockMatch?.titular_cedula
-      ? String(mockMatch.titular_cedula).trim()
-      : '';
-    const encargoCedulaLimpia = plazaModal.encargo_cedula
+      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).trim() : '');
+
+    // Verificamos si realmente la plaza tiene encargo asignado (no hereda encargo de otra plaza)
+    const tieneEncargoReal = Boolean(
+      plazaModal.es_encargo ||
+      (plazaModal.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ||
+      (plazaModal.encargo_cedula && String(plazaModal.encargo_cedula).trim() !== '')
+    );
+
+    const encargoCedulaLimpia = tieneEncargoReal && plazaModal.encargo_cedula
       ? String(plazaModal.encargo_cedula).trim()
-      : mockMatch?.encargo_cedula
-      ? String(mockMatch.encargo_cedula).trim()
       : '';
 
     // Buscar en todoElPerno
@@ -1712,24 +1713,33 @@ export default function NominaScreen() {
       : null;
 
     const pernoPorPosicion = plazaModal.id_perno
-      ? todoElPerno.find((p) => p.posicion_planta === plazaModal.id_perno)
+      ? todoElPerno.find((p) => Number(p.posicion_planta) === Number(plazaModal.id_perno))
       : null;
 
-    // Servidor activo principal (el que desempeña el cargo: encargo primero, si no titular, o por posición de nómina)
-    const pernoActivo = pernoEncargo || pernoTitular || pernoPorPosicion;
+    // Servidor activo principal (el que desempeña el cargo: encargo primero si tiene encargo real, si no titular, o por posición de nómina)
+    const pernoActivo = tieneEncargoReal
+      ? (pernoEncargo || pernoPorPosicion || pernoTitular)
+      : (pernoTitular || pernoPorPosicion);
 
-    // Edades calculadas desde la fecha de nacimiento registrada en PERNO
-    const edadTitular = pernoTitular?.fecha_nacimiento
-      ? calcEdad(pernoTitular.fecha_nacimiento)
+    // Fechas de nacimiento reales
+    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!plazaModal.es_encargo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacEncargo = pernoEncargo?.fecha_nacimiento || (plazaModal.es_encargo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacActiva = tieneEncargoReal
+      ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
+      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || plazaModal.fecha_nacimiento || null);
+
+    // Edades calculadas desde la fecha de nacimiento registrada en PERNO o BD
+    const edadTitular = fechaNacTitular
+      ? calcEdad(fechaNacTitular)
       : (!plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
 
-    const edadEncargo = pernoEncargo?.fecha_nacimiento
-      ? calcEdad(pernoEncargo.fecha_nacimiento)
+    const edadEncargo = fechaNacEncargo
+      ? calcEdad(fechaNacEncargo)
       : (plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
 
-    const edadActiva = pernoActivo?.fecha_nacimiento
-      ? calcEdad(pernoActivo.fecha_nacimiento)
-      : (plazaModal.edad || mockMatch?.edad || (pernoTitular?.fecha_nacimiento ? calcEdad(pernoTitular.fecha_nacimiento) : null));
+    const edadActiva = fechaNacActiva
+      ? calcEdad(fechaNacActiva)
+      : (tieneEncargoReal ? edadEncargo : (edadTitular || (plazaModal.edad ? Number(plazaModal.edad) : null)));
 
     // Manual de Funciones textual del Archivo de Planta Oficial (Columna AH: Páginas Manual de Funciones)
     const manualOficial =
@@ -1852,9 +1862,9 @@ export default function NominaScreen() {
       edad_activa: edadActiva,
       edad_titular: edadTitular,
       edad_encargo: edadEncargo,
-      fecha_nacimiento_activa: pernoActivo?.fecha_nacimiento || null,
-      fecha_nacimiento_titular: pernoTitular?.fecha_nacimiento || null,
-      fecha_nacimiento_encargo: pernoEncargo?.fecha_nacimiento || null,
+      fecha_nacimiento_activa: fechaNacActiva,
+      fecha_nacimiento_titular: fechaNacTitular,
+      fecha_nacimiento_encargo: fechaNacEncargo,
       tipo_sangre_activa: pernoActivo?.tipo_sangre ? `${pernoActivo.tipo_sangre} ${pernoActivo.rh || ''}`.trim() : null,
       fondo_salud: pernoActivo?.fondo_salud || plazaModal.fondo_salud || mockMatch?.fondo_salud || 'No reportada',
       fondo_pension: pernoActivo?.fondo_pension || plazaModal.fondo_pension || mockMatch?.fondo_pension || 'No reportado',
@@ -10104,17 +10114,17 @@ export default function NominaScreen() {
                         <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
                           <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
-                            {plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---'}
+                            {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---')}
                           </Text>
-                          {plazaModalEnriquecida?.edad_activa ? (
+                          {(plazaModalEnriquecida?.edad_titular || plazaModalEnriquecida?.edad_activa) ? (
                             <View style={{ backgroundColor: THEME.marca50, borderColor: THEME.marca100, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
                               <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>PERNO</Text>
                             </View>
                           ) : null}
                         </View>
-                        {plazaModalEnriquecida?.fecha_nacimiento_activa ? (
+                        {(plazaModalEnriquecida?.fecha_nacimiento_titular || plazaModalEnriquecida?.fecha_nacimiento_activa) ? (
                           <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                            F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_activa)}
+                            F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular || plazaModalEnriquecida.fecha_nacimiento_activa)}
                           </Text>
                         ) : null}
                       </View>
