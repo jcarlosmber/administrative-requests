@@ -2950,14 +2950,14 @@ export default function NominaScreen() {
                 </Pressable>
               ) : null}
 
-              {/* Columna G: TIPO DE VINCULACIÓN AL CARGO/ SIDEAP */}
-              {tipoVinculacionCargo ? (
+              {/* Columna G: TIPO DE VINCULACIÓN AL CARGO/ SIDEAP (se omite si ya se muestra el badge de ENCARGADO(A)) */}
+              {tipoVinculacionCargo && (!tieneEncargoActivo || !tipoVinculacionCargo.toUpperCase().includes('ENCARGO')) ? (
                 <Text
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={{
                     fontSize: 10,
-                    color: esProvisional ? '#B45309' : (tieneEncargoActivo ? '#92400E' : THEME.slate500),
+                    color: esProvisional ? '#B45309' : THEME.slate500,
                     fontWeight: esProvisional ? '700' : '500',
                     flexShrink: 1,
                   }}
@@ -3311,14 +3311,14 @@ export default function NominaScreen() {
                 </Pressable>
               ) : null}
 
-              {/* Columna G: TIPO DE VINCULACIÓN AL CARGO/ SIDEAP */}
-              {tipoVinculacionCargo ? (
+              {/* Columna G: TIPO DE VINCULACIÓN AL CARGO/ SIDEAP (se omite si ya se muestra el badge de ENCARGADO(A)) */}
+              {tipoVinculacionCargo && (!tieneEncargoActivo || !tipoVinculacionCargo.toUpperCase().includes('ENCARGO')) ? (
                 <Text
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={{
                     fontSize: 10,
-                    color: esProvisional ? '#B45309' : (tieneEncargoActivo ? '#92400E' : THEME.slate500),
+                    color: esProvisional ? '#B45309' : THEME.slate500,
                     fontWeight: esProvisional ? '700' : '500',
                     flexShrink: 1,
                   }}
