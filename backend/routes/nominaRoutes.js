@@ -416,6 +416,9 @@ module.exports = function (pool) {
         ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_efectiva_encargo DATE;
         ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS numero_acto_encargo TEXT;
         ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_acto_encargo DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS numero_acto_encargo TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_acto_encargo DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_efectiva_encargo DATE;
 
         -- Corregir mojibake en registros existentes de la tabla
         UPDATE public.planta_personal_sjd SET

@@ -129,6 +129,9 @@ export interface PlazaNomina {
   acto_nombramiento?: string;
   numero_acto_nombramiento?: string;
   fecha_acto_nombramiento?: string;
+  numero_acto_encargo?: string;
+  fecha_acto_encargo?: string;
+  fecha_efectiva_encargo?: string;
   total_devengado?: number;
   fecha_vacancia?: string;
   fecha_reporte_simo?: string;

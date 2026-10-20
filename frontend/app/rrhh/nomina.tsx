@@ -273,10 +273,12 @@ export default function NominaScreen() {
   };
 
   const formatFecha = (val?: string | null) => {
-    if (!val) return 'No registrada';
-    const s = String(val).split('T')[0];
+    if (!val) return 'No reportada';
+    const trimmed = String(val).trim();
+    if (!trimmed || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined') return 'No reportada';
+    const s = trimmed.split('T')[0].trim();
     const parts = s.split('-');
-    if (parts.length === 3) {
+    if (parts.length === 3 && parts[0].length === 4) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return s;
@@ -1860,27 +1862,50 @@ export default function NominaScreen() {
       sexo: pernoActivo?.sexo || plazaModal.sexo || mockMatch?.sexo || '---',
       tipo_funcionario: pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
       acto_nombramiento:
+        pernoTitular?.acto_nombramiento ||
         pernoActivo?.acto_nombramiento ||
         plazaModal.acto_nombramiento ||
         mockMatch?.acto_nombramiento ||
         plazaModal.numero_acto_nombramiento ||
         'Resolución institucional',
       numero_acto_nombramiento:
+        pernoTitular?.numero_acto_nombramiento ||
         pernoActivo?.numero_acto_nombramiento ||
         plazaModal.numero_acto_nombramiento ||
         mockMatch?.numero_acto_nombramiento ||
         '---',
       fecha_acto_nombramiento:
+        pernoTitular?.fecha_acto_nombramiento ||
         pernoActivo?.fecha_acto_nombramiento ||
         plazaModal.fecha_acto_nombramiento ||
         mockMatch?.fecha_acto_nombramiento ||
         null,
+      numero_acto_encargo:
+        pernoEncargo?.numero_acto_encargo ||
+        (plazaModal as any)?.numero_acto_encargo ||
+        (mockMatch as any)?.numero_acto_encargo ||
+        pernoActivo?.numero_acto_encargo ||
+        null,
+      fecha_acto_encargo:
+        pernoEncargo?.fecha_acto_encargo ||
+        (plazaModal as any)?.fecha_acto_encargo ||
+        (mockMatch as any)?.fecha_acto_encargo ||
+        pernoActivo?.fecha_acto_encargo ||
+        null,
+      fecha_efectiva_encargo:
+        pernoEncargo?.fecha_efectiva_encargo ||
+        (plazaModal as any)?.fecha_efectiva_encargo ||
+        (mockMatch as any)?.fecha_efectiva_encargo ||
+        pernoActivo?.fecha_efectiva_encargo ||
+        null,
       fecha_ingreso_entidad:
+        pernoTitular?.fecha_ingreso_entidad ||
         pernoActivo?.fecha_ingreso_entidad ||
         (plazaModal as any).fecha_ingreso_entidad ||
         mockMatch?.fecha_ingreso_entidad ||
         null,
       fecha_ingreso_distrito:
+        pernoTitular?.fecha_ingreso_distrito ||
         pernoActivo?.fecha_ingreso_distrito ||
         (plazaModal as any).fecha_ingreso_distrito ||
         mockMatch?.fecha_ingreso_distrito ||
@@ -9727,7 +9752,7 @@ export default function NominaScreen() {
                             </View>
                             {plazaModalEnriquecida?.fecha_nacimiento_encargo ? (
                               <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {plazaModalEnriquecida.fecha_nacimiento_encargo}
+                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_encargo)}
                               </Text>
                             ) : null}
                           </View>
@@ -9743,6 +9768,13 @@ export default function NominaScreen() {
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
                               {plazaModal.tipo_vinculacion || 'Planta'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Encargo (Col. AN)</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309', marginTop: 1 }}>
+                              {plazaModalEnriquecida?.numero_acto_encargo ? `Acto #${plazaModalEnriquecida.numero_acto_encargo}` : '---'}
                             </Text>
                           </View>
                         </View>
@@ -9803,7 +9835,7 @@ export default function NominaScreen() {
                             </View>
                             {plazaModalEnriquecida?.fecha_nacimiento_titular ? (
                               <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                                F. Nac: {plazaModalEnriquecida.fecha_nacimiento_titular}
+                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular)}
                               </Text>
                             ) : null}
                           </View>
@@ -9826,6 +9858,15 @@ export default function NominaScreen() {
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
                               {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || '---'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                                ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                                : '---'}
                             </Text>
                           </View>
 
@@ -9881,7 +9922,7 @@ export default function NominaScreen() {
                         </View>
                         {plazaModalEnriquecida?.fecha_nacimiento_activa ? (
                           <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
-                            F. Nac: {plazaModalEnriquecida.fecha_nacimiento_activa}
+                            F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_activa)}
                           </Text>
                         ) : null}
                       </View>
@@ -9908,9 +9949,11 @@ export default function NominaScreen() {
                       </View>
 
                       <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.acto_nombramiento || plazaModalEnriquecida?.numero_acto_nombramiento || '---'}
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                            ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                            : (plazaModalEnriquecida?.acto_nombramiento || '---')}
                         </Text>
                       </View>
                     </View>
@@ -9918,7 +9961,7 @@ export default function NominaScreen() {
 
                   {/* SECCIÓN 3: FECHAS Y REGISTRO INSTITUCIONAL */}
                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                    3. Registro y Fechas de Vinculación
+                    3. Actos Administrativos y Fechas de Vinculación
                   </Text>
                   <View
                     style={{
@@ -9932,24 +9975,43 @@ export default function NominaScreen() {
                       gap: 14,
                     }}
                   >
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fecha Acto Nombramiento</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModalEnriquecida?.fecha_acto_nombramiento || 'No reportada'}
+                    <View style={{ flex: 1, minWidth: 160 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                          ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                          : (plazaModalEnriquecida?.acto_nombramiento || 'No reportado')}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                        Fecha: {formatFecha(plazaModalEnriquecida?.fecha_acto_nombramiento)}
                       </Text>
                     </View>
+
+                    {(plazaModal.es_encargo || !!plazaModalEnriquecida?.numero_acto_encargo) ? (
+                      <View style={{ flex: 1, minWidth: 160 }}>
+                        <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '700' }}>Acto de Encargo (Col. AN)</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309', marginTop: 2 }}>
+                          {plazaModalEnriquecida?.numero_acto_encargo
+                            ? `Acto #${plazaModalEnriquecida.numero_acto_encargo}`
+                            : 'Registrado'}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                          Fecha: {formatFecha(plazaModalEnriquecida?.fecha_acto_encargo || plazaModalEnriquecida?.fecha_efectiva_encargo)}
+                        </Text>
+                      </View>
+                    ) : null}
 
                     <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={{ fontSize: 11, color: THEME.slate500 }}>Ingreso a la Entidad (SJD)</Text>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModalEnriquecida?.fecha_ingreso_entidad || 'No reportada'}
+                        {formatFecha(plazaModalEnriquecida?.fecha_ingreso_entidad)}
                       </Text>
                     </View>
 
                     <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={{ fontSize: 11, color: THEME.slate500 }}>Ingreso al Distrito Capital</Text>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModalEnriquecida?.fecha_ingreso_distrito || 'No reportada'}
+                        {formatFecha(plazaModalEnriquecida?.fecha_ingreso_distrito)}
                       </Text>
                     </View>
                   </View>
@@ -10656,7 +10718,7 @@ export default function NominaScreen() {
                           Fecha de Nacimiento
                         </Text>
                         <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 3 }}>
-                          {plazaModalEnriquecida?.fecha_nacimiento_activa || 'No registrada'}
+                          {formatFecha(plazaModalEnriquecida?.fecha_nacimiento_activa)}
                         </Text>
                       </View>
 
