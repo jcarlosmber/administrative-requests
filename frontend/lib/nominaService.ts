@@ -471,15 +471,26 @@ export const nominaService = {
         if (data.success && Array.isArray(data.plazas) && data.plazas.length > 0) {
           const listPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
           const plazasProcesadas = data.plazas.map((p: PlazaNomina) => {
-            const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+            const idPlazaNum = Number(p.id_plaza);
+            const m = (mockPlazasData as any[]).find((mock) => Number(mock.id_plaza) === idPlazaNum);
             const esVacDef = 
               (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
               (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
               (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
-            const encargoNombreFinal = p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null);
-            const encargoCedulaFinal = p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null);
-            const esEncargoFinal = p.es_encargo !== undefined ? Boolean(p.es_encargo) : (m?.es_encargo ?? false);
+            const tieneEncargo = Boolean(
+              p.es_encargo ||
+              (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
+              (p.encargo_cedula && String(p.encargo_cedula).trim() !== '')
+            );
+
+            const encargoNombreFinal = tieneEncargo
+              ? (p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null))
+              : null;
+            const encargoCedulaFinal = tieneEncargo
+              ? (p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null))
+              : null;
+            const esEncargoFinal = tieneEncargo;
             const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
             const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
 
@@ -492,7 +503,7 @@ export const nominaService = {
               peldano_escalera: peldanoEscaleraFinal,
               encargo_cedula: encargoCedulaFinal,
               encargo_nombre: encargoNombreFinal,
-              es_encargo: esEncargoFinal || !!encargoNombreFinal,
+              es_encargo: esEncargoFinal,
               opec: p.opec || m?.opec || null,
               situacion_titular: esVacDef ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
               tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
@@ -917,10 +928,13 @@ export const nominaService = {
     const listPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
 
     let result = listPerno.map((per) => {
+      const cedLimpia = String(per.cedula || '').replace(/\D/g, '');
+      if (!cedLimpia) return per;
+
       const match = listPlazas.find(
         (pl) =>
-          String(pl.titular_cedula) === String(per.cedula) ||
-          String(pl.encargo_cedula) === String(per.cedula)
+          (pl.titular_cedula && String(pl.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
+          (pl.es_encargo && pl.encargo_cedula && String(pl.encargo_cedula).replace(/\D/g, '') === cedLimpia)
       );
       if (!match) return per;
 

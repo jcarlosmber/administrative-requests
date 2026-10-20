@@ -355,9 +355,8 @@ export default function NominaScreen() {
       });
 
       const listadoEnriquecido = (listado || []).map((p: PlazaNomina) => {
-        const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
-        const posPlanta = p.id_perno || m?.id_perno;
-        const funcionarioActivo = posPlanta ? pernoActivosPorPos.get(posPlanta) : null;
+        const idPlazaNum = Number(p.id_plaza);
+        const m = (mockPlazasData as any[]).find((mock) => Number(mock.id_plaza) === idPlazaNum);
 
         // La fuente de verdad para la titularidad, encargos y estado es la planta de personal oficial
         const titularNombreFinal = p.titular_nombre !== undefined ? p.titular_nombre : (m?.titular_nombre || null);
@@ -369,11 +368,34 @@ export default function NominaScreen() {
           (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
           (String(p.situacion_titular || m?.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
 
-        const encargoNombreFinal = p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null);
-        const encargoCedulaFinal = p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null);
-        const esEncargoFinal = p.es_encargo !== undefined ? Boolean(p.es_encargo) : (m?.es_encargo ?? false);
+        // Solo es encargo si la plaza realmente tiene encargo asignado
+        const tieneEncargo = Boolean(
+          p.es_encargo ||
+          (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
+          (p.encargo_cedula && String(p.encargo_cedula).trim() !== '')
+        );
+
+        const encargoNombreFinal = tieneEncargo
+          ? (p.encargo_nombre !== undefined ? p.encargo_nombre : (m?.encargo_nombre || null))
+          : null;
+        const encargoCedulaFinal = tieneEncargo
+          ? (p.encargo_cedula !== undefined ? p.encargo_cedula : (m?.encargo_cedula || null))
+          : null;
+        const esEncargoFinal = tieneEncargo;
         const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
         const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
+
+        // Persona física que desempeña activamente el empleo (encargo si hay encargo real, titular si no)
+        const cedulaActiva = esEncargoFinal && encargoCedulaFinal
+          ? String(encargoCedulaFinal).replace(/\D/g, '')
+          : (!esVacanteDefinitiva && titularCedulaFinal)
+            ? String(titularCedulaFinal).replace(/\D/g, '')
+            : null;
+
+        // Búsqueda ESTRICTA por documento de identidad de la persona física activa
+        const funcionarioActivo = cedulaActiva
+          ? rawPerno.find((per) => String(per.cedula || '').replace(/\D/g, '') === cedulaActiva)
+          : null;
 
         return {
           ...p,
@@ -384,7 +406,7 @@ export default function NominaScreen() {
           peldano_escalera: peldanoEscaleraFinal,
           encargo_cedula: encargoCedulaFinal,
           encargo_nombre: encargoNombreFinal,
-          es_encargo: esEncargoFinal || !!encargoNombreFinal,
+          es_encargo: esEncargoFinal,
           opec: p.opec !== undefined ? p.opec : (m?.opec || null),
           situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
           tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
@@ -392,7 +414,8 @@ export default function NominaScreen() {
           manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
           resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
           sexo: (() => {
-            const rawS = p.sexo || m?.sexo || funcionarioActivo?.sexo || null;
+            if (esVacanteDefinitiva) return null;
+            const rawS = funcionarioActivo?.sexo || p.sexo || m?.sexo || null;
             if (!rawS) return null;
             const sU = String(rawS).trim().toUpperCase();
             if (sU === 'F' || sU === 'FEMENINO' || sU === 'MUJER') return 'MUJER';
@@ -400,9 +423,13 @@ export default function NominaScreen() {
             return sU;
           })(),
           edad: (() => {
+            if (esVacanteDefinitiva) return undefined;
+            if (funcionarioActivo?.fecha_nacimiento) {
+              const ed = calcEdad(funcionarioActivo.fecha_nacimiento);
+              if (ed && ed > 0) return ed;
+            }
             if (p.edad && Number(p.edad) > 0) return Number(p.edad);
             if (m?.edad && Number(m.edad) > 0) return Number(m.edad);
-            if (funcionarioActivo?.fecha_nacimiento) return calcEdad(funcionarioActivo.fecha_nacimiento) || undefined;
             return undefined;
           })(),
         };
@@ -603,9 +630,10 @@ export default function NominaScreen() {
         if (perMatch?.sexo) raw = String(perMatch.sexo).trim().toUpperCase();
       }
 
-      // 5. Buscar en mock oficial de respaldo por ID de plaza
+      // 5. Buscar en mock oficial de respaldo por ID numérico de plaza
       if (!raw || raw === 'SIN_DATO' || raw === 'NULL') {
-        const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+        const idPlazaNum = Number(p.id_plaza);
+        const m = (mockPlazasData as any[]).find((mock) => Number(mock.id_plaza) === idPlazaNum);
         if (m?.sexo) raw = String(m.sexo).trim().toUpperCase();
       }
 
@@ -615,13 +643,22 @@ export default function NominaScreen() {
     };
 
     const obtenerEdadPlaza = (p: PlazaNomina) => {
-      if (p.edad && Number(p.edad) > 0) return Number(p.edad);
-      const ced = p.encargo_cedula ? String(p.encargo_cedula).trim() : p.titular_cedula ? String(p.titular_cedula).trim() : null;
+      const tieneEncargo = Boolean(
+        p.es_encargo ||
+        (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
+        (p.encargo_cedula && String(p.encargo_cedula).trim() !== '')
+      );
+      const ced = tieneEncargo && p.encargo_cedula
+        ? String(p.encargo_cedula).replace(/\D/g, '')
+        : p.titular_cedula
+          ? String(p.titular_cedula).replace(/\D/g, '')
+          : null;
       const per = ced ? pernoMapPorCed.get(ced) : null;
       if (per?.fecha_nacimiento) {
         const ed = calcEdad(per.fecha_nacimiento);
         if (ed && ed > 0) return ed;
       }
+      if (p.edad && Number(p.edad) > 0) return Number(p.edad);
       return 0;
     };
 
@@ -1689,8 +1726,8 @@ export default function NominaScreen() {
 
     // Cédulas limpias para búsqueda en PERNO
     const titularCedulaLimpia = plazaModal.titular_cedula
-      ? String(plazaModal.titular_cedula).trim()
-      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).trim() : '');
+      ? String(plazaModal.titular_cedula).replace(/\D/g, '')
+      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
 
     // Verificamos si realmente la plaza tiene encargo asignado (no hereda encargo de otra plaza)
     const tieneEncargoReal = Boolean(
@@ -1700,46 +1737,45 @@ export default function NominaScreen() {
     );
 
     const encargoCedulaLimpia = tieneEncargoReal && plazaModal.encargo_cedula
-      ? String(plazaModal.encargo_cedula).trim()
+      ? String(plazaModal.encargo_cedula).replace(/\D/g, '')
       : '';
 
-    // Buscar en todoElPerno
+    // Buscar en todoElPerno por cédula estricta
     const pernoTitular = titularCedulaLimpia
-      ? todoElPerno.find((p) => String(p.cedula).trim() === titularCedulaLimpia)
+      ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
       : null;
 
     const pernoEncargo = encargoCedulaLimpia
-      ? todoElPerno.find((p) => String(p.cedula).trim() === encargoCedulaLimpia)
+      ? todoElPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === encargoCedulaLimpia)
       : null;
 
-    const pernoPorPosicion = plazaModal.id_perno
+    // Solo buscar por posición si la plaza NO tiene ninguna cédula registrada para evitar colisiones con terceros
+    const pernoPorPosicion = (!titularCedulaLimpia && !encargoCedulaLimpia && plazaModal.id_perno)
       ? todoElPerno.find((p) => Number(p.posicion_planta) === Number(plazaModal.id_perno))
       : null;
 
-    // Servidor activo principal (el que desempeña el cargo: encargo primero si tiene encargo real, si no titular, o por posición de nómina)
+    // Servidor activo principal (el que desempeña el cargo: encargo si tiene encargo real, de lo contrario titular)
     const pernoActivo = tieneEncargoReal
       ? (pernoEncargo || pernoPorPosicion || pernoTitular)
       : (pernoTitular || pernoPorPosicion);
 
-    // Fechas de nacimiento reales
-    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!plazaModal.es_encargo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
-    const fechaNacEncargo = pernoEncargo?.fecha_nacimiento || (plazaModal.es_encargo ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    // Fechas de nacimiento reales (prioridad absoluta al registro oficial en PERNO)
+    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || plazaModal.fecha_nacimiento || mockMatch?.fecha_nacimiento || null) : null;
     const fechaNacActiva = tieneEncargoReal
       ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
-      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || plazaModal.fecha_nacimiento || null);
+      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || null);
 
-    // Edades calculadas desde la fecha de nacimiento registrada en PERNO o BD
+    // Edades calculadas desde la fecha de nacimiento oficial registrada en PERNO o BD
     const edadTitular = fechaNacTitular
       ? calcEdad(fechaNacTitular)
-      : (!plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
+      : (!tieneEncargoReal && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
 
-    const edadEncargo = fechaNacEncargo
-      ? calcEdad(fechaNacEncargo)
-      : (plazaModal?.es_encargo && (plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null);
+    const edadEncargo = tieneEncargoReal
+      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : ((plazaModal?.edad || mockMatch?.edad) ? Number(plazaModal?.edad || mockMatch?.edad) : null))
+      : null;
 
-    const edadActiva = fechaNacActiva
-      ? calcEdad(fechaNacActiva)
-      : (tieneEncargoReal ? edadEncargo : (edadTitular || (plazaModal.edad ? Number(plazaModal.edad) : null)));
+    const edadActiva = tieneEncargoReal ? edadEncargo : (edadTitular || (plazaModal.edad ? Number(plazaModal.edad) : null));
 
     // Manual de Funciones textual del Archivo de Planta Oficial (Columna AH: Páginas Manual de Funciones)
     const manualOficial =

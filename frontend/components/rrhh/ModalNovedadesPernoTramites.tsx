@@ -343,15 +343,20 @@ export default function ModalNovedadesPernoTramites({
       const etapasBase = generarEtapasParaCaso(tipoProceso, modalidad);
       const etapasLimpias = limpiarEtapasParaNuevoTramite(etapasBase);
 
-      // Buscar plaza asociada si existe
+      // Buscar plaza asociada priorizando SIEMPRE la cédula del funcionario
       let idPlazaDetectada: number | undefined = undefined;
-      if (item.posicion_planta) {
-        const plazaMatch = plazas.find((pl) => pl.id_perno === item.posicion_planta);
-        if (plazaMatch) idPlazaDetectada = plazaMatch.id_plaza;
-      }
-      if (!idPlazaDetectada) {
-        const plazaPorCedula = plazas.find((pl) => String(pl.titular_cedula).trim() === item.cedula);
+      const cedLimpia = String(item.cedula || '').replace(/\D/g, '');
+      if (cedLimpia) {
+        const plazaPorCedula = plazas.find(
+          (pl) =>
+            (pl.titular_cedula && String(pl.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
+            (pl.es_encargo && pl.encargo_cedula && String(pl.encargo_cedula).replace(/\D/g, '') === cedLimpia)
+        );
         if (plazaPorCedula) idPlazaDetectada = plazaPorCedula.id_plaza;
+      }
+      if (!idPlazaDetectada && item.posicion_planta) {
+        const plazaMatch = plazas.find((pl) => Number(pl.id_perno) === Number(item.posicion_planta));
+        if (plazaMatch) idPlazaDetectada = plazaMatch.id_plaza;
       }
 
       // Causal de retiro sugerida para desvinculaciones

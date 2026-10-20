@@ -4710,15 +4710,18 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     setCedulaInput(String(p.cedula || ''));
 
     // Búsqueda cruzada de plaza para el servidor (por plaza vinculada o por cédula titular/encargo)
+    const cedulaLimpia = String(p.cedula || '').replace(/\D/g, '');
     const plazaAsociada =
       (p.plaza_id_plaza
-        ? (mockPlazasData as any[]).find((pl) => pl.id_plaza === p.plaza_id_plaza)
+        ? (mockPlazasData as any[]).find((pl) => Number(pl.id_plaza) === Number(p.plaza_id_plaza))
         : null) ||
-      (mockPlazasData as any[]).find(
-        (pl) =>
-          String(pl.titular_cedula) === String(p.cedula) ||
-          String(pl.encargo_cedula) === String(p.cedula)
-      );
+      (cedulaLimpia
+        ? (mockPlazasData as any[]).find(
+            (pl) =>
+              (pl.titular_cedula && String(pl.titular_cedula).replace(/\D/g, '') === cedulaLimpia) ||
+              (pl.es_encargo && pl.encargo_cedula && String(pl.encargo_cedula).replace(/\D/g, '') === cedulaLimpia)
+          )
+        : null);
 
     if (plazaAsociada?.id_plaza) {
       setPlazaSeleccionadaId(plazaAsociada.id_plaza);
@@ -6361,7 +6364,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const plazaOpecMatch = useMemo(() => {
     if (!casoActivo) return null;
     if (casoActivo.id_plaza) {
-      return (mockPlazasData as any[]).find((p) => p.id_plaza === casoActivo.id_plaza);
+      return (mockPlazasData as any[]).find((p) => Number(p.id_plaza) === Number(casoActivo.id_plaza));
+    }
+    const cedLimpia = String(casoActivo.servidor_cedula || '').replace(/\D/g, '');
+    if (cedLimpia) {
+      const porCed = (mockPlazasData as any[]).find(
+        (p) =>
+          (p.titular_cedula && String(p.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
+          (p.es_encargo && p.encargo_cedula && String(p.encargo_cedula).replace(/\D/g, '') === cedLimpia)
+      );
+      if (porCed) return porCed;
     }
     return (mockPlazasData as any[]).find(
       (p) =>
@@ -6397,16 +6409,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     if (!casoActivo) return null;
     if ((casoActivo as any).id_sideap) return (casoActivo as any).id_sideap;
     if (casoActivo.id_plaza) {
-      const pl = (mockPlazasData as any[]).find((p) => p.id_plaza === casoActivo.id_plaza);
+      const pl = (mockPlazasData as any[]).find((p) => Number(p.id_plaza) === Number(casoActivo.id_plaza));
       if (pl?.id_sideap) return pl.id_sideap;
     }
     // 1. Por cédula exacta en planta (titular o encargo)
-    const porCedula = (mockPlazasData as any[]).find(
-      (p) =>
-        String(p.titular_cedula) === String(casoActivo.servidor_cedula) ||
-        String(p.encargo_cedula) === String(casoActivo.servidor_cedula)
-    );
-    if (porCedula?.id_sideap) return porCedula.id_sideap;
+    const cedCasoLimpia = String(casoActivo.servidor_cedula || '').replace(/\D/g, '');
+    if (cedCasoLimpia) {
+      const porCedula = (mockPlazasData as any[]).find(
+        (p) =>
+          (p.titular_cedula && String(p.titular_cedula).replace(/\D/g, '') === cedCasoLimpia) ||
+          (p.es_encargo && p.encargo_cedula && String(p.encargo_cedula).replace(/\D/g, '') === cedCasoLimpia)
+      );
+      if (porCedula?.id_sideap) return porCedula.id_sideap;
+    }
 
     // 2. Por coincidencia en plazaOpecMatch
     if (plazaOpecMatch?.id_sideap) return plazaOpecMatch.id_sideap;
@@ -8486,7 +8501,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
     // Buscar información de la plaza en planta oficial
     const plazas = (mockPlazasData as any[]) || [];
-    let plaza = casoRef.id_plaza ? plazas.find((p) => p.id_plaza === casoRef.id_plaza) : null;
+    const idPlazaNum = casoRef.id_plaza ? Number(casoRef.id_plaza) : null;
+    let plaza = idPlazaNum ? plazas.find((p) => Number(p.id_plaza) === idPlazaNum) : null;
+    if (!plaza && casoRef.servidor_cedula) {
+      const cedLimpia = String(casoRef.servidor_cedula).replace(/\D/g, '');
+      if (cedLimpia) {
+        plaza = plazas.find(
+          (p) =>
+            (p.titular_cedula && String(p.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
+            (p.es_encargo && p.encargo_cedula && String(p.encargo_cedula).replace(/\D/g, '') === cedLimpia)
+        );
+      }
+    }
     if (!plaza && casoRef.cargo) {
       plaza = plazas.find(
         (p) =>

@@ -183,8 +183,8 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
     );
 
     const titularCedulaLimpia = plazaActiva.titular_cedula
-      ? String(plazaActiva.titular_cedula).trim()
-      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).trim() : '');
+      ? String(plazaActiva.titular_cedula).replace(/\D/g, '')
+      : (mockMatch?.titular_cedula ? String(mockMatch.titular_cedula).replace(/\D/g, '') : '');
 
     const tieneEncargoReal = Boolean(
       plazaActiva.es_encargo ||
@@ -193,18 +193,19 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
     );
 
     const encargoCedulaLimpia = tieneEncargoReal && plazaActiva.encargo_cedula
-      ? String(plazaActiva.encargo_cedula).trim()
+      ? String(plazaActiva.encargo_cedula).replace(/\D/g, '')
       : '';
 
     const pernoTitular = titularCedulaLimpia
-      ? listadoPerno.find((p) => String(p.cedula).trim() === titularCedulaLimpia)
+      ? listadoPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === titularCedulaLimpia)
       : null;
 
     const pernoEncargo = encargoCedulaLimpia
-      ? listadoPerno.find((p) => String(p.cedula).trim() === encargoCedulaLimpia)
+      ? listadoPerno.find((p) => String(p.cedula || '').replace(/\D/g, '') === encargoCedulaLimpia)
       : null;
 
-    const pernoPorPosicion = plazaActiva.id_perno
+    // Solo buscar por posición si la plaza no tiene cédulas identificadas
+    const pernoPorPosicion = (!titularCedulaLimpia && !encargoCedulaLimpia && plazaActiva.id_perno)
       ? listadoPerno.find((p) => Number(p.posicion_planta) === Number(plazaActiva.id_perno))
       : null;
 
@@ -212,23 +213,22 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       ? (pernoEncargo || pernoPorPosicion || pernoTitular)
       : (pernoTitular || pernoPorPosicion);
 
-    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!plazaActiva.es_encargo ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
-    const fechaNacEncargo = pernoEncargo?.fecha_nacimiento || (plazaActiva.es_encargo ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    // Fechas de nacimiento reales (prioridad absoluta a PERNO)
+    const fechaNacTitular = pernoTitular?.fecha_nacimiento || (!tieneEncargoReal ? (plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento) : null);
+    const fechaNacEncargo = tieneEncargoReal ? (pernoEncargo?.fecha_nacimiento || plazaActiva.fecha_nacimiento || mockMatch?.fecha_nacimiento || null) : null;
     const fechaNacActiva = tieneEncargoReal
       ? (fechaNacEncargo || pernoActivo?.fecha_nacimiento || null)
-      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || plazaActiva.fecha_nacimiento || null);
+      : (fechaNacTitular || pernoActivo?.fecha_nacimiento || null);
 
     const edadTitular = fechaNacTitular
       ? calcEdad(fechaNacTitular)
-      : (!plazaActiva.es_encargo && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
+      : (!tieneEncargoReal && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
 
-    const edadEncargo = fechaNacEncargo
-      ? calcEdad(fechaNacEncargo)
-      : (plazaActiva.es_encargo && (plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null);
+    const edadEncargo = tieneEncargoReal
+      ? (fechaNacEncargo ? calcEdad(fechaNacEncargo) : ((plazaActiva.edad || mockMatch?.edad) ? Number(plazaActiva.edad || mockMatch?.edad) : null))
+      : null;
 
-    const edadActiva = fechaNacActiva
-      ? calcEdad(fechaNacActiva)
-      : (tieneEncargoReal ? edadEncargo : (edadTitular || (plazaActiva.edad ? Number(plazaActiva.edad) : null)));
+    const edadActiva = tieneEncargoReal ? edadEncargo : (edadTitular || (plazaActiva.edad ? Number(plazaActiva.edad) : null));
 
     const manualOficial =
       plazaActiva.manual_funciones ||
