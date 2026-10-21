@@ -1443,19 +1443,28 @@ function generarEtapasParaCasoInterno(
             },
               {
                 id: 'vl1_2',
-                label: 'Autorización formal de notificación electrónica',
+                label: 'Autorización formal de notificación electrónica (Formato 2311520-FT-019)',
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-019',
                 norma: 'Ley 1437 de 2011, Art. 53 • Ley 527 de 1999',
                 textoNormativo: 'El aspirante debe suscribir la autorización expresa para ser notificado de todos los actos y requerimientos mediante la dirección electrónica institucional reportada en su hoja de vida.',
-                detalleProcedimiento: 'Suscribir consentimiento expreso para surtir todas las notificaciones del trámite mediante la dirección de correo electrónico aportada.',
-              
-              posiblesEvidencias: [
-                "Formato institucional 2311520-FT-019 debidamente firmado",
-          "Constancia de autorización expresa de correo electrónico para notificaciones",
-              ],
-            },
+                detalleProcedimiento: 'Suscribir consentimiento expreso para surtir todas las notificaciones del trámite mediante la dirección de correo electrónico aportada en formato oficial FT-019.',
+                posiblesEvidencias: [
+                  "Formato institucional 2311520-FT-019 debidamente firmado",
+                  "Constancia de autorización expresa de correo electrónico para notificaciones",
+                ],
+                documentosAdjuntos: [
+                  {
+                    id: 'doc-soporte-ft019-oficio',
+                    nombre: '2311520-FT-019 Oficio V2.doc',
+                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311520-FT-019 Oficio V2.doc')}`,
+                    fechaSubida: '2026-08-01',
+                    size: 247808,
+                    mimeType: 'application/msword',
+                  },
+                ],
+              },
               {
                 id: 'vl1_3',
                 label: 'Registro y cargue completo de soportes académicos y laborales en SIDEAP',
@@ -4170,6 +4179,54 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     fasesRecomendadas: ['Causal & Soportes Legales', 'Recepción Documento Soporte'],
     descripcion: 'Formato institucional oficial de memorando para el soporte, verificación y radicación del retiro del servicio.',
     requisitosAsociados: ['dc1_1', 'dp1_1', 'dl1_1'],
+  },
+  {
+    id: 'FT-019',
+    codigo: '2311520-FT-019',
+    nombre: 'Autorización formal de notificación electrónica / Oficio (Formato 2311520-FT-019)',
+    version: 'V2',
+    archivo: '2311520-FT-019 Oficio V2.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Recepción Documentos Candidato', 'Notificación Formal de Actos'],
+    descripcion: 'Formato institucional oficial de oficio / autorización formal para notificación electrónica personal de conformidad con la Ley 1437 de 2011 (CPACA).',
+    requisitosAsociados: ['vl1_2', 'vc1_3', 'vp1_2'],
+  },
+  {
+    id: 'FT-130',
+    codigo: '2311520-FT-130',
+    nombre: 'Proyecto de Resolución Oficial (Nombramiento / Retiro / Insubsistencia)',
+    version: 'V2',
+    archivo: 'Resolución _V2.doc',
+    tipo: 'DOC',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Expedición Acto Administrativo', 'Resolución de Retiro'],
+    descripcion: 'Plantilla estructurada institucional de resolución motivada de personal expedida por la Secretaría Jurídica Distrital.',
+    requisitosAsociados: ['dc2_1', 'dp2_1', 'dl2_1'],
+  },
+  {
+    id: 'FT-244',
+    codigo: '2311520-FT-244',
+    nombre: 'Hoja de Control y Constancia de Ejecutoria del Acto Administrativo',
+    version: 'V2',
+    archivo: '2311520-FT-244 Hoja de Control V2.xlsx',
+    tipo: 'XLSX',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Notificación & Recursos', 'Constancia de Firmeza y Ejecutoria'],
+    descripcion: 'Matriz oficial de control de trámite, términos preclusivos y certificación de firmeza del acto administrativo según el CPACA.',
+    requisitosAsociados: ['dc2_ejecutoria', 'dp2_ejecutoria'],
+  },
+  {
+    id: 'FT-100',
+    codigo: '2311300-FT-100',
+    nombre: 'Declaración extrajuicio sobre obligaciones alimentarias pendientes (REDAM)',
+    version: 'V2',
+    archivo: 'Declaración extrajuicio sobre obligaciones alimentarias pendientes_V2.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Validación Candidato & Antecedentes', 'Posesión'],
+    descripcion: 'Declaración jurada obligatoria de no encontrarse reportado en el Registro de Deudores Alimentarios Morosos (REDAM) de conformidad con la Ley 2097 de 2021.',
+    requisitosAsociados: ['vl1_redam', 'vc5_redam'],
   },
   {
     id: 'FT-219',
@@ -7619,6 +7676,44 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [modalFT095Visible, setModalFT095Visible] = useState(false);
   const [filtroProcesoFormatos, setFiltroProcesoFormatos] = useState<'TODOS' | 'VINCULACION' | 'DESVINCULACION' | 'GUIA_NORMATIVA'>('TODOS');
   const [busquedaFormatos, setBusquedaFormatos] = useState('');
+  const [sincronizandoSmart, setSincronizandoSmart] = useState(false);
+  const [modalFeedbackSmartVisible, setModalFeedbackSmartVisible] = useState(false);
+  const [modalFeedbackSmartContenido, setModalFeedbackSmartContenido] = useState<{ titulo: string; mensaje: string; tipo: 'exito' | 'error' }>({
+    titulo: '',
+    mensaje: '',
+    tipo: 'exito',
+  });
+
+  const handleSincronizarSmart = async () => {
+    setSincronizandoSmart(true);
+    try {
+      const resp = await fetch(`${API_URL}/api/rrhh/formatos/smart/sincronizar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soloRelevantes: true }),
+      });
+      const data = await resp.json();
+      if (data.exito) {
+        setModalFeedbackSmartContenido({
+          titulo: 'Sincronización SMART SJD Exitosa',
+          mensaje: `${data.mensaje}\n\nLos formatos oficiales de la Secretaría Jurídica Distrital han sido descargados y actualizados a sus versiones vigentes en el servidor.`,
+          tipo: 'exito',
+        });
+        setModalFeedbackSmartVisible(true);
+      } else {
+        throw new Error(data.error || 'Error al sincronizar con SMART SJD');
+      }
+    } catch (e: any) {
+      setModalFeedbackSmartContenido({
+        titulo: 'Aviso de Sincronización SMART',
+        mensaje: `No se pudo conectar con el portal SMART en este instante: ${e.message}. El sistema continuará operando normalmente con las plantillas locales descargadas.`,
+        tipo: 'error',
+      });
+      setModalFeedbackSmartVisible(true);
+    } finally {
+      setSincronizandoSmart(false);
+    }
+  };
 
   const handleDescargarFormatoOficial = (nombreArchivo: string) => {
     try {
@@ -13103,6 +13198,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
                                         if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
                                         if ((reqLabel.includes('2311520-ft-018') || reqId === 'dc1_1') && f.id === 'FT-018') return true;
+                                        if ((reqLabel.includes('2311520-ft-019') || reqLabel.includes('notificación electrónica') || reqId === 'vl1_2') && f.id === 'FT-019') return true;
+                                        if ((reqLabel.includes('2311520-ft-130') || reqLabel.includes('resolución de retiro') || reqId === 'dc2_1') && f.id === 'FT-130') return true;
+                                        if ((reqLabel.includes('2311520-ft-244') || reqLabel.includes('ejecutoria')) && f.id === 'FT-244') return true;
+                                        if ((reqLabel.includes('2311300-ft-100') || reqLabel.includes('alimentarias') || reqLabel.includes('redam')) && f.id === 'FT-100') return true;
                                         if ((reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || reqId === 'dc3_1' || reqId === 'dp3_1' || reqId === 'dl3_3') && f.id === 'FT-219') return true;
                                         if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
                                         if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
@@ -19132,6 +19231,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
                   if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
                   if ((reqLabel.includes('2311520-ft-018') || reqId === 'dc1_1') && f.id === 'FT-018') return true;
+                  if ((reqLabel.includes('2311520-ft-019') || reqLabel.includes('notificación electrónica') || reqId === 'vl1_2') && f.id === 'FT-019') return true;
+                  if ((reqLabel.includes('2311520-ft-130') || reqLabel.includes('resolución de retiro') || reqId === 'dc2_1') && f.id === 'FT-130') return true;
+                  if ((reqLabel.includes('2311520-ft-244') || reqLabel.includes('ejecutoria')) && f.id === 'FT-244') return true;
+                  if ((reqLabel.includes('2311300-ft-100') || reqLabel.includes('alimentarias') || reqLabel.includes('redam')) && f.id === 'FT-100') return true;
                   if ((reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || reqId === 'dc3_1' || reqId === 'dp3_1' || reqId === 'dl3_3') && f.id === 'FT-219') return true;
                   if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
                   if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
@@ -22164,6 +22267,76 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               </Pressable>
             </View>
 
+            {/* Banner de Conexión & Sincronización Automática con SMART SJD */}
+            <View
+              style={{
+                backgroundColor: '#F0FDF4',
+                borderBottomWidth: 1,
+                borderBottomColor: '#BBF7D0',
+                paddingHorizontal: 18,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 260 }}>
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    backgroundColor: '#DCFCE7',
+                    borderWidth: 1,
+                    borderColor: '#86EFAC',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="cloud-done-outline" size={16} color="#15803D" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534' }}>
+                    Repositorio Oficial SMART SJD Conectado
+                  </Text>
+                  <Text style={{ fontSize: 10.5, color: '#15803D' }}>
+                    Formatos y plantillas oficiales vinculadas con smart.secretariajuridica.gov.co
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={handleSincronizarSmart}
+                disabled={sincronizandoSmart}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  backgroundColor: sincronizandoSmart ? '#94A3B8' : pressed ? '#15803D' : '#16A34A',
+                  shadowColor: '#16A34A',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 2,
+                  elevation: 1,
+                  cursor: (sincronizandoSmart ? undefined : 'pointer') as any,
+                })}
+              >
+                {sincronizandoSmart ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="sync-outline" size={14} color="#FFFFFF" />
+                )}
+                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                  {sincronizandoSmart ? 'Sincronizando...' : 'Actualizar Versiones de SMART SJD'}
+                </Text>
+              </Pressable>
+            </View>
+
             {/* Barra de Búsqueda y Filtros */}
             <View style={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
               <View
@@ -22478,6 +22651,92 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               >
                 <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
                   Cerrar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL DE RESULTADO DE SINCRONIZACIÓN SMART SJD                 */}
+      {/* ============================================================== */}
+      <Modal
+        visible={modalFeedbackSmartVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalFeedbackSmartVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: modalFeedbackSmartContenido.tipo === 'exito' ? '#BBF7D0' : '#FECDD3',
+              width: '100%',
+              maxWidth: 480,
+              padding: 22,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 10,
+              elevation: 6,
+              gap: 14,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: modalFeedbackSmartContenido.tipo === 'exito' ? '#DCFCE7' : '#FFE4E6',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons
+                  name={modalFeedbackSmartContenido.tipo === 'exito' ? 'checkmark-circle' : 'alert-circle'}
+                  size={24}
+                  color={modalFeedbackSmartContenido.tipo === 'exito' ? '#16A34A' : '#E11D48'}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                  {modalFeedbackSmartContenido.titulo}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
+                  Sistema Integrado de Gestión SMART — Secretaría Jurídica Distrital
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ fontSize: 13, color: '#334155', lineHeight: 20 }}>
+              {modalFeedbackSmartContenido.mensaje}
+            </Text>
+
+            <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
+              <Pressable
+                onPress={() => setModalFeedbackSmartVisible(false)}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? '#0F172A' : '#1E293B',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  cursor: 'pointer' as any,
+                })}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' }}>
+                  Entendido
                 </Text>
               </Pressable>
             </View>

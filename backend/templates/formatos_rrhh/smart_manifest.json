@@ -1,0 +1,225 @@
+{
+  "ultimaSincronizacion": "2026-10-21T01:58:37.016Z",
+  "formatos": {
+    "2311300-FT-010": {
+      "codigo": "2311300-FT-010",
+      "titulo": "Registro de Asistencia",
+      "version": "14-11-2024",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "Registro de Asistencia_V3.docx",
+      "sizeBytes": 242674,
+      "fechaDescarga": "2026-10-21T01:58:34.671Z"
+    },
+    "2311300-FT-021": {
+      "codigo": "2311300-FT-021",
+      "titulo": "Programaci�n de Vacaciones",
+      "version": "01-03-2022",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-021 Programación de Vacaciones V2.docx",
+      "sizeBytes": 174840,
+      "fechaDescarga": "2026-10-21T01:58:34.916Z"
+    },
+    "2311300-FT-022": {
+      "codigo": "2311300-FT-022",
+      "titulo": "Solicitud Prima T�cnica",
+      "version": "24-07-2018",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-022 Solicitud Prima Técnica.doc",
+      "sizeBytes": 246784,
+      "fechaDescarga": "2026-10-21T01:58:34.938Z"
+    },
+    "2311300-FT-025": {
+      "codigo": "2311300-FT-025",
+      "titulo": "CARTA DE COMPROMISO Y AUTORIZACI�N DESCUENTO DE N�MINA",
+      "version": "24-04-2026",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-025_V3_CARTA DE COMPROMISO Y AUTORIZACIÓN DESCUENTO DE NÓMINA.docx",
+      "sizeBytes": 239185,
+      "fechaDescarga": "2026-10-21T01:58:35.485Z"
+    },
+    "2311300-FT-027": {
+      "codigo": "2311300-FT-027",
+      "titulo": "Declaraci�n Juramentada",
+      "version": "13-08-2018",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-027 V1.doc",
+      "sizeBytes": 248320,
+      "fechaDescarga": "2026-10-21T01:58:35.502Z"
+    },
+    "2311300-FT-028": {
+      "codigo": "2311300-FT-028",
+      "titulo": "Permisos y licencias",
+      "version": "23-07-2026",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "Permisos y licencias_V2.xlsx",
+      "sizeBytes": 94425,
+      "fechaDescarga": "2026-10-21T01:58:35.511Z"
+    },
+    "2311300-FT-029": {
+      "codigo": "2311300-FT-029",
+      "titulo": "Planilla de Horas Extras y Recargos",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "FT-029-PlanillaHorasExtras V1.xlsx",
+      "sizeBytes": 234963,
+      "fechaDescarga": "2026-10-21T01:58:35.526Z"
+    },
+    "2311300-FT-035": {
+      "codigo": "2311300-FT-035",
+      "titulo": "Encuesta de levantamiento de necesidades de Bienestar Capacitaci�n y Seguridad y salud en el Trabajo",
+      "version": "27-10-2021",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-035 Encuesta de levantamiento de necesidades de Bienestar Capacitación y Seguridad y salud en el Trabajo V2.xlsx",
+      "sizeBytes": 249356,
+      "fechaDescarga": "2026-10-21T01:58:35.759Z"
+    },
+    "2311300-FT-037": {
+      "codigo": "2311300-FT-037",
+      "titulo": "Consolidado y recomendaciones accidentes de trabajo",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-037 V1.xlsx",
+      "sizeBytes": 230835,
+      "fechaDescarga": "2026-10-21T01:58:35.774Z"
+    },
+    "2311300-FT-038": {
+      "codigo": "2311300-FT-038",
+      "titulo": "Investigacion de incidentes y accidentes de trabajo",
+      "version": "27-07-2018",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-038 Investigacion de incidentes y accidentes de trabajo_V2.docx",
+      "sizeBytes": 217761,
+      "fechaDescarga": "2026-10-21T01:58:35.837Z"
+    },
+    "2311300-FT-039": {
+      "codigo": "2311300-FT-039",
+      "titulo": "Listado de votantes para elecci�n del Comit� Paritario de Seguridad y Salud en el Trabajo y Comit� de Convivencia Laboral",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-039 V1.docx",
+      "sizeBytes": 293037,
+      "fechaDescarga": "2026-10-21T01:58:36.180Z"
+    },
+    "2311300-FT-040": {
+      "codigo": "2311300-FT-040",
+      "titulo": "Acta de apertura elecci�n Comit� Paritario de Seguridad y Salud en el Trabajo y Comit� de Convivencia Laboral",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-040 V1.docx",
+      "sizeBytes": 293073,
+      "fechaDescarga": "2026-10-21T01:58:36.196Z"
+    },
+    "2311300-FT-041": {
+      "codigo": "2311300-FT-041",
+      "titulo": "Acta de escrutinio elecci�n Comit� Paritario de Seguridad y Salud en el Trabajo y Comit� de Convivencia Laboral",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-041 V1.docx",
+      "sizeBytes": 292399,
+      "fechaDescarga": "2026-10-21T01:58:36.212Z"
+    },
+    "2311300-FT-053": {
+      "codigo": "2311300-FT-053",
+      "titulo": "Inspecci�n de Extintores",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-053 V1.xlsx",
+      "sizeBytes": 230603,
+      "fechaDescarga": "2026-10-21T01:58:36.628Z"
+    },
+    "2311300-FT-054": {
+      "codigo": "2311300-FT-054",
+      "titulo": "Inspecci�n de seguridad en oficinas",
+      "version": "23-03-2023",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "Inspección de seguridad en oficinas_V2.xlsx",
+      "sizeBytes": 407956,
+      "fechaDescarga": "2026-10-21T01:58:36.647Z"
+    },
+    "2311300-FT-055": {
+      "codigo": "2311300-FT-055",
+      "titulo": "Hoja de vida del Brigadista",
+      "version": "11-11-2017",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-055 V1.docx",
+      "sizeBytes": 172578,
+      "fechaDescarga": "2026-10-21T01:58:36.803Z"
+    },
+    "2311300-FT-095": {
+      "codigo": "2311300-FT-095",
+      "titulo": "Requisitos para tomar posesion del cargo",
+      "version": "27-11-2025",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "Requisitos para tomar posesion del cargo_V5.doc",
+      "sizeBytes": 282112,
+      "fechaDescarga": "2026-10-21T01:58:36.817Z"
+    },
+    "2311300-FT-100": {
+      "codigo": "2311300-FT-100",
+      "titulo": "Declaraci�n extrajuicio sobre obligaciones alimentarias pendientes",
+      "version": "28-12-2023",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "Declaración extrajuicio sobre obligaciones alimentarias pendientes_V2.doc",
+      "sizeBytes": 250368,
+      "fechaDescarga": "2026-10-21T01:58:36.830Z"
+    },
+    "2311300-FT-103": {
+      "codigo": "2311300-FT-103",
+      "titulo": "Matriz de Identificaci�n de Peligros - Riesgos Laborales",
+      "version": "02-03-2018",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-103 Matriz de Identificaci�n de Peligros - Riesgos Laborales_V02-03-2018.xlsx",
+      "sizeBytes": 25714,
+      "fechaDescarga": "2026-10-21T01:58:36.834Z"
+    },
+    "2311300-FT-104": {
+      "codigo": "2311300-FT-104",
+      "titulo": "Autorreporte Condiciones de Trabajo y Salud",
+      "version": "28-10-2021",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-104 Autorreporte Condiciones de Trabajo y Salud_V28-10-2021.docx",
+      "sizeBytes": 25826,
+      "fechaDescarga": "2026-10-21T01:58:36.838Z"
+    },
+    "2311300-FT-105": {
+      "codigo": "2311300-FT-105",
+      "titulo": "Plan de Intervenci�n de Peligros-Riesgos Laborales",
+      "version": "02-03-2018",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-105 Plan de Intervenci�n de Peligros-Riesgos Laborales_V02-03-2018.docx",
+      "sizeBytes": 25714,
+      "fechaDescarga": "2026-10-21T01:58:36.842Z"
+    },
+    "2311300-FT-106": {
+      "codigo": "2311300-FT-106",
+      "titulo": "Ubicaci�n y entrenamiento puesto de trabajo",
+      "version": "26-11-2025",
+      "fechaVigencia": "Formato",
+      "proceso": "GESTI�N DEL TALENTO HUMANO",
+      "archivo": "2311300-FT-106 Ubicaci�n y entrenamiento puesto de trabajo_V26-11-2025.docx",
+      "sizeBytes": 38440,
+      "fechaDescarga": "2026-10-21T01:58:36.845Z"
+    }
+  }
+}

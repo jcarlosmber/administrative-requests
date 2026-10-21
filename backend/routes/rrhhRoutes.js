@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const smartSyncService = require('../services/smartSyncService');
 
 const FORMATOS_DIR = path.join(__dirname, '../templates/formatos_rrhh');
 
@@ -110,6 +111,50 @@ const CATALOGO_FORMATOS = [
     descripcion: 'Formato institucional oficial de memorando para el soporte, verificación y radicación del retiro del servicio.',
   },
   {
+    id: 'FT-019',
+    codigo: '2311520-FT-019',
+    nombre: 'Autorización formal de notificación electrónica / Oficio',
+    version: 'V2',
+    archivo: '2311520-FT-019 Oficio V2.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Recepción Documentos Candidato', 'Notificación Formal de Actos'],
+    descripcion: 'Formato institucional oficial de oficio / autorización formal para notificación electrónica personal de conformidad con la Ley 1437 de 2011 (CPACA).',
+  },
+  {
+    id: 'FT-130',
+    codigo: '2311520-FT-130',
+    nombre: 'Proyecto de Resolución Oficial (Nombramiento / Retiro / Insubsistencia)',
+    version: 'V2',
+    archivo: 'Resolución _V2.doc',
+    tipo: 'DOC',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Expedición Acto Administrativo', 'Resolución de Retiro'],
+    descripcion: 'Plantilla estructurada institucional de resolución motivada de personal expedida por la Secretaría Jurídica Distrital.',
+  },
+  {
+    id: 'FT-244',
+    codigo: '2311520-FT-244',
+    nombre: 'Hoja de Control y Constancia de Ejecutoria del Acto Administrativo',
+    version: 'V2',
+    archivo: '2311520-FT-244 Hoja de Control V2.xlsx',
+    tipo: 'XLSX',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Notificación & Recursos', 'Constancia de Firmeza y Ejecutoria'],
+    descripcion: 'Matriz oficial de control de trámite, términos preclusivos y certificación de firmeza del acto administrativo según el CPACA.',
+  },
+  {
+    id: 'FT-100',
+    codigo: '2311300-FT-100',
+    nombre: 'Declaración extrajuicio sobre obligaciones alimentarias pendientes (REDAM)',
+    version: 'V2',
+    archivo: 'Declaración extrajuicio sobre obligaciones alimentarias pendientes_V2.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Validación Candidato & Antecedentes', 'Posesión'],
+    descripcion: 'Declaración jurada obligatoria de no encontrarse reportado en el Registro de Deudores Alimentarios Morosos (REDAM) de conformidad con la Ley 2097 de 2021.',
+  },
+  {
     id: 'ACTA-ENTREGA-LEY951',
     codigo: 'ACTA-GESTION-951',
     nombre: 'Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005)',
@@ -204,6 +249,42 @@ router.get('/formatos/descargar/:nombreArchivo', (req, res) => {
   } catch (err) {
     console.error('[RRHH] Error en descarga de formato:', err);
     res.status(500).json({ error: 'Error al procesar descarga: ' + err.message });
+  }
+});
+
+/**
+ * GET /api/rrhh/formatos/smart/estado
+ * Consulta en vivo el estado de formatos en SMART SJD y verifica versiones
+ */
+router.get('/formatos/smart/estado', async (req, res) => {
+  try {
+    const estado = await smartSyncService.verificarEstadoFormatos();
+    res.json({
+      exito: true,
+      data: estado
+    });
+  } catch (err) {
+    console.error('[RRHH] Error al consultar estado SMART:', err);
+    res.status(500).json({ exito: false, error: 'Error consultando SMART SJD: ' + err.message });
+  }
+});
+
+/**
+ * POST /api/rrhh/formatos/smart/sincronizar
+ * Descarga y actualiza automáticamente las versiones más recientes desde SMART SJD
+ */
+router.post('/formatos/smart/sincronizar', async (req, res) => {
+  try {
+    const { codigos, soloRelevantes } = req.body || {};
+    const resultado = await smartSyncService.sincronizarFormatos({ codigos, soloRelevantes });
+    res.json({
+      exito: true,
+      mensaje: `Sincronización finalizada: ${resultado.nuevos} nuevos, ${resultado.actualizados} actualizados, ${resultado.sinCambios} al día.`,
+      resultado
+    });
+  } catch (err) {
+    console.error('[RRHH] Error al sincronizar con SMART:', err);
+    res.status(500).json({ exito: false, error: 'Error al sincronizar con SMART: ' + err.message });
   }
 });
 
