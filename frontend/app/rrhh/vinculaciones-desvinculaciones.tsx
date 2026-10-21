@@ -1454,16 +1454,6 @@ function generarEtapasParaCasoInterno(
                   "Formato institucional 2311520-FT-019 debidamente firmado",
                   "Constancia de autorización expresa de correo electrónico para notificaciones",
                 ],
-                documentosAdjuntos: [
-                  {
-                    id: 'doc-soporte-ft019-oficio',
-                    nombre: '2311520-FT-019 Oficio V2.doc',
-                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311520-FT-019 Oficio V2.doc')}`,
-                    fechaSubida: '2026-08-01',
-                    size: 247808,
-                    mimeType: 'application/msword',
-                  },
-                ],
               },
               {
                 id: 'vl1_3',
@@ -2534,16 +2524,6 @@ function generarEtapasParaCasoInterno(
                   'Resolución de reconocimiento pensional expedida por Colpensiones o fondo privado.',
                   'Formato institucional 2311520-FT-018 de verificación de trámite de personal.',
                 ],
-                documentosAdjuntos: [
-                  {
-                    id: 'doc-soporte-ft018-memorando',
-                    nombre: '2311520-FT-018 Memorando V3.doc',
-                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311520-FT-018 Memorando V3.doc')}`,
-                    fechaSubida: '2026-08-01',
-                    size: 251392,
-                    mimeType: 'application/msword',
-                  },
-                ],
               },
               {
                 id: 'dc1_2',
@@ -2652,16 +2632,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Formato institucional 2311300-FT-219 diligenciado y firmado por el funcionario saliente.',
                 ],
-                documentosAdjuntos: [
-                  {
-                    id: 'doc-ft219-evaluacion-retiro',
-                    nombre: '2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx',
-                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx')}`,
-                    fechaSubida: '2026-08-01',
-                    size: 235787,
-                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  },
-                ],
               },
               {
                 id: 'dc3_2',
@@ -2673,16 +2643,6 @@ function generarEtapasParaCasoInterno(
                 detalleProcedimiento: 'Detallar inventario de trámites pendientes, procesos jurídicos a cargo, claves de acceso y estado del archivo en gestión.',
                 posiblesEvidencias: [
                   'Formato 2311300-FT-436 suscrito por el funcionario saliente y su jefe inmediato.',
-                ],
-                documentosAdjuntos: [
-                  {
-                    id: 'doc-ft436-entrega-cargo',
-                    nombre: '2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx',
-                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx')}`,
-                    fechaSubida: '2026-08-01',
-                    size: 236240,
-                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  },
                 ],
               },
               {
@@ -2698,16 +2658,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita.',
                   'Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.',
-                ],
-                documentosAdjuntos: [
-                  {
-                    id: 'doc-acta-ley951-gestion',
-                    nombre: 'Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx',
-                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx')}`,
-                    fechaSubida: '2026-08-01',
-                    size: 194212,
-                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                  },
                 ],
               },
               {
@@ -3899,15 +3849,23 @@ export function sincronizarEtapasCaso(
           usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
           noAplica: noAplicaFinal,
           documentosAdjuntos: (() => {
-            let docsBase = Array.isArray(reqG.documentosAdjuntos) ? [...reqG.documentosAdjuntos] : [];
-            if (Array.isArray(reqM.documentosAdjuntos)) {
-              reqM.documentosAdjuntos.forEach((dM) => {
-                if (!docsBase.some((d) => d.nombre === dM.nombre || d.id === dM.id)) {
-                  docsBase.push(dM);
-                }
-              });
+            const esPlantillaOficial = (d: DocumentoSoporteAdjunto) =>
+              Boolean(
+                d.id?.startsWith('doc-soporte-ft') ||
+                d.id?.startsWith('doc-ft') ||
+                d.id?.startsWith('doc-acta-ley951') ||
+                d.nombre?.includes('2311520-FT-') ||
+                d.nombre?.includes('2311300-FT-') ||
+                d.nombre?.includes('Acta de Informe de Gestión')
+              );
+
+            if (Array.isArray(reqG.documentosAdjuntos)) {
+              return reqG.documentosAdjuntos.filter((d) => !esPlantillaOficial(d));
             }
-            return docsBase.length > 0 ? docsBase : (reqM.documentosAdjuntos || []);
+            if (Array.isArray(reqM.documentosAdjuntos)) {
+              return reqM.documentosAdjuntos.filter((d) => !esPlantillaOficial(d));
+            }
+            return [];
           })(),
           tipoCobroUsoLista: reqG.tipoCobroUsoLista !== undefined ? reqG.tipoCobroUsoLista : reqM.tipoCobroUsoLista,
           numeroResolucionPago: reqG.numeroResolucionPago !== undefined ? reqG.numeroResolucionPago : reqM.numeroResolucionPago,
@@ -4569,16 +4527,16 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const scrollViewPrincipalRef = useRef<ScrollView>(null);
   const [scrollYPrincipal, setScrollYPrincipal] = useState<number>(0);
 
-  // Filtros de búsqueda específicos para Ingresos
+  // Filtros de búsqueda específicos para Ingresos (por defecto se abren los que están EN TRÁMITE)
   const [filtroModalidadIngreso, setFiltroModalidadIngreso] = useState<'TODAS' | ModalidadPersonal>('TODAS');
   const [busquedaIngresos, setBusquedaIngresos] = useState('');
-  const [filtroEstadoIngreso, setFiltroEstadoIngreso] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('TODOS');
+  const [filtroEstadoIngreso, setFiltroEstadoIngreso] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('EN_TRAMITE');
   const [filtroDependenciaIngreso, setFiltroDependenciaIngreso] = useState<string>('TODAS');
 
-  // Filtros de búsqueda específicos para Desvinculaciones
+  // Filtros de búsqueda específicos para Desvinculaciones (por defecto se abren los que están EN TRÁMITE)
   const [filtroModalidadDesvinculacion, setFiltroModalidadDesvinculacion] = useState<'TODAS' | ModalidadPersonal>('TODAS');
   const [busquedaDesvinculaciones, setBusquedaDesvinculaciones] = useState('');
-  const [filtroEstadoDesvinculacion, setFiltroEstadoDesvinculacion] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('TODOS');
+  const [filtroEstadoDesvinculacion, setFiltroEstadoDesvinculacion] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('EN_TRAMITE');
   const [filtroCausalDesvinculacion, setFiltroCausalDesvinculacion] = useState<string>('TODAS');
   const [filtroDependenciaDesvinculacion, setFiltroDependenciaDesvinculacion] = useState<string>('TODAS');
 
@@ -4610,10 +4568,19 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const guardado = window.localStorage.getItem(STORAGE_KEY_CASO_ACTIVO);
-        if (guardado) return guardado;
+        if (guardado) {
+          const casoG = CASOS_BASE.find((c) => c.id === guardado);
+          if (casoG && !esTerminadoDefault2026(casoG.id, casoG.tipo_proceso)) {
+            return guardado;
+          }
+        }
       } catch (e) {}
     }
-    return CASOS_BASE[0]?.id || '';
+    // Abrir de forma predeterminada el primer caso que se encuentre EN TRÁMITE
+    const primerEnTramite = CASOS_BASE.find(
+      (c) => c.tipo_proceso === 'VINCULACION' && !esTerminadoDefault2026(c.id, c.tipo_proceso)
+    );
+    return primerEnTramite?.id || CASOS_BASE[0]?.id || '';
   };
 
   // Casos con flujos inicializados con persistencia
@@ -6490,8 +6457,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       casosFiltrados.find((c) => c.id === casoSeleccionadoId) ||
       casosFiltrados[0] ||
       (tabActiva === 'desvinculaciones'
-        ? casos.find((c) => c.tipo_proceso === 'DESVINCULACION')
-        : casos.find((c) => c.tipo_proceso === 'VINCULACION')) ||
+        ? casos.find((c) => c.tipo_proceso === 'DESVINCULACION' && !c.etapas.every((e) => e.estado === 'completed')) ||
+          casos.find((c) => c.tipo_proceso === 'DESVINCULACION')
+        : casos.find((c) => c.tipo_proceso === 'VINCULACION' && !c.etapas.every((e) => e.estado === 'completed')) ||
+          casos.find((c) => c.tipo_proceso === 'VINCULACION')) ||
       casos[0];
 
     if (!match) return undefined;
@@ -6500,7 +6469,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       ...match,
       etapas: sincronizarEtapasCaso(match.etapas, match.tipo_proceso, match.modalidad),
     };
-  }, [casos, casoSeleccionadoId, tabActiva]);
+  }, [casos, casosFiltrados, casoSeleccionadoId, tabActiva]);
 
   // Resolución reactiva de OPEC y Convocatoria asociada al caso activo o su plaza
   const plazaOpecMatch = useMemo(() => {
@@ -9737,7 +9706,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           >
             {/* Pestaña 1: Ingresos y Vinculaciones */}
             <Pressable
-              onPress={() => setTabActiva('ingresos')}
+              onPress={() => {
+                setTabActiva('ingresos');
+                const primerTramiteIngreso = casos.find(
+                  (c) => c.tipo_proceso === 'VINCULACION' && !c.etapas.every((e) => e.estado === 'completed')
+                );
+                if (primerTramiteIngreso) {
+                  setCasoSeleccionadoId(primerTramiteIngreso.id);
+                  guardarCasoActivoEnStorage(primerTramiteIngreso.id);
+                }
+              }}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -9786,7 +9764,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
             {/* Pestaña 2: Desvinculaciones y Retiros */}
             <Pressable
-              onPress={() => setTabActiva('desvinculaciones')}
+              onPress={() => {
+                setTabActiva('desvinculaciones');
+                const primerTramiteDesv = casos.find(
+                  (c) => c.tipo_proceso === 'DESVINCULACION' && !c.etapas.every((e) => e.estado === 'completed')
+                );
+                if (primerTramiteDesv) {
+                  setCasoSeleccionadoId(primerTramiteDesv.id);
+                  guardarCasoActivoEnStorage(primerTramiteDesv.id);
+                }
+              }}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -12491,40 +12478,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                 {/* Lado derecho: Botón Obs Fase y Chevron */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                  <Pressable
-                                    onPress={(e: any) => {
-                                      e?.stopPropagation?.();
-                                      abrirModalObservacionFase(casoActivo.id, etapa);
-                                    }}
-                                    style={({ pressed }: any) => ({
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 4,
-                                      borderRadius: 6,
-                                      backgroundColor: etapa.observacionesFase ? '#FEF3C7' : '#FFFFFF',
-                                      borderWidth: 1,
-                                      borderColor: etapa.observacionesFase ? '#FCD34D' : '#CBD5E1',
-                                      cursor: 'pointer',
-                                    })}
-                                  >
-                                    <Ionicons
-                                      name={etapa.observacionesFase ? 'chatbubble-ellipses' : 'chatbubble-outline'}
-                                      size={13}
-                                      color={etapa.observacionesFase ? '#92400E' : '#475569'}
-                                    />
-                                    <Text
-                                      style={{
-                                        fontSize: 10.5,
-                                        fontWeight: '600',
-                                        color: etapa.observacionesFase ? '#92400E' : '#475569',
-                                      }}
-                                    >
-                                      {etapa.observacionesFase ? 'Ver Obs. Fase' : '+ Obs. Fase'}
-                                    </Text>
-                                  </Pressable>
-
                                   <View
                                     style={{
                                       width: 26,
@@ -14909,6 +14862,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </View>
                                             <TextInput
                                               placeholder="Escriba aquí las observaciones técnicas de cumplimiento o justificación..."
+                                              placeholderTextColor="#64748B"
                                               value={reqObsEditInline[req.id] !== undefined ? reqObsEditInline[req.id] : (req.observaciones || '')}
                                               onChangeText={(txt) => setReqObsEditInline((prev) => ({ ...prev, [req.id]: txt }))}
                                               style={{
@@ -14918,12 +14872,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 borderRadius: 4,
                                                 padding: 6,
                                                 fontSize: 11,
-                                                color: '#0F172A',
+                                                color: '#000000',
                                               }}
                                             />
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                               <TextInput
                                                 placeholder="Radicado de soporte (ej. 2026-EE-0492)..."
+                                                placeholderTextColor="#64748B"
                                                 value={reqRadicadoEditInline[req.id] !== undefined ? reqRadicadoEditInline[req.id] : (req.radicadoSoporte || '')}
                                                 onChangeText={(txt) => setReqRadicadoEditInline((prev) => ({ ...prev, [req.id]: txt }))}
                                                 style={{
@@ -14933,7 +14888,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   borderRadius: 4,
                                                   padding: 5,
                                                   fontSize: 10.5,
-                                                  color: '#0F172A',
+                                                  color: '#000000',
                                                   flex: 1,
                                                 }}
                                               />
@@ -15081,31 +15036,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </Pressable>
                                           </View>
 
-                                          {/* Botón inferior para contraer requisito completado */}
-                                          {esCumplido && estaCompletadoExpandido && (
-                                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 10, borderTopWidth: 1, borderTopColor: '#BBF7D0' }}>
-                                              <Pressable
-                                                onPress={() => toggleCompletadoExpandido(req.id)}
-                                                style={({ pressed }) => ({
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  gap: 5,
-                                                  backgroundColor: pressed ? '#DCFCE7' : '#ECFDF5',
-                                                  borderWidth: 1,
-                                                  borderColor: '#86EFAC',
-                                                  paddingHorizontal: 12,
-                                                  paddingVertical: 6,
-                                                  borderRadius: 6,
-                                                  cursor: 'pointer',
-                                                })}
-                                              >
-                                                <Ionicons name="chevron-up" size={14} color="#047857" />
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
-                                                  Contraer versión comprimida
-                                                </Text>
-                                              </Pressable>
-                                            </View>
-                                          )}
+
                                         </View>
                                       );
                                     })}
@@ -15146,27 +15077,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         <Ionicons name="shield-checkmark" size={15} color="#FFFFFF" />
                                         <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' }}>
                                           Aprobar Validación Técnica
-                                        </Text>
-                                      </Pressable>
-
-                                      <Pressable
-                                        onPress={() => abrirModalObservacionFase(casoActivo.id, etapa)}
-                                        style={({ pressed }: any) => ({
-                                          flexDirection: 'row',
-                                          alignItems: 'center',
-                                          gap: 6,
-                                          paddingHorizontal: 12,
-                                          paddingVertical: 7,
-                                          borderRadius: 8,
-                                          backgroundColor: pressed ? '#F1F5F9' : '#FFFFFF',
-                                          borderWidth: 1,
-                                          borderColor: '#CBD5E1',
-                                          cursor: 'pointer',
-                                        })}
-                                      >
-                                        <Ionicons name="help-circle-outline" size={15} color="#64748B" />
-                                        <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#334155' }}>
-                                          Solicitar Aclaración
                                         </Text>
                                       </Pressable>
                                     </View>
@@ -20194,7 +20104,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     value={obsReqTexto}
                     onChangeText={setObsReqTexto}
                     placeholder="Escriba aquí los detalles, constancias, observaciones o aclaraciones sobre el cumplimiento de este requisito..."
-                    placeholderTextColor={THEME.slate400}
+                    placeholderTextColor="#64748B"
                     multiline
                     numberOfLines={4}
                     style={{
@@ -20204,7 +20114,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       borderRadius: 8,
                       padding: 10,
                       fontSize: 12.5,
-                      color: THEME.slate900,
+                      color: '#000000',
                       textAlignVertical: 'top',
                       minHeight: 85,
                     }}
@@ -20220,7 +20130,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     value={obsReqRadicado}
                     onChangeText={setObsReqRadicado}
                     placeholder="Ej. Radicado 2026-ER-01948 / Acta No. 04 / Resolución 042"
-                    placeholderTextColor={THEME.slate400}
+                    placeholderTextColor="#64748B"
                     style={{
                       backgroundColor: THEME.white,
                       borderWidth: 1,
@@ -20229,7 +20139,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       fontSize: 12.5,
-                      color: THEME.slate900,
+                      color: '#000000',
                     }}
                   />
                 </View>
