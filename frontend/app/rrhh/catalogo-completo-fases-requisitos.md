@@ -601,8 +601,8 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 
 ### 🔹 Fase 4: Formatos Entrega de Cargo (`d_carr_4`)
 * **Responsable**: Servidor Saliente / Jefe Inmediato / Control Interno
-* **Plazo Legal**: Antes o al último día de labores y archivo final
-* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de informe de gestión (Ley 951/2005), declaración juramentada de bienes y rentas en SIDEAP con marcación de retiro, declaración juramentada de conflictos de interés en SIDEAP con novedad de retiro, actualización de hoja de vida en SIDEAP, declaración proactiva de bienes y conflicto de intereses en SIGEP II, y archivo integral en la Historia Laboral con Hoja de Control (Formato 2311520-FT-244).
+* **Plazo Legal**: Antes o al último día de labores
+* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de informe de gestión (Ley 951/2005), declaración juramentada de bienes y rentas en SIDEAP con marcación de retiro, declaración juramentada de conflictos de interés en SIDEAP con novedad de retiro, actualización de hoja de vida en SIDEAP, y declaración proactiva de bienes y conflicto de intereses en SIGEP II.
 
 #### Requisito 4.1 (`dc4_1`): Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)
 * **Obligatorio**: Sí
@@ -639,14 +639,6 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Ley 1437 de 2011 • Portal Función Pública.
 * **📁 Posibles Evidencias**: Certificado digital de publicación proactiva en SIGEP II con corte de retiro y formulario de conflicto de intereses radicado.
-
-#### Requisito 4.7 (`dc4_5`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 • Circular AGN 004 de 2003 • Formato 2311520-FT-244.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Foliar y consolidar todos los formatos de entrega de cargo y documentos del retiro cerrando formalmente la historia laboral activa con la Hoja de Control 2311520-FT-244.
-* **📁 Posibles Evidencias Documentales**:
-  1. Hoja de Control de Historia Laboral formato 2311520-FT-244 actualizada y foliada al cierre.
-  2. Constancia de custodia del expediente en el archivo central.
 
 ---
 
@@ -846,11 +838,6 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **⚖️ Fundamento Jurídico Aplicable**: Circular Externa CNSC 011 de 2021 • Ley 1960 de 2019.
 * **📁 Posibles Evidencias**: Comprobante del sistema SIMO de desvinculación de la vacante y vinculación del titular de período de prueba.
 
-#### Requisito 6.2 (`dp6_2`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 • Formato 2311520-FT-244.
-* **📁 Posibles Evidencias**: Hoja de Control foliada con todos los soportes de la vinculación y retiro del funcionario provisional.
-
 ---
 
 ## 3. RÉGIMEN: LIBRE NOMBRAMIENTO Y REMOCIÓN (`LIBRE_NOMBRAMIENTO`)
@@ -925,10 +912,10 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 
 ---
 
-### 🔹 Fase 6: Cierre de Expediente Directivo (`d_lnr_6`)
-* **Requisito 6.1 (`dl6_1`)**: *Consolidación integral de la Historia Laboral y custodia en Archivo Central*.  
-  *⚖️ Norma*: Ley 594 de 2000 • Formato 2311520-FT-244.  
-  *📁 Posibles Evidencias*: Hoja de control de historia laboral completamente diligenciada y foliada.
+### 🔹 Fase 6: Cierre & Control Interno (`d_lnr_6`)
+* **Requisito 6.1 (`dl6_1`)**: *Constatación y archivo de radicado de entrega de copia a Control Interno (Ley 951/2005)*.  
+  *⚖️ Norma*: Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD.  
+  *📁 Posibles Evidencias*: Oficio con sello y radicado oficial de recibido de la Oficina de Control Interno.
 
 ---
 
@@ -1043,10 +1030,16 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   1. Certificado oficial de judicatura o práctica firmado por el Secretario Jurídico Distrital o el Director de Gestión Corporativa.
   2. Oficio formal remisorio del certificado dirigido al Decano de la Facultad de Derecho o Institución Educativa.
 
-#### Requisito 4.2 (`dpj4_2`): Archivo y foliación en carpeta de Prácticas Formativas (Formato 2311520-FT-244)
+#### Requisito 4.2 (`dpj4_2`): Trámite del último pago proporcional del auxilio de sostenimiento (sin prestaciones)
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 • Tabla de Retención Documental SJD.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Consolidar en la carpeta física y electrónica del practicante toda la trazabilidad (carta de presentación, acta de inicio, afiliación ARL, informes, evaluación y certificación final).
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 2043 de 2020, Art. 7 • Procedimiento Presupuestal Bogdata 2311420-PR-063.
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Generar la orden de pago del auxilio proporcional de sostenimiento en Bogdata con visto bueno del tutor.
 * **📁 Posibles Evidencias Documentales**:
-  1. Hoja de Control formato 2311520-FT-244 debidamente foliada al cierre de la práctica.
-  2. Expediente electrónico custodiado en el repositorio documental oficial.
+  1. Orden de pago y soporte de transferencia bancaria del auxilio final en Bogdata.
+
+#### Requisito 4.3 (`dpj4_3`): Cierre y liberación del saldo del Certificado de Registro Presupuestal (CRP)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Estatuto Orgánico del Presupuesto • Procedimiento 2311420-PR-063.
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Liberar en Bogdata el saldo remanente no ejecutado del CRP y CDP de prácticas formativas.
+* **📁 Posibles Evidencias Documentales**:
+  1. Comprobante de liberación de saldos de CRP en el sistema Bogdata de la Secretaría Distrital de Hacienda.

@@ -2653,14 +2653,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_carr_4',
             numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-219, ACTA-GESTION-951, SIDEAP (ByR, Conflictos y HV), SIGEP y Archivo FT-244',
+            subtitulo: 'FT-219, ACTA-GESTION-951, SIDEAP (ByR, Conflictos y HV) y SIGEP',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / Control Interno',
-            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
-            plazoLegal: 'Hasta el último día de permanencia en el cargo y archivo final',
-            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro, actualizar en SIDEAP su declaración de bienes y rentas, declaración juramentada de conflictos de interés y hoja de vida con novedad de retiro, publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés, y archivar integralmente el expediente foliado con la Hoja de Control (2311520-FT-244).',
+            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Decreto Distrital 830 de 2021; Procedimiento PR-074 SJD',
+            plazoLegal: 'Hasta el último día de permanencia en el cargo',
+            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro, actualizar en SIDEAP su declaración de bienes y rentas, declaración juramentada de conflictos de interés y hoja de vida con novedad de retiro, y publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés.',
             requisitos: [
               {
                 id: 'dc4_1',
@@ -2736,18 +2736,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Certificado digital de publicación proactiva de bienes y rentas y registro de conflictos de interés expedido por SIGEP II (Novedad Retiro).',
                   'Formulario de conflicto de intereses con corte de retiro debidamente radicado.',
-                ],
-              },
-              {
-                id: 'dc4_5',
-                label: 'Archivo integral en Historia Laboral (Hoja de Control 2311520-FT-244)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311520-FT-244',
-                norma: 'Ley 594 de 2000; Acuerdo 004 de 2019 AGN',
-                detalleProcedimiento: 'Foliar y archivar todo el expediente de retiro y entrega de cargo en la Historia Laboral con su hoja de control final.',
-                posiblesEvidencias: [
-                  'Hoja de control de historia laboral 2311520-FT-244 foliada y firmada.',
                 ],
               },
             ],
@@ -2989,14 +2977,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_prov_4',
             numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-219, ACTA-GESTION-951, SIDEAP (ByR, Conflictos y HV), SIGEP y Hoja de Control FT-244',
+            subtitulo: 'FT-219, ACTA-GESTION-951, SIDEAP (ByR, Conflictos y HV) y SIGEP',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / TH',
-            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
-            plazoLegal: 'Hasta el último día de labores y foliación final',
-            procedimientoDetallado: 'El servidor provisional debe diligenciar la encuesta de retiro FT-219, suscribir el acta de gestión (Ley 951/2005), actualizar en SIDEAP su declaración de bienes y rentas, declaración jurada de conflictos de interés y hoja de vida con novedad de retiro, publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés, y archivar integralmente el expediente con la Hoja de Control (2311520-FT-244).',
+            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Decreto Distrital 830 de 2021; Procedimiento PR-074 SJD',
+            plazoLegal: 'Hasta el último día de labores',
+            procedimientoDetallado: 'El servidor provisional debe diligenciar la encuesta de retiro FT-219, suscribir el acta de gestión (Ley 951/2005), actualizar en SIDEAP su declaración de bienes y rentas, declaración jurada de conflictos de interés y hoja de vida con novedad de retiro, y publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés.',
             requisitos: [
               {
                 id: 'dp4_1',
@@ -3072,18 +3060,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Certificado digital de publicación proactiva de bienes y rentas y registro de conflictos de interés expedido por SIGEP II (Novedad Retiro).',
                   'Comprobante de cargue de declaración de conflicto de intereses con corte de retiro.',
-                ],
-              },
-              {
-                id: 'dp4_5',
-                label: 'Archivo integral en Historia Laboral con Hoja de Control (2311520-FT-244)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311520-FT-244',
-                norma: 'Ley 594 de 2000; Acuerdo AGN 004 de 2019',
-                detalleProcedimiento: 'Foliar y archivar los actos de nombramiento provisional, posesión, resolución motivada de retiro, entrega de cargo y paz y salvos en la Historia Laboral.',
-                posiblesEvidencias: [
-                  'Hoja de control de historia laboral 2311520-FT-244 debidamente foliada.',
                 ],
               },
             ],
@@ -3476,14 +3452,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_lnr_6',
             numero: 6,
             titulo: 'Cierre & Control Interno',
-            subtitulo: 'Constancia de entrega Ley 951/2005 y archivo en Historia Laboral',
+            subtitulo: 'Constancia de entrega Ley 951/2005 a Control Interno',
             icono: 'checkmark-done-circle-outline',
             estado: 'pending',
             tiempoEstimadoDias: 2,
-            responsable: 'Profesional TH / Archivo',
-            normaGeneral: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10; Ley 594 de 2000; Formato 2311520-FT-244',
+            responsable: 'Profesional TH / Control Interno',
+            normaGeneral: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD',
             plazoLegal: '15 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Constatar la radicación formal de la copia auténtica del Acta de Entrega en la Oficina de Control Interno y realizar la foliación y archivo definitivo del expediente.',
+            procedimientoDetallado: 'Constatar la radicación formal de la copia auténtica del Acta de Entrega en la Oficina de Control Interno dentro de los 15 días hábiles siguientes al retiro.',
             requisitos: [
               {
                 id: 'dl6_1',
@@ -3495,18 +3471,6 @@ function generarEtapasParaCasoInterno(
                 detalleProcedimiento: 'Verificar la existencia del radicado oficial de correspondencia de entrega del informe de gestión a la Oficina de Control Interno.',
                 posiblesEvidencias: [
                   'Oficio con sello y radicado oficial de recibido de la Oficina de Control Interno.',
-                ],
-              },
-              {
-                id: 'dl6_2',
-                label: 'Archivo integral y foliación final en Historia Laboral con Hoja de Control (2311520-FT-244)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311520-FT-244',
-                norma: 'Ley 594 de 2000; Hoja de Control SJD',
-                detalleProcedimiento: 'Foliar y coser todo el expediente directivo en la Historia Laboral con su hoja de control final.',
-                posiblesEvidencias: [
-                  'Hoja de control 2311520-FT-244 foliada y archivada en archivo central.',
                 ],
               },
             ],
@@ -3977,27 +3941,6 @@ export function sincronizarEtapasCaso(
       // Reconciliación especial para requisitos unificados (ej: vp1_1)
       if (reqM.id === 'vp1_1' && !reqG) {
         reqG = etapaG.requisitos?.find((rg) => rg.id === 'vp1_1' || rg.id === 'vp1_2');
-      }
-
-      // Reconciliación especial para Hoja de Control 2311520-FT-244
-      if (
-        (reqM.id === 'dc4_5' ||
-          reqM.id === 'dp4_5' ||
-          reqM.codigoFormato === '2311520-FT-244' ||
-          reqM.label.includes('2311520-FT-244')) &&
-        !reqG
-      ) {
-        reqG = etapasGuardadas
-          .flatMap((e) => e.requisitos || [])
-          .find(
-            (r) =>
-              r.codigoFormato === '2311520-FT-244' ||
-              r.id === 'dc6_3' ||
-              r.id === 'dp6_2' ||
-              r.id === 'dc4_5' ||
-              r.id === 'dp4_5' ||
-              r.label?.includes('2311520-FT-244')
-          );
       }
 
       // Reconciliación para requisitos de SIMO 4.0 en desvinculación
