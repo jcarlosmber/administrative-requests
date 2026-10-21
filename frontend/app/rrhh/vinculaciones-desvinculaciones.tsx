@@ -13368,22 +13368,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </View>
                                                     )}
 
-                                                    {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
-                                                      <View
-                                                        style={{
-                                                          backgroundColor: '#FFFFFF',
-                                                          paddingHorizontal: 5,
-                                                          paddingVertical: 1,
-                                                          borderRadius: 4,
-                                                          borderWidth: 1,
-                                                          borderColor: '#BBF7D0',
-                                                        }}
-                                                      >
-                                                        <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#166534' }}>
-                                                          📄 {req.codigoFormato}
-                                                        </Text>
-                                                      </View>
-                                                    )}
+
                                                   </View>
                                                 </View>
                                               </View>
@@ -13667,23 +13652,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       NO APLICA
                                                     </Text>
                                                   </View>
-
-                                                  {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
-                                                    <View
-                                                      style={{
-                                                        backgroundColor: '#F8FAFC',
-                                                        paddingHorizontal: 5,
-                                                        paddingVertical: 1,
-                                                        borderRadius: 4,
-                                                        borderWidth: 1,
-                                                        borderColor: '#CBD5E1',
-                                                      }}
-                                                    >
-                                                      <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#64748B' }}>
-                                                        📄 {req.codigoFormato}
-                                                      </Text>
-                                                    </View>
-                                                  )}
                                                 </View>
 
                                                 <Text style={{ fontSize: 11, color: '#64748B' }} numberOfLines={1}>
@@ -14082,13 +14050,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </Text>
                                                     </View>
                                                   )}
-                                                  {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
-                                                    <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                                                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
-                                                        📄 {req.codigoFormato}
-                                                      </Text>
-                                                    </View>
-                                                  )}
+
                                                 </View>
                                               </View>
                                             </View>
@@ -19169,12 +19131,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       Responsable Oficial: <Text style={{ fontWeight: '600', color: '#1E3A8A' }}>{modalReqContext?.req.cargoResponsable || CARGO_RESPONSABLE_MAP[modalReqContext?.req.id || ''] || 'Profesional Universitario TH'}</Text>
                     </Text>
                   </View>
-                )}
-
-                {modalReqContext?.req.codigoFormato && !modalReqContext.req.label.includes(modalReqContext.req.codigoFormato) && (
-                  <Text style={{ fontSize: 11, color: THEME.slate600, fontWeight: '600' }}>
-                    📄 Formato Institucional: {modalReqContext.req.codigoFormato}
-                  </Text>
                 )}
 
                 {modalReqContext?.req.norma && (
