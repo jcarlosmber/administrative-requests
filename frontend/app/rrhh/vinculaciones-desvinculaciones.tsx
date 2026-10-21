@@ -2653,14 +2653,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_carr_4',
             numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-219, FT-436, ACTA-GESTION-951, SIDEAP Retiro y Archivo FT-244',
+            subtitulo: 'FT-219, FT-436, ACTA-GESTION-951, SIDEAP (ByR y HV), SIGEP y Archivo FT-244',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / Control Interno',
             normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
             plazoLegal: 'Hasta el último día de permanencia en el cargo y archivo final',
-            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro, actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP/SIGEP II marcando Retiro, y archivar integralmente el expediente foliado con la Hoja de Control (2311520-FT-244).',
+            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro, actualizar su declaración jurada de bienes y hoja de vida en SIDEAP con novedad de retiro, publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés, y archivar integralmente el expediente foliado con la Hoja de Control (2311520-FT-244).',
             requisitos: [
               {
                 id: 'dc4_1',
@@ -2676,14 +2676,17 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'dc4_2',
-                label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
+                label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436) • Paz y Salvo Electrónico',
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-436',
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Detallar inventario de trámites pendientes, procesos jurídicos a cargo, claves de acceso y estado del archivo en gestión.',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                notaNormativa: 'Corresponde al soporte institucional del Paz y Salvo Electrónico gestionado en SIGA Trámites (TIC, Almacén, Archivo y Talento Humano).',
+                textoNormativo: 'Procedimiento PR-074: Todo servidor público que se retire definitivamente debe suscribir el formato 2311300-FT-436 de entrega de puesto, soporte fundamental para la expedición del paz y salvo electrónico.',
+                detalleProcedimiento: 'Detallar inventario de trámites pendientes, procesos jurídicos a cargo, claves de acceso y estado del archivo en gestión. Corresponde al mismo trámite de paz y salvo electrónico coordinado en SIGA Trámites.',
                 posiblesEvidencias: [
                   'Formato 2311300-FT-436 suscrito por el funcionario saliente y su jefe inmediato.',
+                  'Constancia de paz y salvo electrónico articulado.',
                 ],
               },
               {
@@ -2703,24 +2706,38 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'dc4_3',
-                label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
+                label: 'SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
-                textoNormativo: 'Los servidores públicos deben publicar y actualizar en el SIDEAP/SIGEP II su declaración jurada de bienes y rentas al momento de su retiro del servicio.',
-                detalleProcedimiento: 'Generar y radicar el certificado digital de SIDEAP de declaración de bienes actualizada al último día de labores.',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital',
+                textoNormativo: 'Los servidores públicos deben publicar y actualizar en el SIDEAP su declaración jurada de bienes y rentas al momento de su retiro del servicio (novedad retiro).',
+                detalleProcedimiento: 'Generar y radicar el certificado digital de SIDEAP de declaración juramentada de bienes y rentas actualizada al último día de labores con opción Novedad Retiro.',
                 posiblesEvidencias: [
-                  'Certificado digital de declaración de bienes y rentas en SIDEAP con marcación de Retiro.',
+                  'Certificado digital de declaración juramentada de bienes y rentas en SIDEAP con marcación de Retiro.',
+                ],
+              },
+              {
+                id: 'dc4_sideap_hv',
+                label: 'SIDEAP: Hoja de vida',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Distrital 830 de 2021 • Lineamientos SIDEAP Distrital',
+                textoNormativo: 'Es deber del servidor mantener actualizada y formalmente cerrada su hoja de vida digital con los soportes académicos y laborales en el sistema distrital SIDEAP con motivo de su desvinculación.',
+                detalleProcedimiento: 'Actualizar la información personal, formación académica, experiencia laboral y generar la hoja de vida digital definitiva desde el aplicativo SIDEAP con corte a la fecha de retiro.',
+                posiblesEvidencias: [
+                  'Hoja de vida digital actualizada generada desde el aplicativo SIDEAP con radicado de cierre.',
                 ],
               },
               {
                 id: 'dc4_4',
-                label: 'Declaración proactiva de Conflicto de Intereses seleccionando Retiro',
+                label: 'SIGEP: Publicación proactiva declaración de bienes y rentas y registro de conflictos de interés (Novedad Retiro)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
-                detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración de inhabilidades e incompatibilidades posteriores al cargo.',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Ley 1437 de 2011 • Función Pública',
+                textoNormativo: 'Publicación proactiva en el portal de la Función Pública / SIGEP II de la declaración de bienes y rentas, declaración del impuesto de renta y registro de conflictos de interés seleccionando novedad retiro.',
+                detalleProcedimiento: 'Diligenciar en la plataforma SIGEP II la publicación proactiva de declaración de bienes y rentas y el registro de conflicto de intereses con corte de retiro, adjuntando el certificado de publicación digital.',
                 posiblesEvidencias: [
+                  'Certificado digital de publicación proactiva de bienes y rentas y registro de conflictos de interés expedido por SIGEP II (Novedad Retiro).',
                   'Formulario de conflicto de intereses con corte de retiro debidamente radicado.',
                 ],
               },
@@ -2742,27 +2759,28 @@ function generarEtapasParaCasoInterno(
             id: 'd_carr_5',
             numero: 5,
             titulo: 'Paz y Salvo Electrónico',
-            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
+            subtitulo: 'Circuito institucional en SIGA Trámites • Entrega de Cargo (FT-436)',
             icono: 'checkbox-outline',
             estado: 'completed',
             tiempoEstimadoDias: 1,
             responsable: 'SIGA Trámites / Talento Humano',
-            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites; Formato 2311300-FT-436',
             plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
-            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional y entrega de cargo (Formato 2311300-FT-436: TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dc5_1',
-                label: 'Paz y Salvo Electrónico',
+                label: 'Paz y Salvo Electrónico (SIGA Trámites) • Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
                 cumplido: true,
                 noAplica: true,
                 obligatorio: false,
-                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
-                textoNormativo: 'El circuito de paz y salvo de bienes, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
-                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436',
+                textoNormativo: 'El circuito de paz y salvo y entrega de cargo institucional (Formato 2311300-FT-436: bienes, equipos, archivos y talento humano) se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites) integrando el circuito de descargos y el Formato 2311300-FT-436 de entrega de puesto.',
                 observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites (Formato 2311300-FT-436)',
                 ],
               },
             ],
@@ -2974,14 +2992,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_prov_4',
             numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-436, FT-219, SIDEAP Retiro y Hoja de Control FT-244',
+            subtitulo: 'FT-436, FT-219, ACTA-GESTION-951, SIDEAP (ByR y HV), SIGEP y Hoja de Control FT-244',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / TH',
-            normaGeneral: 'Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
+            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
             plazoLegal: 'Hasta el último día de labores y foliación final',
-            procedimientoDetallado: 'El servidor provisional debe diligenciar el formato de entrega de puesto FT-436, la encuesta de retiro FT-219, actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP marcando Retiro, y archivar integralmente el expediente con la Hoja de Control (2311520-FT-244).',
+            procedimientoDetallado: 'El servidor provisional debe diligenciar el formato de entrega de puesto FT-436, la encuesta de retiro FT-219, suscribir el acta de gestión (Ley 951/2005), actualizar su declaración jurada de bienes y hoja de vida en SIDEAP con novedad de retiro, publicar en SIGEP II la declaración proactiva de bienes y registro de conflictos de interés, y archivar integralmente el expediente con la Hoja de Control (2311520-FT-244).',
             requisitos: [
               {
                 id: 'dp4_1',
@@ -2997,35 +3015,68 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'dp4_2',
-                label: 'Acta de Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436)',
+                label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436) • Paz y Salvo Electrónico',
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-436',
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Diligenciar informe de empalme con detalle de tareas en curso, expedientes y claves asignadas para entrega al nuevo titular.',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                notaNormativa: 'Corresponde al soporte institucional del Paz y Salvo Electrónico gestionado en SIGA Trámites (TIC, Almacén, Archivo y Talento Humano).',
+                textoNormativo: 'Procedimiento PR-074: Todo servidor público que se retire definitivamente debe suscribir el formato 2311300-FT-436 de entrega de puesto, soporte fundamental para la expedición del paz y salvo electrónico.',
+                detalleProcedimiento: 'Diligenciar informe de empalme con detalle de tareas en curso, expedientes y claves asignadas para entrega al nuevo titular. Corresponde al mismo trámite de paz y salvo electrónico coordinado en SIGA Trámites.',
                 posiblesEvidencias: [
                   'Formato 2311300-FT-436 firmado por el servidor provisional y su jefe inmediato.',
+                  'Constancia de paz y salvo electrónico articulado.',
+                ],
+              },
+              {
+                id: 'dp4_acta_gestion',
+                label: 'Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: 'ACTA-GESTION-951',
+                norma: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD',
+                notaNormativa: 'Deber legal e institucional de rendir informe de gestión y formalizar la entrega de los asuntos, bienes, expedientes y documentación a cargo conforme a la Ley 951 de 2005 (Arts. 1, 5, 9 y 10) y el procedimiento de la entidad.',
+                textoNormativo: 'Ley 951 de 2005, Arts. 1 y 5: Todo servidor público comprendido en la ley, al separarse de su cargo, está obligado a entregar a quien lo sustituya o a su superior jerárquico un informe detallado de los asuntos a su cargo y de los recursos puestos a su disposición mediante acta individual.',
+                detalleProcedimiento: 'Diligenciar el acta según plantilla oficial institucional (Formato ACTA-GESTION-951) y allegar copia radicada a la Oficina de Control Interno dentro de los 15 días hábiles.',
+                posiblesEvidencias: [
+                  'Acta de Informe de Gestión y Entrega de Cargo debidamente suscrita.',
+                  'Radicado formal de remisión a Control Interno.',
                 ],
               },
               {
                 id: 'dp4_3',
-                label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
+                label: 'SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
-                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración juramentada de bienes con corte a fecha de retiro.',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital',
+                textoNormativo: 'Los servidores públicos deben publicar y actualizar en el SIDEAP su declaración jurada de bienes y rentas al momento de su retiro del servicio (novedad retiro).',
+                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración juramentada de bienes con corte a fecha de retiro marcando la opción Novedad Retiro.',
                 posiblesEvidencias: [
-                  'Certificado digital expedido por SIDEAP/SIGEP II con radicado de retiro.',
+                  'Certificado digital expedido por SIDEAP con radicado de retiro.',
+                ],
+              },
+              {
+                id: 'dp4_sideap_hv',
+                label: 'SIDEAP: Hoja de vida',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Distrital 830 de 2021 • Lineamientos SIDEAP Distrital',
+                textoNormativo: 'Es deber del servidor mantener actualizada y formalmente cerrada su hoja de vida digital con los soportes académicos y laborales en el sistema distrital SIDEAP con motivo de su desvinculación.',
+                detalleProcedimiento: 'Actualizar la información personal, formación académica, experiencia laboral y generar la hoja de vida digital definitiva desde el aplicativo SIDEAP con corte a la fecha de retiro.',
+                posiblesEvidencias: [
+                  'Hoja de vida digital actualizada generada desde el aplicativo SIDEAP con radicado de cierre.',
                 ],
               },
               {
                 id: 'dp4_4',
-                label: 'Declaración de Conflicto de Intereses en SIDEAP / Función Pública marcando Retiro',
+                label: 'SIGEP: Publicación proactiva declaración de bienes y rentas y registro de conflictos de interés (Novedad Retiro)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
-                detalleProcedimiento: 'Registrar la declaración de inhabilidades posteriores en el aplicativo distrital.',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Ley 1437 de 2011 • Función Pública',
+                textoNormativo: 'Publicación proactiva en el portal de la Función Pública / SIGEP II de la declaración de bienes y rentas, declaración del impuesto de renta y registro de conflictos de interés seleccionando novedad retiro.',
+                detalleProcedimiento: 'Diligenciar en la plataforma SIGEP II la publicación proactiva de declaración de bienes y rentas y el registro de conflicto de intereses con corte de retiro, adjuntando el certificado de publicación digital.',
                 posiblesEvidencias: [
+                  'Certificado digital de publicación proactiva de bienes y rentas y registro de conflictos de interés expedido por SIGEP II (Novedad Retiro).',
                   'Comprobante de cargue de declaración de conflicto de intereses con corte de retiro.',
                 ],
               },
@@ -3047,27 +3098,28 @@ function generarEtapasParaCasoInterno(
             id: 'd_prov_5',
             numero: 5,
             titulo: 'Paz y Salvo Electrónico',
-            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
+            subtitulo: 'Circuito institucional en SIGA Trámites • Entrega de Cargo (FT-436)',
             icono: 'checkbox-outline',
             estado: 'completed',
             tiempoEstimadoDias: 1,
             responsable: 'SIGA Trámites / Talento Humano',
-            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites; Formato 2311300-FT-436',
             plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
-            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional y entrega de cargo (Formato 2311300-FT-436: TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dp5_1',
-                label: 'Paz y Salvo Electrónico',
+                label: 'Paz y Salvo Electrónico (SIGA Trámites) • Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
                 cumplido: true,
                 noAplica: true,
                 obligatorio: false,
-                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
-                textoNormativo: 'El circuito de paz y salvo de bienes, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
-                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436',
+                textoNormativo: 'El circuito de paz y salvo y entrega de cargo institucional (Formato 2311300-FT-436: bienes, equipos, archivos y talento humano) se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites) integrando el circuito de descargos y el Formato 2311300-FT-436 de entrega de puesto.',
                 observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites (Formato 2311300-FT-436)',
                 ],
               },
             ],
@@ -3246,14 +3298,14 @@ function generarEtapasParaCasoInterno(
             id: 'd_lnr_3',
             numero: 3,
             titulo: 'Entrega Despacho & Control Interno',
-            subtitulo: 'Acta de informe de gestión (Ley 951/2005) y SIDEAP Retiro',
+            subtitulo: 'Acta de informe de gestión (Ley 951/2005), SIDEAP (ByR y HV), SIGEP y FT-436',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Directivo saliente / Control Interno',
             normaGeneral: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10; Ley 2013 de 2019; Procedimiento PR-074 SJD',
             plazoLegal: 'Informe de entrega dentro de 15 días hábiles a Control Interno (Ley 951/2005)',
-            procedimientoDetallado: 'Obligación legal de todo servidor público saliente de suscribir el Acta de Informe de Gestión (FT-333) y remitir copia a la Oficina de Control Interno dentro de los 15 días hábiles, además de diligenciar los formatos FT-436, FT-219 y la declaración de SIDEAP Retiro.',
+            procedimientoDetallado: 'Obligación legal de todo servidor público saliente de suscribir el Acta de Informe de Gestión (FT-333) y remitir copia a la Oficina de Control Interno dentro de los 15 días hábiles, además de diligenciar los formatos FT-436, FT-219, actualizar SIDEAP (Bienes y Rentas y Hoja de vida) con novedad de retiro y publicar en SIGEP II.',
             requisitos: [
               {
                 id: 'dl3_1',
@@ -3272,14 +3324,16 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'dl3_2',
-                label: 'Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436)',
+                label: 'Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436) • Paz y Salvo Electrónico',
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-436',
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Detallar inventario de claves de acceso, trámites prioritarios y expedientes del despacho.',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                notaNormativa: 'Corresponde al soporte institucional del Paz y Salvo Electrónico gestionado en SIGA Trámites (TIC, Almacén, Archivo y Talento Humano).',
+                detalleProcedimiento: 'Detallar inventario de claves de acceso, trámites prioritarios y expedientes del despacho. Corresponde al mismo trámite de paz y salvo electrónico coordinado en SIGA Trámites.',
                 posiblesEvidencias: [
                   'Formato 2311300-FT-436 firmado por el directivo saliente y el Secretario Jurídico.',
+                  'Constancia de paz y salvo electrónico articulado.',
                 ],
               },
               {
@@ -3296,23 +3350,38 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'dl3_4',
-                label: 'Declaración proactiva de Bienes y Rentas en SIDEAP/SIGEP II marcando Retiro',
+                label: 'SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
-                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración jurada de bienes y rentas con corte al último día en funciones directivas.',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital',
+                textoNormativo: 'Los servidores públicos deben publicar y actualizar en el SIDEAP su declaración jurada de bienes y rentas al momento de su retiro del servicio (novedad retiro).',
+                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración jurada de bienes y rentas con corte al último día en funciones directivas con opción Novedad Retiro.',
                 posiblesEvidencias: [
                   'Certificado digital de SIDEAP con radicado de retiro del servicio.',
                 ],
               },
               {
-                id: 'dl3_5',
-                label: 'Declaración proactiva de Conflicto de Intereses e Inhabilidades Posteriores',
+                id: 'dl3_sideap_hv',
+                label: 'SIDEAP: Hoja de vida',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
-                detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración de no conflicto de intereses e inhabilidades posteriores para directivos.',
+                norma: 'Decreto Distrital 830 de 2021 • Lineamientos SIDEAP Distrital',
+                textoNormativo: 'Es deber del directivo mantener actualizada y formalmente cerrada su hoja de vida digital con los soportes de formación y trayectoria en el aplicativo distrital SIDEAP con motivo de su retiro.',
+                detalleProcedimiento: 'Actualizar y cerrar la hoja de vida digital definitiva desde el aplicativo SIDEAP con corte a la fecha de retiro de las funciones directivas.',
                 posiblesEvidencias: [
+                  'Hoja de vida digital actualizada generada desde el aplicativo SIDEAP con radicado de cierre.',
+                ],
+              },
+              {
+                id: 'dl3_5',
+                label: 'SIGEP: Publicación proactiva declaración de bienes y rentas y registro de conflictos de interés (Novedad Retiro)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011 • Función Pública',
+                textoNormativo: 'Publicación proactiva en el portal de la Función Pública / SIGEP II de la declaración de bienes y rentas, declaración del impuesto de renta y registro de conflictos de interés seleccionando novedad retiro.',
+                detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración de no conflicto de intereses e inhabilidades posteriores para directivos marcando retiro.',
+                posiblesEvidencias: [
+                  'Certificado digital de publicación proactiva de bienes y rentas y registro de conflictos de interés expedido por SIGEP II (Novedad Retiro).',
                   'Comprobante digital de cargue de declaración de inhabilidades posteriores.',
                 ],
               },
@@ -3322,27 +3391,28 @@ function generarEtapasParaCasoInterno(
             id: 'd_lnr_4',
             numero: 4,
             titulo: 'Paz y Salvo Electrónico',
-            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
+            subtitulo: 'Circuito institucional en SIGA Trámites • Entrega de Cargo (FT-436)',
             icono: 'checkbox-outline',
             estado: 'completed',
             tiempoEstimadoDias: 1,
             responsable: 'SIGA Trámites / Talento Humano',
-            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites; Formato 2311300-FT-436',
             plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
-            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional y entrega de cargo (Formato 2311300-FT-436: TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dl4_1',
-                label: 'Paz y Salvo Electrónico',
+                label: 'Paz y Salvo Electrónico (SIGA Trámites) • Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
                 cumplido: true,
                 noAplica: true,
                 obligatorio: false,
-                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
-                textoNormativo: 'El circuito de paz y salvo de bienes directivos, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
-                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436',
+                textoNormativo: 'El circuito de paz y salvo de bienes directivos, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites integrando el Formato 2311300-FT-436.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites) integrando el circuito de descargos y el Formato 2311300-FT-436.',
                 observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites (Formato 2311300-FT-436)',
                 ],
               },
             ],
@@ -4010,13 +4080,19 @@ export function sincronizarEtapasCaso(
       }
 
       // Reconciliación especial para Paz y Salvo Electrónico en desvinculaciones (SIGA Trámites)
-      if (reqM.label === 'Paz y Salvo Electrónico' || reqM.id.includes('paz_salvo_electronico')) {
+      if (
+        reqM.id === 'dc5_1' ||
+        reqM.id === 'dp5_1' ||
+        reqM.id === 'dl4_1' ||
+        (reqM.label.toLowerCase().includes('paz y salvo electrónico') && (etapaM.numero === 5 || etapaM.numero === 4)) ||
+        reqM.id.includes('paz_salvo_electronico')
+      ) {
         return {
           ...reqM,
           cumplido: true,
           noAplica: true,
           obligatorio: false,
-          observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
+          observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites) - Integrado con Formato 2311300-FT-436',
           fecha_cumplimiento: reqG?.fecha_cumplimiento || new Date().toISOString().split('T')[0],
           usuarioRegistro: reqG?.usuarioRegistro || 'SIGA Trámites / TH',
         };
@@ -4442,7 +4518,7 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     proceso: 'DESVINCULACION',
     fasesRecomendadas: ['Formatos Entrega de Cargo', 'Paz y Salvo Dependencia'],
     descripcion: 'Matriz en Excel para relacionar inventario físico, equipos, expedientes archivísticos, procesos en trámite y claves asignadas.',
-    requisitosAsociados: ['dc3_2', 'dp3_2', 'dl3_2'],
+    requisitosAsociados: ['dc4_2', 'dp4_2', 'dl3_2', 'dc5_1', 'dp5_1', 'dl4_1', 'dc3_2', 'dp3_2'],
   },
   {
     id: 'ACTA-LEY-951',
@@ -13455,7 +13531,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
                                         if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
                                         if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
-                                        if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
+                                        if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqLabel.includes('paz y salvo') || reqId === 'dc4_2' || reqId === 'dp4_2' || reqId === 'dc5_1' || reqId === 'dp5_1' || reqId === 'dl4_1' || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
                                         if ((reqLabel.includes('acta de informe de gestión') || reqLabel.includes('acta de gestión') || reqLabel.includes('informe de gestión') || reqLabel.includes('ley 951') || reqId === 'dc3_acta_gestion' || reqId === 'dl3_1' || reqId === 'dp3_acta_gestion') && (f.id === 'ACTA-LEY-951' || f.id === 'ACTA-GESTION-951')) return true;
                                         return false;
                                       });
@@ -19376,7 +19452,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
                   if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
                   if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
-                  if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
+                  if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqLabel.includes('paz y salvo') || reqId === 'dc4_2' || reqId === 'dp4_2' || reqId === 'dc5_1' || reqId === 'dp5_1' || reqId === 'dl4_1' || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
                   if ((reqLabel.includes('acta de informe de gestión') || reqLabel.includes('acta de gestión') || reqLabel.includes('informe de gestión') || reqLabel.includes('ley 951') || reqId === 'dc3_acta_gestion' || reqId === 'dl3_1' || reqId === 'dp3_acta_gestion') && (f.id === 'ACTA-LEY-951' || f.id === 'ACTA-GESTION-951')) return true;
                   return false;
                 });

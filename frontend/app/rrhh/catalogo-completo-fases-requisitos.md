@@ -609,9 +609,10 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **⚖️ Fundamento Jurídico Aplicable**: Sistema Integrado de Gestión SJD • Procedimiento PR-074 • Formato 2311300-FT-219.
 * **📁 Posibles Evidencias**: Formato 2311300-FT-219 diligenciado y suscrito por el servidor saliente.
 
-#### Requisito 4.2 (`dc4_2`): Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (Formato 2311300-FT-436)
+#### Requisito 4.2 (`dc4_2`): Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436) • Paz y Salvo Electrónico
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005 • Procedimiento PR-074 • Formato 2311300-FT-436.
+* **⚖️ Fundamento Jurídico Aplicable**: Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Corresponde al soporte fundamental del Paz y Salvo Electrónico gestionado en SIGA Trámites (TIC, Almacén, Archivo y Talento Humano).
 * **📁 Posibles Evidencias**: Formato 2311300-FT-436 debidamente diligenciado con inventario de asuntos en curso y firma de recibido del superior jerárquico.
 
 #### Requisito 4.3 (`dc3_acta_gestion`): Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951
@@ -623,17 +624,23 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   1. Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita con inventario y estado de trámites.
   2. Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.
 
-#### Requisito 4.4 (`dc4_3`): Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro
+#### Requisito 4.4 (`dc4_3`): SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 190 de 1995, Art. 13 • Decreto 1083 de 2015, Art. 2.2.16.4.
-* **📁 Posibles Evidencias**: Formulario único de Declaración Juramentada de Bienes y Rentas descargado de SIDEAP tipo Retiro.
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital.
+* **📁 Posibles Evidencias**: Certificado digital de radicación de la declaración juramentada de bienes y rentas en SIDEAP con marcación de Novedad Retiro.
 
-#### Requisito 4.5 (`dc4_4`): Declaración proactiva de Conflicto de Intereses seleccionando Retiro
+#### Requisito 4.5 (`dc4_sideap_hv`): SIDEAP: Hoja de vida
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Art. 2 y 3 • Decreto 1083 de 2015.
-* **📁 Posibles Evidencias**: Certificado de publicación de la declaración de bienes y conflictos de interés en el aplicativo por causal de retiro.
+* **⚖️ Fundamento Jurídico Aplicable**: Decreto Distrital 830 de 2021 • Lineamientos SIDEAP Distrital • Procedimiento PR-074 SJD.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Deber de mantener actualizada y formalmente cerrada la hoja de vida institucional en el aplicativo distrital SIDEAP con sus soportes de experiencia y titulación.
+* **📁 Posibles Evidencias**: Hoja de vida digital generada desde el aplicativo SIDEAP con corte de retiro del servicio.
 
-#### Requisito 4.6 (`dc4_5`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
+#### Requisito 4.6 (`dc4_4`): SIGEP: Publicación proactiva declaración de bienes y rentas y registro de conflictos de interés (Novedad Retiro)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Ley 1437 de 2011 • Portal Función Pública.
+* **📁 Posibles Evidencias**: Certificado digital de publicación proactiva en SIGEP II con corte de retiro y formulario de conflicto de intereses radicado.
+
+#### Requisito 4.7 (`dc4_5`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 • Circular AGN 004 de 2003 • Formato 2311520-FT-244.
 * **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Foliar y consolidar todos los formatos de entrega de cargo y documentos del retiro cerrando formalmente la historia laboral activa con la Hoja de Control 2311520-FT-244.
@@ -646,12 +653,12 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 ### 🔹 Fase 5: Paz y Salvo Electrónico (`d_carr_5`)
 * **Responsable**: SIGA Trámites / Talento Humano
 * **Plazo Legal**: Trámite digital autónomo en SIGA Trámites
-* **Procedimiento General de Fase**: El circuito institucional de paz y salvo (TIC, Almacén, Archivo y Talento Humano) se gestiona centralizadamente en el sistema SIGA Trámites (no aplica gestión en esta plataforma).
+* **Procedimiento General de Fase**: El circuito institucional de paz y salvo (TIC, Almacén, Archivo y Talento Humano) y la entrega de puesto conforme al Formato 2311300-FT-436 se gestiona centralizadamente en el sistema SIGA Trámites (no aplica gestión en esta plataforma).
 
-#### Requisito 5.1 (`dc5_1`): Paz y Salvo Electrónico (SIGA Trámites)
-* **Obligatorio**: No (Marcado No Aplica - gestionado en SIGA Trámites)
-* **⚖️ Fundamento Jurídico Aplicable**: Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites.
-* **📁 Posibles Evidencias**: Paz y salvo electrónico consolidado generado en SIGA Trámites.
+#### Requisito 5.1 (`dc5_1`): Paz y Salvo Electrónico (SIGA Trámites) • Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)
+* **Obligatorio**: No (Marcado No Aplica - gestionado en SIGA Trámites articulado con Formato 2311300-FT-436)
+* **⚖️ Fundamento Jurídico Aplicable**: Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436.
+* **📁 Posibles Evidencias**: Paz y salvo electrónico consolidado generado en SIGA Trámites (Formato 2311300-FT-436).
 
 ---
 
