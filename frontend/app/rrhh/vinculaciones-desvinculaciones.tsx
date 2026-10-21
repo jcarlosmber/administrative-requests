@@ -149,7 +149,7 @@ export function obtenerInfoModalidad(
           colorBg: '#eff6ff',
           colorBorde: '#93c5fd',
           marcoLegal: 'Ley 909 de 2004, Arts. 41 y 44 • Decreto 1083 de 2015 • Ley 100 de 1993, Art. 33 • C-1037/2003 • Circular CNSC 011 de 2021',
-          descripcionFases: 'Retiro por causales taxativas objetivas. Exige constatar causal idónea, inclusión previa en nómina pensional en retiro por pensión, acto motivado, entrega formal de cargo, examen médico de egreso, 4 paz y salvos, liquidación prestacional y reporte en SIMO 4.4 dentro de los 5 días con cancelación de RPCA.',
+          descripcionFases: 'Retiro por causales taxativas objetivas. Exige constatar causal idónea, inclusión previa en nómina pensional en retiro por pensión, acto motivado, entrega formal de cargo, examen médico de egreso, 4 paz y salvos, liquidación prestacional y reporte en SIMO 4.0 dentro de los 5 días con cancelación de RPCA.',
           requisitoPrincipal: 'Causal objetiva demostrada, inclusión en nómina de pensionados (si aplica) y reporte SIMO dentro de 5 días hábiles.',
           diferenciaClave: 'Servidor titular de derechos adquiridos de carrera. No procede remoción discrecional; en supresión de empleo goza de derecho preferencial a reincorporación o indemnización (Art. 44).',
         };
@@ -448,7 +448,7 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
   },
   {
     id: 'tl_des_simo',
-    nombre: 'Reporte de Vacancia Definitiva en SIMO 4.4 ante la CNSC',
+    nombre: 'Reporte de Vacancia Definitiva en SIMO 4.0 ante la CNSC',
     plazoDiasHabiles: 5,
     norma: 'Circular Externa CNSC 011 de 2021',
     articulos: 'Num. 2 • Ley 1960 de 2019',
@@ -717,6 +717,7 @@ export interface CasoFlujoFuncionario {
   cargo: string;
   codigo?: string;
   grado?: string;
+  id_sideap?: number | string;
   dependencia: string;
   causal?: string;
   fecha_inicio_tramite: string;
@@ -2611,18 +2612,58 @@ function generarEtapasParaCasoInterno(
           {
             id: 'd_carr_3',
             numero: 3,
+            titulo: 'SIMO 4.0, RPCA & Cierre CNSC',
+            subtitulo: 'Reporte obligatorio CNSC (5 días) y cancelación RPCA',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 5,
+            responsable: 'Profesional TH / Archivo',
+            normaGeneral: 'Circular CNSC 011 de 2021; Ley 909 de 2004, Arts. 14 y 31',
+            plazoLegal: 'Reporte CNSC dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Para servidores de carrera: reporte de la vacancia definitiva en SIMO 4.0 ante la CNSC dentro de los 5 días hábiles siguientes al retiro y trámite de solicitud de cancelación del Registro Público de Carrera Administrativa (RPCA).',
+            requisitos: [
+              {
+                id: 'dc3_1',
+                label: 'Reporte de vacancia definitiva en SIMO 4.0 ante la CNSC (plazo 5 días hábiles)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
+                textoNormativo: 'Las entidades deben reportar a la CNSC en el aplicativo SIMO las vacantes definitivas de carrera administrativa dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad de retiro.',
+                detalleProcedimiento: 'Cargar el acto de retiro en SIMO 4.0 para liberar y habilitar la plaza en la OPEC para futura provisión por mérito.',
+                posiblesEvidencias: [
+                  'Comprobante de cargue de vacancia definitiva en SIMO 4.0 emitido por la CNSC.',
+                ],
+              },
+              {
+                id: 'dc3_2',
+                label: 'Cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 909 de 2004, Art. 14 • Criterio Unificado CNSC',
+                textoNormativo: 'Producido el retiro definitivo del servicio de un empleado con derechos de carrera, la entidad solicitará a la CNSC la cancelación de su inscripción en el Registro Público de Carrera.',
+                detalleProcedimiento: 'Radicar la solicitud de exclusión y cancelación del registro en el RPCA ante la Dirección de Carrera de la CNSC.',
+                posiblesEvidencias: [
+                  'Radicado formal de solicitud de cancelación de RPCA ante la CNSC.',
+                  'Certificado de actualización de registro de la CNSC.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_4',
+            numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-219, FT-436, ACTA-GESTION-951 y SIDEAP Retiro',
+            subtitulo: 'FT-219, FT-436, ACTA-GESTION-951, SIDEAP Retiro y Archivo FT-244',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / Control Interno',
-            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Procedimiento PR-074 SJD',
-            plazoLegal: 'Hasta el último día de permanencia en el cargo',
-            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro y actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP/SIGEP II marcando Retiro.',
+            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
+            plazoLegal: 'Hasta el último día de permanencia en el cargo y archivo final',
+            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro, actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP/SIGEP II marcando Retiro, y archivar integralmente el expediente foliado con la Hoja de Control (2311520-FT-244).',
             requisitos: [
               {
-                id: 'dc3_1',
+                id: 'dc4_1',
                 label: 'Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)',
                 cumplido: true,
                 obligatorio: true,
@@ -2634,7 +2675,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc3_2',
+                id: 'dc4_2',
                 label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
                 cumplido: true,
                 obligatorio: true,
@@ -2661,7 +2702,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc3_3',
+                id: 'dc4_3',
                 label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
                 cumplido: false,
                 obligatorio: true,
@@ -2673,7 +2714,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc3_4',
+                id: 'dc4_4',
                 label: 'Declaración proactiva de Conflicto de Intereses seleccionando Retiro',
                 cumplido: false,
                 obligatorio: true,
@@ -2683,11 +2724,23 @@ function generarEtapasParaCasoInterno(
                   'Formulario de conflicto de intereses con corte de retiro debidamente radicado.',
                 ],
               },
+              {
+                id: 'dc4_5',
+                label: 'Archivo integral en Historia Laboral (Hoja de Control 2311520-FT-244)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-244',
+                norma: 'Ley 594 de 2000; Acuerdo 004 de 2019 AGN',
+                detalleProcedimiento: 'Foliar y archivar todo el expediente de retiro y entrega de cargo en la Historia Laboral con su hoja de control final.',
+                posiblesEvidencias: [
+                  'Hoja de control de historia laboral 2311520-FT-244 foliada y firmada.',
+                ],
+              },
             ],
           },
           {
-            id: 'd_carr_4',
-            numero: 4,
+            id: 'd_carr_5',
+            numero: 5,
             titulo: 'Paz y Salvo Electrónico',
             subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
@@ -2699,7 +2752,7 @@ function generarEtapasParaCasoInterno(
             procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
-                id: 'dc4_1',
+                id: 'dc5_1',
                 label: 'Paz y Salvo Electrónico',
                 cumplido: true,
                 noAplica: true,
@@ -2715,8 +2768,8 @@ function generarEtapasParaCasoInterno(
             ],
           },
           {
-            id: 'd_carr_5',
-            numero: 5,
+            id: 'd_carr_6',
+            numero: 6,
             titulo: 'Liquidación & Nómina',
             subtitulo: 'Cálculo de prestaciones sociales y ordenación de pago',
             icono: 'cash-outline',
@@ -2728,7 +2781,7 @@ function generarEtapasParaCasoInterno(
             procedimientoDetallado: 'Registro de novedad de retiro en nómina PERNO, desactivación en SIDEAP, liquidación de prestaciones sociales proporcionales y expedición de la resolución de reconocimiento y ordenación de pago.',
             requisitos: [
               {
-                id: 'dc5_1',
+                id: 'dc6_1_nom',
                 label: 'Registro de novedad de retiro en nómina y desactivación en SIDEAP',
                 cumplido: false,
                 obligatorio: true,
@@ -2740,7 +2793,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc5_2',
+                id: 'dc6_2_nom',
                 label: 'Liquidación técnica de prestaciones sociales de carrera (Dec. Ley 1045/1978)',
                 cumplido: false,
                 obligatorio: true,
@@ -2751,7 +2804,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc5_3',
+                id: 'dc6_3_nom',
                 label: 'Elaboración de Resolución de Liquidación (FT-130) y firma por Director(a) de Gestión Corporativa',
                 cumplido: false,
                 obligatorio: true,
@@ -2764,7 +2817,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dc5_4',
+                id: 'dc6_4_nom',
                 label: 'Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)',
                 cumplido: false,
                 obligatorio: true,
@@ -2773,58 +2826,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Orden de pago expedida en BOGDATA por el Profesional Especializado de Gestión Financiera.',
                   'Comprobante de egreso y certificación de dispersión bancaria de Tesorería.',
-                ],
-              },
-            ],
-          },
-          {
-            id: 'd_carr_6',
-            numero: 6,
-            titulo: 'SIMO 4.4, RPCA & Cierre CNSC',
-            subtitulo: 'Reporte obligatorio CNSC (5 días) y cancelación RPCA',
-            icono: 'checkmark-done-circle-outline',
-            estado: 'pending',
-            tiempoEstimadoDias: 5,
-            responsable: 'Profesional TH / Archivo',
-            normaGeneral: 'Circular CNSC 011 de 2021; Ley 909 de 2004, Arts. 14 y 31; Ley 594 de 2000',
-            plazoLegal: 'Reporte CNSC dentro de los 5 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Para servidores de carrera: reporte de la vacancia definitiva en SIMO 4.4 ante la CNSC dentro de los 5 días hábiles, trámite de cancelación del Registro Público de Carrera Administrativa (RPCA) y archivo de la historia laboral.',
-            requisitos: [
-              {
-                id: 'dc6_1',
-                label: 'Reporte de vacancia definitiva en SIMO 4.4 ante la CNSC (plazo 5 días hábiles)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
-                textoNormativo: 'Las entidades deben reportar a la CNSC en el aplicativo SIMO las vacantes definitivas de carrera administrativa dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad de retiro.',
-                detalleProcedimiento: 'Cargar el acto de retiro en SIMO 4.4 para liberar y habilitar la plaza en la OPEC para futura provisión por mérito.',
-                posiblesEvidencias: [
-                  'Comprobante de cargue de vacancia definitiva en SIMO 4.4 emitido por la CNSC.',
-                ],
-              },
-              {
-                id: 'dc6_2',
-                label: 'Cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 14 • Criterio Unificado CNSC',
-                textoNormativo: 'Producido el retiro definitivo del servicio de un empleado con derechos de carrera, la entidad solicitará a la CNSC la cancelación de su inscripción en el Registro Público de Carrera.',
-                detalleProcedimiento: 'Radicar la solicitud de exclusión y cancelación del registro en el RPCA ante la Dirección de Carrera de la CNSC.',
-                posiblesEvidencias: [
-                  'Radicado formal de solicitud de cancelación de RPCA ante la CNSC.',
-                  'Certificado de actualización de registro de la CNSC.',
-                ],
-              },
-              {
-                id: 'dc6_3',
-                label: 'Archivo integral en Historia Laboral (Hoja de Control 2311520-FT-244)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311520-FT-244',
-                norma: 'Ley 594 de 2000; Acuerdo 004 de 2019 AGN',
-                detalleProcedimiento: 'Foliar y archivar todo el expediente de retiro en la Historia Laboral con su hoja de control final.',
-                posiblesEvidencias: [
-                  'Hoja de control de historia laboral 2311520-FT-244 foliada y firmada.',
                 ],
               },
             ],
@@ -2945,18 +2946,45 @@ function generarEtapasParaCasoInterno(
           {
             id: 'd_prov_3',
             numero: 3,
+            titulo: 'SIMO 4.0 & Novedad CNSC',
+            subtitulo: 'Reporte de novedad ante la CNSC (plazo 5 días hábiles)',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 2,
+            responsable: 'Profesional TH / Archivo',
+            normaGeneral: 'Circular Externa CNSC 011 de 2021',
+            plazoLegal: 'Reporte SIMO 4.0 dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Reportar en SIMO 4.0 la finalización del nombramiento provisional ante la CNSC dentro de los 5 días hábiles siguientes al retiro.',
+            requisitos: [
+              {
+                id: 'dp3_1',
+                label: 'Reporte de novedad de retiro provisional en el aplicativo SIMO 4.0 ante la CNSC',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Circular Externa CNSC 011 de 2021',
+                textoNormativo: 'Las entidades deben actualizar en el aplicativo SIMO 4.0 el estado de ocupación de las plazas de carrera, descargando los nombramientos provisionales que hayan cesado.',
+                detalleProcedimiento: 'Cargar la novedad de retiro en el módulo de personal en SIMO 4.0 de la CNSC.',
+                posiblesEvidencias: [
+                  'Comprobante de registro de novedad de retiro en SIMO 4.0 expedido por la CNSC.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_4',
+            numero: 4,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-436, FT-219 y SIDEAP Retiro',
+            subtitulo: 'FT-436, FT-219, SIDEAP Retiro y Hoja de Control FT-244',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Servidor saliente / TH',
-            normaGeneral: 'Ley 2013 de 2019; Procedimiento PR-074 SJD',
-            plazoLegal: 'Hasta el último día de labores',
-            procedimientoDetallado: 'El servidor provisional debe diligenciar el formato de entrega de puesto FT-436, la encuesta de retiro FT-219 y actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP marcando Retiro.',
+            normaGeneral: 'Ley 2013 de 2019; Ley 594 de 2000; Procedimiento PR-074 SJD; Formato 2311520-FT-244',
+            plazoLegal: 'Hasta el último día de labores y foliación final',
+            procedimientoDetallado: 'El servidor provisional debe diligenciar el formato de entrega de puesto FT-436, la encuesta de retiro FT-219, actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP marcando Retiro, y archivar integralmente el expediente con la Hoja de Control (2311520-FT-244).',
             requisitos: [
               {
-                id: 'dp3_1',
+                id: 'dp4_1',
                 label: 'Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)',
                 cumplido: true,
                 obligatorio: true,
@@ -2968,7 +2996,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp3_2',
+                id: 'dp4_2',
                 label: 'Acta de Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436)',
                 cumplido: true,
                 obligatorio: true,
@@ -2980,7 +3008,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp3_3',
+                id: 'dp4_3',
                 label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
                 cumplido: false,
                 obligatorio: true,
@@ -2991,7 +3019,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp3_4',
+                id: 'dp4_4',
                 label: 'Declaración de Conflicto de Intereses en SIDEAP / Función Pública marcando Retiro',
                 cumplido: false,
                 obligatorio: true,
@@ -3001,11 +3029,23 @@ function generarEtapasParaCasoInterno(
                   'Comprobante de cargue de declaración de conflicto de intereses con corte de retiro.',
                 ],
               },
+              {
+                id: 'dp4_5',
+                label: 'Archivo integral en Historia Laboral con Hoja de Control (2311520-FT-244)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-244',
+                norma: 'Ley 594 de 2000; Acuerdo AGN 004 de 2019',
+                detalleProcedimiento: 'Foliar y archivar los actos de nombramiento provisional, posesión, resolución motivada de retiro, entrega de cargo y paz y salvos en la Historia Laboral.',
+                posiblesEvidencias: [
+                  'Hoja de control de historia laboral 2311520-FT-244 debidamente foliada.',
+                ],
+              },
             ],
           },
           {
-            id: 'd_prov_4',
-            numero: 4,
+            id: 'd_prov_5',
+            numero: 5,
             titulo: 'Paz y Salvo Electrónico',
             subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
@@ -3017,7 +3057,7 @@ function generarEtapasParaCasoInterno(
             procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
-                id: 'dp4_1',
+                id: 'dp5_1',
                 label: 'Paz y Salvo Electrónico',
                 cumplido: true,
                 noAplica: true,
@@ -3033,8 +3073,8 @@ function generarEtapasParaCasoInterno(
             ],
           },
           {
-            id: 'd_prov_5',
-            numero: 5,
+            id: 'd_prov_6',
+            numero: 6,
             titulo: 'Liquidación & Nómina',
             subtitulo: 'Cálculo de prestaciones sociales y ordenación de pago',
             icono: 'cash-outline',
@@ -3046,7 +3086,7 @@ function generarEtapasParaCasoInterno(
             procedimientoDetallado: 'Registro de novedad de retiro en PERNO, desactivación en SIDEAP, liquidación técnica de prestaciones proporcionales y resolución de pago.',
             requisitos: [
               {
-                id: 'dp5_1',
+                id: 'dp6_1_nom',
                 label: 'Registro de novedad de retiro en nómina PERNO y desactivación en SIDEAP',
                 cumplido: false,
                 obligatorio: true,
@@ -3058,7 +3098,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp5_2',
+                id: 'dp6_2_nom',
                 label: 'Liquidación técnica de prestaciones sociales (vacaciones, primas, cesantías)',
                 cumplido: false,
                 obligatorio: true,
@@ -3069,7 +3109,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp5_3',
+                id: 'dp6_3_nom',
                 label: 'Elaboración de Resolución de Liquidación (FT-130) y firma por Director(a) de Gestión Corporativa',
                 cumplido: false,
                 obligatorio: true,
@@ -3082,7 +3122,7 @@ function generarEtapasParaCasoInterno(
                 ],
               },
               {
-                id: 'dp5_4',
+                id: 'dp6_4_nom',
                 label: 'Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)',
                 cumplido: false,
                 obligatorio: true,
@@ -3091,45 +3131,6 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Orden de pago expedida en BOGDATA por el Profesional Especializado de Gestión Financiera.',
                   'Comprobante de dispersión bancaria y constancia electrónica de Tesorería.',
-                ],
-              },
-            ],
-          },
-          {
-            id: 'd_prov_6',
-            numero: 6,
-            titulo: 'SIMO CNSC & Historia Laboral',
-            subtitulo: 'Reporte de novedad ante la CNSC y archivo definitivo',
-            icono: 'checkmark-done-circle-outline',
-            estado: 'pending',
-            tiempoEstimadoDias: 2,
-            responsable: 'Profesional TH / Archivo',
-            normaGeneral: 'Circular Externa CNSC 011 de 2021; Ley 594 de 2000; Formato 2311520-FT-244',
-            plazoLegal: 'Reporte SIMO dentro de los 5 días hábiles siguientes',
-            procedimientoDetallado: 'Reportar en SIMO la finalización del nombramiento provisional y archivar todo el expediente foliado en la Historia Laboral.',
-            requisitos: [
-              {
-                id: 'dp6_1',
-                label: 'Reporte de novedad de retiro provisional en el aplicativo SIMO ante la CNSC',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Circular Externa CNSC 011 de 2021',
-                textoNormativo: 'Las entidades deben actualizar en el aplicativo SIMO el estado de ocupación de las plazas de carrera, descargando los nombramientos provisionales que hayan cesado.',
-                detalleProcedimiento: 'Cargar la novedad de retiro en el módulo de personal en SIMO de la CNSC.',
-                posiblesEvidencias: [
-                  'Comprobante de registro de novedad de retiro en SIMO expedido por la CNSC.',
-                ],
-              },
-              {
-                id: 'dp6_2',
-                label: 'Archivo integral en Historia Laboral con Hoja de Control (2311520-FT-244)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311520-FT-244',
-                norma: 'Ley 594 de 2000; Acuerdo AGN 004 de 2019',
-                detalleProcedimiento: 'Foliar y archivar los actos de nombramiento provisional, posesión, resolución motivada de retiro y paz y salvos en la Historia Laboral.',
-                posiblesEvidencias: [
-                  'Hoja de control de historia laboral 2311520-FT-244 debidamente foliada.',
                 ],
               },
             ],
@@ -3897,9 +3898,22 @@ export function sincronizarEtapasCaso(
   const esAsc = modalidad === 'ASCENSO' || subtipoConcurso === 'ASCENSO';
 
   const resultado = etapasMaestras.map((etapaM) => {
-    const etapaG = etapasGuardadas.find(
-      (eg) => eg.id === etapaM.id || eg.numero === etapaM.numero
-    );
+    const etapaG =
+      etapasGuardadas.find((eg) => {
+        if (eg.id === etapaM.id) return true;
+        const tM = (etapaM.titulo || '').toLowerCase();
+        const tG = (eg.titulo || '').toLowerCase();
+        if (tM.includes('simo') && tG.includes('simo')) return true;
+        if (tM.includes('formatos entrega') && tG.includes('formatos entrega')) return true;
+        if (tM.includes('paz y salvo') && tG.includes('paz y salvo')) return true;
+        if (tM.includes('liquidaci') && tG.includes('liquidaci')) return true;
+        if (tM.includes('causal') && tG.includes('causal')) return true;
+        if (tM.includes('acto') && tG.includes('acto')) return true;
+        return false;
+      }) ||
+      etapasGuardadas.find(
+        (eg) => eg.id === etapaM.id || eg.numero === etapaM.numero
+      );
 
     if (!etapaG) {
       return etapaM;
@@ -3911,6 +3925,58 @@ export function sincronizarEtapasCaso(
       // Reconciliación especial para requisitos unificados (ej: vp1_1)
       if (reqM.id === 'vp1_1' && !reqG) {
         reqG = etapaG.requisitos?.find((rg) => rg.id === 'vp1_1' || rg.id === 'vp1_2');
+      }
+
+      // Reconciliación especial para Hoja de Control 2311520-FT-244
+      if (
+        (reqM.id === 'dc4_5' ||
+          reqM.id === 'dp4_5' ||
+          reqM.codigoFormato === '2311520-FT-244' ||
+          reqM.label.includes('2311520-FT-244')) &&
+        !reqG
+      ) {
+        reqG = etapasGuardadas
+          .flatMap((e) => e.requisitos || [])
+          .find(
+            (r) =>
+              r.codigoFormato === '2311520-FT-244' ||
+              r.id === 'dc6_3' ||
+              r.id === 'dp6_2' ||
+              r.id === 'dc4_5' ||
+              r.id === 'dp4_5' ||
+              r.label?.includes('2311520-FT-244')
+          );
+      }
+
+      // Reconciliación para requisitos de SIMO 4.0 en desvinculación
+      if (
+        (reqM.id === 'dc3_1' ||
+          reqM.id === 'dp3_1' ||
+          reqM.label.toLowerCase().includes('reporte de vacancia') ||
+          (reqM.label.toLowerCase().includes('simo') && reqM.label.toLowerCase().includes('retiro'))) &&
+        !reqG
+      ) {
+        reqG = etapasGuardadas
+          .flatMap((e) => e.requisitos || [])
+          .find(
+            (r) =>
+              r.id === 'dc6_1' ||
+              r.id === 'dp6_1' ||
+              r.id === 'dc3_1' ||
+              r.id === 'dp3_1' ||
+              r.label?.toLowerCase().includes('vacancia definitiva') ||
+              (r.label?.toLowerCase().includes('simo') && r.label?.toLowerCase().includes('retiro'))
+          );
+      }
+
+      // Reconciliación para RPCA
+      if (
+        (reqM.id === 'dc3_2' || reqM.label.toLowerCase().includes('rpca')) &&
+        !reqG
+      ) {
+        reqG = etapasGuardadas
+          .flatMap((e) => e.requisitos || [])
+          .find((r) => r.id === 'dc6_2' || r.id === 'dc3_2' || r.label?.toLowerCase().includes('rpca'));
       }
 
       // Reconciliación inteligente para requisitos de desvinculación provenientes del modelo genérico anterior (dsX_Y)
@@ -6620,9 +6686,41 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
     if (!match) return undefined;
 
+    let depSaneada = match.dependencia;
+    let codSaneado = match.codigo;
+    let grdSaneado = match.grado;
+    let sideapSaneado = (match as any).id_sideap;
+
+    const cedLimpia = String(match.servidor_cedula || '').replace(/\D/g, '');
+    const plMatch = (mockPlazasData as any[]).find((p) => {
+      if (cedLimpia && (
+        (p.titular_cedula && String(p.titular_cedula).replace(/\D/g, '') === cedLimpia) ||
+        (p.encargo_cedula && String(p.encargo_cedula).replace(/\D/g, '') === cedLimpia)
+      )) return true;
+      if (match?.id_plaza && Number(p.id_plaza) === Number(match.id_plaza)) return true;
+      if ((match as any)?.id_sideap && Number(p.id_sideap) === Number((match as any).id_sideap)) return true;
+      if (p.cargo?.trim().toUpperCase() === match?.cargo?.trim().toUpperCase()) return true;
+      return false;
+    });
+
+    if (plMatch) {
+      if (!depSaneada || depSaneada.trim().toUpperCase() === 'SIN IDENTIFICAR' || depSaneada.trim().toUpperCase() === 'NO IDENTIFICADA') {
+        depSaneada = plMatch.dependencia_cargo || plMatch.dependencia_funcional || plMatch.dependencia || 'OFICINA DE CONTROL INTERNO';
+      }
+      if (!codSaneado || codSaneado === '—') codSaneado = plMatch.codigo || '219';
+      if (!grdSaneado || grdSaneado === '—') grdSaneado = plMatch.grado || '10';
+      if (!sideapSaneado) sideapSaneado = plMatch.id_sideap;
+    }
+
+    const subtipo = match.subtipo_concurso || (match.modalidad === 'ASCENSO' ? 'ASCENSO' : undefined);
+
     return {
       ...match,
-      etapas: sincronizarEtapasCaso(match.etapas, match.tipo_proceso, match.modalidad),
+      dependencia: depSaneada || 'OFICINA DE CONTROL INTERNO',
+      codigo: codSaneado || '219',
+      grado: grdSaneado || '10',
+      id_sideap: sideapSaneado || (match as any).id_sideap || 5134,
+      etapas: sincronizarEtapasCaso(match.etapas, match.tipo_proceso, match.modalidad, subtipo, match.causal, match.cargo),
     };
   }, [casos, casosFiltrados, casoSeleccionadoId, tabActiva]);
 
@@ -7107,13 +7205,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setInputFechaPosesionPeriodo(
       casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_efectiva || casoActivo.fecha_inicio_tramite || ''
     );
-    // Para desvinculaciones (Paso 6): buscar si ya hay radicado en dc6_1, dp6_1 o dc6_2
+    // Para desvinculaciones (Paso 3): buscar si ya hay radicado en dc3_1, dp3_1, dc6_1, dp6_1 o dc3_2, dc6_2
     const reqSimo = casoActivo.etapas
       .flatMap((e) => e.requisitos || [])
-      .find((r) => r.id === 'dc6_1' || r.id === 'dp6_1');
+      .find((r) => r.id === 'dc3_1' || r.id === 'dp3_1' || r.id === 'dc6_1' || r.id === 'dp6_1' || r.label.toLowerCase().includes('reporte de vacancia') || (r.label.toLowerCase().includes('simo') && r.label.toLowerCase().includes('retiro')));
     const reqRpca = casoActivo.etapas
       .flatMap((e) => e.requisitos || [])
-      .find((r) => r.id === 'dc6_2');
+      .find((r) => r.id === 'dc3_2' || r.id === 'dc6_2' || r.label.toLowerCase().includes('rpca'));
     setInputRadicadoSimoCaso(reqSimo?.radicadoSoporte || '');
     setInputRadicadoRpcaCaso(reqRpca?.radicadoSoporte || '');
     setInputEstadoSimoCaso(
@@ -7125,7 +7223,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const guardarOpecConvocatoriaCaso = () => {
     if (!casoActivo) return;
 
-    // FLUJO EXCLUSIVO DE DESVINCULACIÓN (PASO 6 - SIMO 4.4 / CNSC)
+    // FLUJO EXCLUSIVO DE DESVINCULACIÓN (PASO 3 - SIMO 4.0 / CNSC)
     if (casoActivo.tipo_proceso === 'DESVINCULACION') {
       const nuevaOpec = inputOpecCaso.trim();
       const nuevaConv = inputConvocatoriaCaso.trim() || 'Convocatoria CNSC';
@@ -7137,20 +7235,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         const actualizados = prevCasos.map((c) => {
           if (c.id !== casoActivo.id) return c;
           const nuevasEtapas = c.etapas.map((et) => {
-            if (et.id === 'd_carr_6' || et.id === 'd_prov_6') {
+            if (et.id === 'd_carr_3' || et.id === 'd_prov_3' || et.id === 'd_carr_6' || et.id === 'd_prov_6' || (et.titulo || '').toLowerCase().includes('simo')) {
               const nuevosReqs = et.requisitos.map((r) => {
-                if (r.id === 'dc6_1' || r.id === 'dp6_1') {
+                if (r.id === 'dc3_1' || r.id === 'dp3_1' || r.id === 'dc6_1' || r.id === 'dp6_1' || r.label.toLowerCase().includes('reporte de vacancia') || (r.label.toLowerCase().includes('simo') && r.label.toLowerCase().includes('retiro'))) {
                   const cumplido = estSimo === 'REPORTADO_SIMO' || estSimo === 'RPCA_CANCELADO' || Boolean(radSimo);
                   return {
                     ...r,
                     cumplido,
                     radicadoSoporte: radSimo || r.radicadoSoporte,
                     observaciones: nuevaOpec
-                      ? `OPEC Vacante Liberada: #${nuevaOpec} (${nuevaConv}). Novedad SIMO 4.4 ante CNSC.`
+                      ? `OPEC Vacante Liberada: #${nuevaOpec} (${nuevaConv}). Novedad SIMO 4.0 ante CNSC.`
                       : r.observaciones,
                   };
                 }
-                if (r.id === 'dc6_2') {
+                if (r.id === 'dc3_2' || r.id === 'dc6_2' || r.label.toLowerCase().includes('rpca')) {
                   const cumplido = estSimo === 'RPCA_CANCELADO' || Boolean(radRpca);
                   return {
                     ...r,
@@ -7217,7 +7315,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       setModalEditarOpecCasoVisible(false);
       mostrarModal(
         'Novedad de Retiro en SIMO Guardada',
-        `Se registró la OPEC de la vacante liberada (${nuevaOpec || 'S/N'}), Convocatoria y el estado de reporte en SIMO 4.4 ante la CNSC para el Paso 6.`,
+        `Se registró la OPEC de la vacante liberada (${nuevaOpec || 'S/N'}), Convocatoria y el estado de reporte en SIMO 4.0 ante la CNSC para el Paso 3.`,
         'success'
       );
       return;
@@ -8886,7 +8984,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const modalidadEfectiva: ModalidadPersonal = esAsc ? 'ASCENSO' : nuevaModalidad;
     const etapasBase = generarEtapasParaCaso(nuevoTipoProceso, modalidadEfectiva, esConcurso ? subtipoConcursoInput : undefined);
     const etapasLimpias = limpiarEtapasParaNuevoTramite(etapasBase);
-
+    const plData = plazaSeleccionadaId ? (mockPlazasData as any[]).find((p) => String(p.id_plaza) === String(plazaSeleccionadaId)) : null;
     const nuevoCaso: CasoFlujoFuncionario = {
       id: nuevoId,
       tipo_proceso: nuevoTipoProceso,
@@ -8898,10 +8996,17 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       servidor_nombre: nombreInput.trim(),
       servidor_cedula: cedulaInput.trim(),
       cargo: cargoInput.trim(),
-      dependencia: dependenciaInput.trim() || 'SECRETARÍA JURÍDICA DISTRITAL',
+      codigo: plData?.codigo || '219',
+      grado: plData?.grado || '10',
+      id_sideap: plData?.id_sideap || undefined,
+      dependencia: dependenciaInput.trim() && dependenciaInput.trim().toUpperCase() !== 'SIN IDENTIFICAR'
+        ? dependenciaInput.trim()
+        : (plData?.dependencia_cargo || plData?.dependencia_funcional || plData?.dependencia || 'OFICINA DE CONTROL INTERNO'),
       causal: nuevoTipoProceso === 'DESVINCULACION' ? causalInput : undefined,
       fecha_inicio_tramite: new Date().toISOString().split('T')[0],
-      etapas: etapasLimpias,
+      etapas: nuevoTipoProceso === 'DESVINCULACION' && causalInput
+        ? aplicarExencionesPorCausalRetiro(etapasLimpias, causalInput, cargoInput)
+        : etapasLimpias,
       etapa_activa_id: etapasLimpias[0]?.id,
       observaciones: 'Trámite registrado e iniciado. Todos los requisitos están pendientes de verificación.',
     };
@@ -11563,7 +11668,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 >
                                   Denominación del Cargo
                                 </Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                                   <Text
                                     style={{
                                       fontSize: 15,
@@ -11574,29 +11679,31 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   >
                                     {casoActivo.cargo}
                                   </Text>
-                                  {Boolean(casoActivo.codigo && casoActivo.codigo !== '—' && !casoActivo.cargo?.toLowerCase().includes('cód')) && (
-                                    <View
+                                  <View
+                                    style={{
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 2.5,
+                                      borderRadius: 5,
+                                      backgroundColor: '#1E293B',
+                                      borderWidth: 1,
+                                      borderColor: '#06B6D4',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <Ionicons name="pricetag-outline" size={11} color="#06B6D4" />
+                                    <Text
                                       style={{
-                                        paddingHorizontal: 6,
-                                        paddingVertical: 2,
-                                        borderRadius: 4,
-                                        backgroundColor: '#1E293B',
-                                        borderWidth: 1,
-                                        borderColor: '#334155',
+                                        color: '#06B6D4',
+                                        fontSize: 11,
+                                        fontWeight: '800',
+                                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
                                       }}
                                     >
-                                      <Text
-                                        style={{
-                                          color: '#06B6D4',
-                                          fontSize: 11,
-                                          fontWeight: '700',
-                                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                                        }}
-                                      >
-                                        Cód: {casoActivo.codigo} • Gr: {casoActivo.grado || '—'}
-                                      </Text>
-                                    </View>
-                                  )}
+                                      Código {casoActivo.codigo || '219'} • Grado {casoActivo.grado || '10'}
+                                    </Text>
+                                  </View>
                                 </View>
                               </View>
                             </View>
@@ -11695,7 +11802,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   color: '#FFFFFF',
                                 }}
                               >
-                                {casoActivo.dependencia}
+                                {casoActivo.dependencia && casoActivo.dependencia.trim().toUpperCase() !== 'SIN IDENTIFICAR' && casoActivo.dependencia.trim().toUpperCase() !== 'NO IDENTIFICADA'
+                                  ? casoActivo.dependencia
+                                  : 'OFICINA DE CONTROL INTERNO'}
                               </Text>
                             </View>
 
@@ -13313,7 +13422,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const esSimo = reqId.includes('vc1_2') || reqId.includes('simo') || reqId.includes('bnle') || reqLabel.includes('banco nacional de listas') || reqLabel.includes('bnle') || (reqLabel.includes('simo') && reqLabel.includes('elegibles'));
                                       const esFT318 = reqId.includes('ft318') || reqCodigo.includes('FT-318') || reqLabel.includes('ft-318') || reqLabel.includes('validación técnica') || req.tipoAccionEspecial === 'INGRESOS_IA';
                                       const esFT095 = reqId.includes('ft095') || reqCodigo.includes('FT-095') || reqLabel.includes('ft-095') || reqLabel.includes('tomar posesión') || req.tipoAccionEspecial === 'FT095';
-                                      const esSimoRetiro = casoActivo.tipo_proceso === 'DESVINCULACION' && (reqId === 'dc6_1' || reqId === 'dp6_1' || reqId === 'dc6_2' || (reqLabel.includes('simo') && reqLabel.includes('retiro')) || (reqLabel.includes('vacancia definitiva') && reqLabel.includes('simo')));
+                                      const esSimoRetiro = casoActivo.tipo_proceso === 'DESVINCULACION' && (reqId === 'dc3_1' || reqId === 'dp3_1' || reqId === 'dc3_2' || reqId === 'dc6_1' || reqId === 'dp6_1' || reqId === 'dc6_2' || (reqLabel.includes('simo') && reqLabel.includes('retiro')) || (reqLabel.includes('vacancia definitiva') && reqLabel.includes('simo')));
                                       const esSecop = req.tipoAccionEspecial === 'SECOP' || reqId.includes('secop') || reqLabel.includes('secop');
                                       const esEvaluacionRetiro = reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || (reqLabel.includes('retiro') && reqId.includes('4_3'));
                                       const esCobro = reqId === 'vc2_4' || (req.tipoCobroUsoLista !== undefined && reqId !== 'vc6_pago_cnsc');
@@ -14640,7 +14749,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </View>
                                           )}
 
-                                          {/* CASO A2: SIMO 4.4 / REPORTE DE VACANCIA DEFINITIVA & OPEC LIBERADA ANTE CNSC (DESVINCULACIÓN - PASO 6) */}
+                                          {/* CASO A2: SIMO 4.0 / REPORTE DE VACANCIA DEFINITIVA & OPEC LIBERADA ANTE CNSC (DESVINCULACIÓN - PASO 3) */}
                                           {esSimoRetiro && (
                                             <View
                                               style={{
@@ -14665,7 +14774,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </View>
                                                   <View>
                                                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
-                                                      Reporte de Vacancia Definitiva en SIMO 4.4 (CNSC)
+                                                      Reporte de Vacancia Definitiva en SIMO 4.0 (CNSC)
                                                     </Text>
                                                     <Text style={{ fontSize: 10.5, color: '#64748B' }}>
                                                       Ley 909 de 2004, Art. 31 • Circular Externa CNSC 011 de 2021
@@ -14699,7 +14808,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       OPEC de la Vacante Liberada:
                                                     </Text>
                                                     <Text style={{ fontSize: 14, fontWeight: '900', color: casoActivo.concurso_opec ? '#0369A1' : '#94A3B8', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
-                                                      {casoActivo.concurso_opec ? `#${casoActivo.concurso_opec}` : '⚠️ OPEC sin registrar en Paso 6'}
+                                                      {casoActivo.concurso_opec ? `#${casoActivo.concurso_opec}` : '⚠️ OPEC sin registrar en Paso 3'}
                                                     </Text>
                                                   </View>
 
@@ -14741,7 +14850,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </View>
                                               </View>
 
-                                              {/* Barra de Acciones Operativas en Paso 6 */}
+                                              {/* Barra de Acciones Operativas en Paso 3 */}
                                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                                 <Pressable
                                                   onPress={abrirModalEditarOpecCaso}
@@ -14762,7 +14871,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 >
                                                   <Ionicons name="settings-outline" size={14} color="#FFFFFF" />
                                                   <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
-                                                    Gestionar OPEC & Reporte SIMO 4.4
+                                                    Gestionar OPEC & Reporte SIMO 4.0
                                                   </Text>
                                                 </Pressable>
 
@@ -15221,7 +15330,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     style={{
                                       flexDirection: 'row',
                                       alignItems: 'center',
-                                      justifyContent: 'space-between',
+                                      justifyContent: 'flex-end',
                                       gap: 8,
                                       paddingTop: 10,
                                       borderTopWidth: 1,
@@ -15229,31 +15338,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       flexWrap: 'wrap',
                                     }}
                                   >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                      <Pressable
-                                        onPress={() => solicitarConfirmarTerminado(casoActivo)}
-                                        style={({ pressed }: any) => ({
-                                          flexDirection: 'row',
-                                          alignItems: 'center',
-                                          gap: 6,
-                                          paddingHorizontal: 12,
-                                          paddingVertical: 7,
-                                          borderRadius: 8,
-                                          backgroundColor: pressed ? '#1D4ED8' : '#2563EB',
-                                          cursor: 'pointer',
-                                          shadowColor: '#2563EB',
-                                          shadowOffset: { width: 0, height: 1 },
-                                          shadowOpacity: 0.2,
-                                          shadowRadius: 3,
-                                          elevation: 2,
-                                        })}
-                                      >
-                                        <Ionicons name="shield-checkmark" size={15} color="#FFFFFF" />
-                                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                          Aprobar Validación Técnica
-                                        </Text>
-                                      </Pressable>
-                                    </View>
 
                                     <View
                                       style={{
@@ -16822,7 +16906,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     },
                     {
                       proc: 'PR-074: Retiro de Servidores Públicos',
-                      desc: 'Causales de retiro Art. 41 Ley 909/2004, circuito de paz y salvo, liquidación y reporte obligatorio en SIMO 4.4.',
+                      desc: 'Causales de retiro Art. 41 Ley 909/2004, circuito de paz y salvo, liquidación y reporte obligatorio en SIMO 4.0.',
                     },
                     {
                       proc: 'Art. 128 Constitución Política & SECOP II',
@@ -24351,7 +24435,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '800' }}>
                     {casoActivo?.tipo_proceso === 'DESVINCULACION'
-                      ? 'Gestión OPEC (SIMO 4.4) & Vacancia Definitiva (Paso 6)'
+                      ? 'Gestión OPEC (SIMO 4.0) & Vacancia Definitiva (Paso 3)'
                       : 'Gestión OPEC (SIMO) & Convocatoria CNSC'}
                   </Text>
                   <Text style={{ color: THEME.marca100, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
@@ -24392,19 +24476,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       </View>
                     </View>
                     <Text style={{ fontSize: 11, color: '#0284C7', lineHeight: 16 }}>
-                      Al producirse el retiro definitivo del servidor, la entidad dispone de un plazo legal perentorio de cinco (5) días hábiles para reportar la vacancia definitiva en el aplicativo SIMO 4.4 ante la CNSC para habilitar la OPEC liberada y tramitar la cancelación del RPCA.
+                      Al producirse el retiro definitivo del servidor, la entidad dispone de un plazo legal perentorio de cinco (5) días hábiles para reportar la vacancia definitiva en el aplicativo SIMO 4.0 ante la CNSC para habilitar la OPEC liberada y tramitar la cancelación del RPCA.
                     </Text>
                   </View>
 
-                  {/* Selector de Estado de Reporte en SIMO 4.4 */}
+                  {/* Selector de Estado de Reporte en SIMO 4.0 */}
                   <View style={{ gap: 6 }}>
                     <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                      Estado del Trámite en SIMO 4.4 ante la CNSC:
+                      Estado del Trámite en SIMO 4.0 ante la CNSC:
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {[
                         { id: 'PENDIENTE_REPORTE', label: '⚠️ Pendiente de Reporte', color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
-                        { id: 'REPORTADO_SIMO', label: '✅ Reportado en SIMO 4.4', color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
+                        { id: 'REPORTADO_SIMO', label: '✅ Reportado en SIMO 4.0', color: '#166534', bg: '#DCFCE7', border: '#86EFAC' },
                         ...(casoActivo?.modalidad === 'CARRERA_ADMINISTRATIVA'
                           ? [{ id: 'RPCA_CANCELADO', label: '🏆 RPCA Cancelado', color: '#3730A3', bg: '#EEF2FF', border: '#C7D2FE' }]
                           : []),
@@ -24484,10 +24568,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     />
                   </View>
 
-                  {/* Input Radicado de Reporte en SIMO 4.4 */}
+                  {/* Input Radicado de Reporte en SIMO 4.0 */}
                   <View style={{ gap: 6 }}>
                     <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                      Radicado / Comprobante de Reporte en SIMO 4.4 ante la CNSC:
+                      Radicado / Comprobante de Reporte en SIMO 4.0 ante la CNSC:
                     </Text>
                     <TextInput
                       value={inputRadicadoSimoCaso}
@@ -24507,7 +24591,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       }}
                     />
                     <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                      * Número de radicado oficial o comprobante de cargue expedido por el aplicativo SIMO 4.4.
+                      * Número de radicado oficial o comprobante de cargue expedido por el aplicativo SIMO 4.0.
                     </Text>
                   </View>
 
@@ -24783,7 +24867,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               >
                 <Ionicons name="checkmark-circle-outline" size={16} color={THEME.white} />
                 <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
-                  {casoActivo?.tipo_proceso === 'DESVINCULACION' ? 'Guardar Reporte SIMO (Paso 6)' : 'Guardar y Actualizar'}
+                  {casoActivo?.tipo_proceso === 'DESVINCULACION' ? 'Guardar Reporte SIMO (Paso 3)' : 'Guardar y Actualizar'}
                 </Text>
               </Pressable>
             </View>

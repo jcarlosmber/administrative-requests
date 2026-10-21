@@ -570,129 +570,26 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 #### Requisito 2.2 (`dc2_2`): Firma por autoridad nominadora, numeración y fechado oficial
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Decreto Distrital 323 de 2016 • Ley 1437 de 2011 (CPACA).
-* **💡 Resumen Jurídico (`notaNormativa`)**: Validez formal y ejecutoria del acto administrativo mediante la suscripción del nominador competente y radicación en el sistema oficial.
-* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: Los actos administrativos surten efectos a partir de su expedición y comunicación/notificación en debida forma.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Presentar para firma del Secretario Jurídico Distrital, radicar y obtener número y fecha oficial en el sistema de correspondencia.
-* **📁 Posibles Evidencias Documentales**:
-  1. Resolución oficial firmada digital o manuscritamente con consecutivo institucional.
-  2. Registro del acto en el sistema de información documental institucional.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Validez formal y ejecutoria del acto administrativo mediante la suscripción del nominador comp---
 
-#### Requisito 2.3 (`dc2_3`): Notificación personal formal e indicación de recursos de ley (CPACA)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 1437 de 2011 (CPACA), Arts. 67, 68 y 74 • Decreto 1083 de 2015.
-* **💡 Resumen Jurídico (`notaNormativa`)**: Garantía del debido proceso administrativo que exige notificar personalmente el acto y advertir la procedencia del recurso de reposición.
-* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Ley 1437 de 2011, Art. 67*: «Las decisiones que pongan término a una actuación administrativa se notificarán personalmente al interesado, a su representante o apoderado [...]».
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Notificar personalmente al servidor de carrera mediante citación presencial o correo electrónico con acuse de recibo técnico, informando recurso de reposición dentro de los 10 días siguientes.
-* **📁 Posibles Evidencias Documentales**:
-  1. Acta de notificación personal firmada por el servidor o certificado de notificación electrónica.
-  2. Constancia de ejecutoria del acto administrativo de retiro.
-
----
-
-### 🔹 Fase 3: Formatos Entrega de Cargo (`d_carr_3`)
-* **Responsable**: Servidor Saliente / Jefe Inmediato
-* **Plazo Legal**: Antes o al último día de labores
-* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de entrega de cargo, actualización de bienes y rentas en SIDEAP con marcación de retiro y conflicto de intereses.
-
-#### Requisito 3.1 (`dc3_1`): Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Sistema Integrado de Gestión SJD • Procedimiento PR-074 • Formato 2311300-FT-219.
-* **📁 Posibles Evidencias**: Formato 2311300-FT-219 diligenciado y suscrito por el servidor saliente.
-
-#### Requisito 3.2 (`dc3_2`): Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (Formato 2311300-FT-436)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005 • Procedimiento PR-074 • Formato 2311300-FT-436.
-* **📁 Posibles Evidencias**: Formato 2311300-FT-436 debidamente diligenciado con inventario de asuntos en curso y firma de recibido del superior jerárquico.
-
-#### Requisito 3.3 (`dc3_3`): Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 190 de 1995, Art. 13 • Decreto 1083 de 2015, Art. 2.2.16.4.
-* **📁 Posibles Evidencias**: Formulario único de Declaración Juramentada de Bienes y Rentas descargado de SIDEAP tipo Retiro.
-
-#### Requisito 3.4 (`dc3_4`): Declaración proactiva de Conflicto de Intereses seleccionando Retiro
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Art. 2 y 3 • Decreto 1083 de 2015.
-* **📁 Posibles Evidencias**: Certificado de publicación de la declaración de bienes y conflictos de interés en el aplicativo por causal de retiro.
-
----
-
-### 🔹 Fase 4: Examen & 4 Paz y Salvos (`d_carr_4`)
-* **Responsable**: Servidor / Dependencias TIC, Almacén, Archivo y TH
-* **Plazo Legal**: Dentro de los 5 días hábiles al retiro
-* **Procedimiento General de Fase**: Practicar el examen médico ocupacional de egreso y recolectar los 4 paz y salvos institucionales (TIC, Almacén, Archivo y Talento Humano).
-
-#### Requisito 4.1 (`dc4_1`): Citación y práctica de Examen Médico Ocupacional de Egreso
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Resolución 2346 de 2007 MinProtección, Art. 6 • Decreto 1072 de 2015.
-* **📁 Posibles Evidencias**: Certificado de aptitud médica de egreso expedido por el médico ocupacional o manifestación escrita de desistimiento voluntario.
-
-#### Requisito 4.2 (`dc4_2`): Paz y Salvo TIC: Entrega de computador, periféricos, buzón y accesos
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Políticas de Seguridad Digital SJD • Formato 2311520-FT-018.
-* **📁 Posibles Evidencias**: Paz y salvo expedido por la Dirección de Tecnologías e Información con bloqueo de usuarios y entrega de hardware.
-
-#### Requisito 4.3 (`dc4_3`): Paz y Salvo Almacén: Devolución de bienes muebles individuales (Formato 2311500-FT-200)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Manual de Administración y Manejo de Bienes SJD • Formato 2311500-FT-200.
-* **📁 Posibles Evidencias**: Formato 2311500-FT-200 suscrito por Almacén e Inventarios constatando paz y salvo patrimonial.
-
-#### Requisito 4.4 (`dc4_4`): Paz y Salvo Archivo: Transferencia de expedientes judiciales y administrativos
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 (Ley General de Archivos) • Procedimiento de Gestión Documental SJD.
-* **📁 Posibles Evidencias**: Formato Único de Inventario Documental (FUID) firmado y paz y salvo del Área de Archivo y Correspondencia.
-
-#### Requisito 4.5 (`dc4_5`): Paz y Salvo Talento Humano: Devolución carné institucional y firmas consolidadas
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Formato Institucional 2311520-FT-018.
-* **📁 Posibles Evidencias**: Formato 2311520-FT-018 suscrito con todas las firmas requeridas y carné institucional entregado físicamente.
-
----
-
-### 🔹 Fase 5: Liquidación & Nómina (`d_carr_5`)
-* **Responsable**: Especialista Nómina / Profesional Universitario TH
-* **Plazo Legal**: Próximo corte de nómina
-* **Procedimiento General de Fase**: Registrar la novedad de retiro en el software de nómina PERNO, desactivar en SIDEAP, proyectar liquidación técnica de prestaciones sociales de carrera y expedir la resolución de liquidación para trámite de pago ante Tesorería.
-
-#### Requisito 5.1 (`dc5_1`): Registro de novedad de retiro en nómina PERNO y desactivación en SIDEAP
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Decreto 1083 de 2015 • Procedimiento de Nómina SJD.
-* **📁 Posibles Evidencias**: Reporte de novedad de retiro procesado en PERNO y captura de estado inactivo en SIDEAP.
-
-#### Requisito 5.2 (`dc5_2`): Liquidación técnica de prestaciones sociales de carrera (Dec. Ley 1045/1978)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Decreto Ley 1045 de 1978 • Ley 909 de 2004.
-* **📁 Posibles Evidencias**: Hoja de liquidación técnica detallando cesantías, intereses, prima de servicios, vacaciones compensadas y bonificaciones proporcionales.
-
-#### Requisito 5.3 (`dc5_3`): Elaboración de Resolución de Reconocimiento y Liquidación (Formato 2311520-FT-130)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Decreto Distrital 323 de 2016 • Estatuto Orgánico del Presupuesto Distrital.
-* **📁 Posibles Evidencias**: Resolución de liquidación firmada por el ordenador del gasto con certificado de disponibilidad presupuestal (CDP).
-
-#### Requisito 5.4 (`dc5_4`): Notificación del acto de liquidación y remisión formal a Tesorería para pago
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: CPACA • Manual de Procedimientos de Tesorería Distrital.
-* **📁 Posibles Evidencias**: Comunicación remitida a Tesorería y constancia de orden de giro por transferencia bancaria.
-
----
-
-### 🔹 Fase 6: SIMO 4.4, RPCA & Cierre CNSC (`d_carr_6`)
+### 🔹 Fase 3: SIMO 4.0, RPCA & Cierre CNSC (`d_carr_3`)
 * **Responsable**: Administrador de Entidad SIMO / Talento Humano
 * **Plazo Legal**: 5 días hábiles siguientes al retiro (Circular CNSC 011/2021)
-* **Procedimiento General de Fase**: Reportar la vacancia definitiva en SIMO 4.4 dentro del término preclusivo de 5 días hábiles, tramitar la cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC y archivar el expediente con Hoja de Control (Formato 2311520-FT-244).
+* **Procedimiento General de Fase**: Reportar la vacancia definitiva en SIMO 4.0 dentro del término perentorio de 5 días hábiles para liberar la vacante en la OPEC y tramitar la cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC.
 
-#### Requisito 6.1 (`dc6_1`): Reporte de vacancia definitiva en SIMO 4.4 ante la CNSC (plazo 5 días hábiles Circular 011/2021)
+#### Requisito 3.1 (`dc3_1`): Reporte de vacancia definitiva en SIMO 4.0 ante la CNSC (plazo 5 días hábiles Circular 011/2021)
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 1960 de 2019, Art. 1 • Circular Externa CNSC 011 de 2021 • Decreto 1083 de 2015.
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 1960 de 2019, Art. 1 • Circular Externa CNSC 011 de 2021 • Ley 909 de 2004, Art. 31.
 * **💡 Resumen Jurídico (`notaNormativa`)**: Obligación legal perentoria de reportar a la CNSC la novedad de vacancia definitiva del empleo de carrera para la actualización de la OPEC.
 * **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Circular Externa 011 de 2021 CNSC*: Las entidades deben reportar las vacancias definitivas en el módulo de OPEC del SIMO dentro de los cinco (5) días hábiles siguientes a la novedad.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Cargar en SIMO 4.4 el acto administrativo de retiro ejecutoriado y actualizar el estado de la vacante definitiva.
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Cargar en SIMO 4.0 el acto administrativo de retiro ejecutoriado y actualizar el estado de la vacante definitiva.
 * **📁 Posibles Evidencias Documentales**:
-  1. Certificado o comprobante electrónico de novedad de vacancia emitido por el sistema SIMO de la CNSC.
+  1. Certificado o comprobante electrónico de novedad de vacancia emitido por el sistema SIMO 4.0 de la CNSC.
   2. Oficio de comunicación formal radicado ante la Comisión Nacional del Servicio Civil.
 
-#### Requisito 6.2 (`dc6_2`): Cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC
+#### Requisito 3.2 (`dc3_2`): Cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 909 de 2004, Art. 30 y 41 • Acuerdo CNSC sobre administración del Registro Público de Carrera.
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 909 de 2004, Art. 14 y 30 • Criterio Unificado CNSC.
 * **💡 Resumen Jurídico (`notaNormativa`)**: El retiro del servicio de carrera genera la cancelación de la inscripción en el registro público de escalafón.
 * **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: Producido el retiro del servicio por cualquiera de las causales de ley, la entidad debe comunicar formalmente a la CNSC para la cancelación del registro correspondiente.
 * **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Remitir a la CNSC la solicitud formal de cancelación de la anotación de carrera adjuntando copia del acto de retiro en firme.
@@ -700,13 +597,84 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   1. Oficio radicado ante la CNSC solicitando la cancelación del registro en el RPCA.
   2. Certificación de cancelación expedida por la CNSC.
 
-#### Requisito 6.3 (`dc6_3`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
+---
+
+### 🔹 Fase 4: Formatos Entrega de Cargo (`d_carr_4`)
+* **Responsable**: Servidor Saliente / Jefe Inmediato / Control Interno
+* **Plazo Legal**: Antes o al último día de labores y archivo final
+* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de entrega de cargo, acta de gestión (Ley 951/2005), actualización de bienes y rentas en SIDEAP con marcación de retiro, conflicto de intereses y archivo integral en la Historia Laboral con Hoja de Control (Formato 2311520-FT-244).
+
+#### Requisito 4.1 (`dc4_1`): Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Sistema Integrado de Gestión SJD • Procedimiento PR-074 • Formato 2311300-FT-219.
+* **📁 Posibles Evidencias**: Formato 2311300-FT-219 diligenciado y suscrito por el servidor saliente.
+
+#### Requisito 4.2 (`dc4_2`): Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (Formato 2311300-FT-436)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005 • Procedimiento PR-074 • Formato 2311300-FT-436.
+* **📁 Posibles Evidencias**: Formato 2311300-FT-436 debidamente diligenciado con inventario de asuntos en curso y firma de recibido del superior jerárquico.
+
+#### Requisito 4.3 (`dc3_acta_gestion`): Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005, Art. 8 • Directiva Distrital 001 de 2018.
+* **📁 Posibles Evidencias**: Acta de gestión suscrita y constancia de radicación ante la Oficina de Control Interno dentro de los 15 días hábiles.
+
+#### Requisito 4.4 (`dc4_3`): Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 190 de 1995, Art. 13 • Decreto 1083 de 2015, Art. 2.2.16.4.
+* **📁 Posibles Evidencias**: Formulario único de Declaración Juramentada de Bienes y Rentas descargado de SIDEAP tipo Retiro.
+
+#### Requisito 4.5 (`dc4_4`): Declaración proactiva de Conflicto de Intereses seleccionando Retiro
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Art. 2 y 3 • Decreto 1083 de 2015.
+* **📁 Posibles Evidencias**: Certificado de publicación de la declaración de bienes y conflictos de interés en el aplicativo por causal de retiro.
+
+#### Requisito 4.6 (`dc4_5`): Archivo integral en Historia Laboral con Hoja de Control (Formato 2311520-FT-244)
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Ley 594 de 2000 • Circular AGN 004 de 2003 • Formato 2311520-FT-244.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Foliar y consolidar todos los documentos generados en el retiro de carrera cerrando formalmente la historia laboral activa.
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Foliar y consolidar todos los formatos de entrega de cargo y documentos del retiro cerrando formalmente la historia laboral activa con la Hoja de Control 2311520-FT-244.
 * **📁 Posibles Evidencias Documentales**:
   1. Hoja de Control de Historia Laboral formato 2311520-FT-244 actualizada y foliada al cierre.
   2. Constancia de custodia del expediente en el archivo central.
+
+---
+
+### 🔹 Fase 5: Paz y Salvo Electrónico (`d_carr_5`)
+* **Responsable**: SIGA Trámites / Talento Humano
+* **Plazo Legal**: Trámite digital autónomo en SIGA Trámites
+* **Procedimiento General de Fase**: El circuito institucional de paz y salvo (TIC, Almacén, Archivo y Talento Humano) se gestiona centralizadamente en el sistema SIGA Trámites (no aplica gestión en esta plataforma).
+
+#### Requisito 5.1 (`dc5_1`): Paz y Salvo Electrónico (SIGA Trámites)
+* **Obligatorio**: No (Marcado No Aplica - gestionado en SIGA Trámites)
+* **⚖️ Fundamento Jurídico Aplicable**: Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites.
+* **📁 Posibles Evidencias**: Paz y salvo electrónico consolidado generado en SIGA Trámites.
+
+---
+
+### 🔹 Fase 6: Liquidación & Nómina (`d_carr_6`)
+* **Responsable**: Especialista Nómina / Profesional Universitario TH
+* **Plazo Legal**: Próximo corte de nómina o máximo 15 días
+* **Procedimiento General de Fase**: Registrar la novedad de retiro en el software de nómina PERNO, desactivar en SIDEAP, proyectar liquidación técnica de prestaciones sociales de carrera y expedir la resolución de liquidación (FT-130) para trámite de pago y dispersión bancaria en BOGDATA.
+
+#### Requisito 6.1 (`dc6_1_nom`): Registro de novedad de retiro en nómina PERNO y desactivación en SIDEAP
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Decreto 1083 de 2015 • Procedimiento de Nómina SJD.
+* **📁 Posibles Evidencias**: Reporte de novedad de retiro procesado en PERNO y captura de estado inactivo en SIDEAP.
+
+#### Requisito 6.2 (`dc6_2_nom`): Liquidación técnica de prestaciones sociales de carrera (Dec. Ley 1045/1978)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Decreto Ley 1045 de 1978 • Ley 909 de 2004.
+* **📁 Posibles Evidencias**: Hoja de liquidación técnica detallando cesantías, intereses, prima de servicios, vacaciones compensadas y bonificaciones proporcionales.
+
+#### Requisito 6.3 (`dc6_3_nom`): Elaboración de Resolución de Reconocimiento y Liquidación (Formato 2311520-FT-130)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Decreto Distrital 323 de 2016 • Formato 2311520-FT-130.
+* **📁 Posibles Evidencias**: Resolución de liquidación firmada por el Director(a) de Gestión Corporativa con certificado de disponibilidad presupuestal (CDP).
+
+#### Requisito 6.4 (`dc6_4_nom`): Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: CPACA • Estatuto de Presupuesto • Sistema BOGDATA.
+* **📁 Posibles Evidencias**: Orden de pago expedida en BOGDATA y certificación de dispersión bancaria de Tesorería.
 
 ---
 
