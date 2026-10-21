@@ -602,20 +602,14 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 ### 🔹 Fase 4: Formatos Entrega de Cargo (`d_carr_4`)
 * **Responsable**: Servidor Saliente / Jefe Inmediato / Control Interno
 * **Plazo Legal**: Antes o al último día de labores y archivo final
-* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de entrega de cargo, acta de gestión (Ley 951/2005), actualización de bienes y rentas en SIDEAP con marcación de retiro, conflicto de intereses y archivo integral en la Historia Laboral con Hoja de Control (Formato 2311520-FT-244).
+* **Procedimiento General de Fase**: Gestionar los formatos de desvinculación institucional: evaluación de retiro, acta de informe de gestión (Ley 951/2005), declaración juramentada de bienes y rentas en SIDEAP con marcación de retiro, declaración juramentada de conflictos de interés en SIDEAP con novedad de retiro, actualización de hoja de vida en SIDEAP, declaración proactiva de bienes y conflicto de intereses en SIGEP II, y archivo integral en la Historia Laboral con Hoja de Control (Formato 2311520-FT-244).
 
 #### Requisito 4.1 (`dc4_1`): Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Sistema Integrado de Gestión SJD • Procedimiento PR-074 • Formato 2311300-FT-219.
 * **📁 Posibles Evidencias**: Formato 2311300-FT-219 diligenciado y suscrito por el servidor saliente.
 
-#### Requisito 4.2 (`dc4_2`): Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436) • Paz y Salvo Electrónico
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites • Formato 2311300-FT-436.
-* **💡 Resumen Jurídico (`notaNormativa`)**: Corresponde al soporte fundamental del Paz y Salvo Electrónico gestionado en SIGA Trámites (TIC, Almacén, Archivo y Talento Humano).
-* **📁 Posibles Evidencias**: Formato 2311300-FT-436 debidamente diligenciado con inventario de asuntos en curso y firma de recibido del superior jerárquico.
-
-#### Requisito 4.3 (`dc3_acta_gestion`): Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951
+#### Requisito 4.2 (`dc3_acta_gestion`): Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951
 * **Obligatorio**: Sí (Activo para todos los servidores salientes según procedimiento institucional; sólo exceptuado por fallecimiento conforme al Art. 8)
 * **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento 2311420-PR-074 SJD • Formato ACTA-GESTION-951.
 * **💡 Resumen Jurídico (`notaNormativa`)**: Deber legal e institucional de rendir informe de gestión y formalizar la entrega de los asuntos, bienes, expedientes y documentación a cargo conforme a la Ley 951 de 2005 (Arts. 1, 5, 9 y 10) y el procedimiento de la entidad, con remisión formal a la Oficina de Control Interno.
@@ -624,10 +618,16 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   1. Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita con inventario y estado de trámites.
   2. Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.
 
-#### Requisito 4.4 (`dc4_3`): SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)
+#### Requisito 4.3 (`dc4_3`): SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)
 * **Obligatorio**: Sí
 * **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital.
 * **📁 Posibles Evidencias**: Certificado digital de radicación de la declaración juramentada de bienes y rentas en SIDEAP con marcación de Novedad Retiro.
+
+#### Requisito 4.4 (`dc4_sideap_conflictos`): SIDEAP: Declaración Juramentada de Conflictos de interés (Novedad retiro)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Decreto Distrital 830 de 2021 • SIDEAP Distrital.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Deber legal y reglamentario de declarar bajo la gravedad de juramento en el sistema distrital SIDEAP la inexistencia o existencia de situaciones generadoras de conflictos de interés con corte al momento del retiro.
+* **📁 Posibles Evidencias**: Certificado digital de Declaración Juramentada de Conflicto de Intereses emitido por el sistema SIDEAP con marcación Novedad Retiro.
 
 #### Requisito 4.5 (`dc4_sideap_hv`): SIDEAP: Hoja de vida
 * **Obligatorio**: Sí
