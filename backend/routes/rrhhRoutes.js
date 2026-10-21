@@ -99,6 +99,17 @@ const CATALOGO_FORMATOS = [
     descripcion: 'Matriz en Excel para relacionar inventario físico, equipos, expedientes archivísticos, procesos en trámite y claves a transferir al relevo funcional.',
   },
   {
+    id: 'FT-018',
+    codigo: '2311520-FT-018',
+    nombre: 'Memorando de Retiro / Solicitud de Personal (Formato 2311520-FT-018)',
+    version: 'V3',
+    archivo: '2311520-FT-018 Memorando V3.doc',
+    tipo: 'DOC',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Causal & Soportes Legales', 'Recepción Documento Soporte'],
+    descripcion: 'Formato institucional oficial de memorando para el soporte, verificación y radicación del retiro del servicio.',
+  },
+  {
     id: 'ACTA-ENTREGA-LEY951',
     codigo: 'ACTA-GESTION-951',
     nombre: 'Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005)',
@@ -106,7 +117,7 @@ const CATALOGO_FORMATOS = [
     archivo: 'Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx',
     tipo: 'DOCX',
     proceso: 'DESVINCULACION',
-    fasesRecomendadas: ['Entrega de Despacho Control Interno (LNR y Directivos)'],
+    fasesRecomendadas: ['Formatos Entrega de Cargo', 'Entrega Despacho Control Interno'],
     descripcion: 'Estatuto legal obligatorio de entrega de gestión ante la Oficina de Control Interno dentro de los 15 días hábiles siguientes al retiro (Ley 951 de 2005).',
   },
   {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Modal,
   Platform,
@@ -340,9 +340,11 @@ export interface DocumentoSoporteAdjunto {
   id: string;
   nombre: string;
   uri: string;
+  url?: string;
   size?: number;
   mimeType?: string;
   fechaSubida: string;
+  fechaCarga?: string;
   usuario?: string;
   faseNombre?: string;
   requisitoNombre?: string;
@@ -852,6 +854,8 @@ export const CARGO_RESPONSABLE_MAP: Record<string, string> = {
   "dc3_2": "Servidor Saliente / Jefe Inmediato",
   "dc3_3": "Servidor Saliente",
   "dc3_4": "Servidor Saliente",
+  "dc3_acta_gestion": "Servidor Saliente / Control Interno",
+  "dp3_acta_gestion": "Servidor Saliente / Control Interno",
   "dc4_1": "Líderes TIC, Almacén, Archivo y TH",
   "dc5_1": "Profesional Especializado TH",
   "dc5_2": "Profesional Especializado (Nómina)",
@@ -2521,6 +2525,16 @@ function generarEtapasParaCasoInterno(
                   'Resolución de reconocimiento pensional expedida por Colpensiones o fondo privado.',
                   'Formato institucional 2311520-FT-018 de verificación de trámite de personal.',
                 ],
+                documentosAdjuntos: [
+                  {
+                    id: 'doc-soporte-ft018-memorando',
+                    nombre: '2311520-FT-018 Memorando V3.doc',
+                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311520-FT-018 Memorando V3.doc')}`,
+                    fechaSubida: '2026-08-01',
+                    size: 251392,
+                    mimeType: 'application/msword',
+                  },
+                ],
               },
               {
                 id: 'dc1_2',
@@ -2609,7 +2623,7 @@ function generarEtapasParaCasoInterno(
             id: 'd_carr_3',
             numero: 3,
             titulo: 'Formatos Entrega de Cargo',
-            subtitulo: 'FT-333, FT-219, FT-436 y SIDEAP Retiro',
+            subtitulo: 'FT-219, FT-436, ACTA-GESTION-951 y SIDEAP Retiro',
             icono: 'folder-open-outline',
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
@@ -2629,6 +2643,16 @@ function generarEtapasParaCasoInterno(
                 posiblesEvidencias: [
                   'Formato institucional 2311300-FT-219 diligenciado y firmado por el funcionario saliente.',
                 ],
+                documentosAdjuntos: [
+                  {
+                    id: 'doc-ft219-evaluacion-retiro',
+                    nombre: '2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx',
+                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx')}`,
+                    fechaSubida: '2026-08-01',
+                    size: 235787,
+                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  },
+                ],
               },
               {
                 id: 'dc3_2',
@@ -2640,6 +2664,41 @@ function generarEtapasParaCasoInterno(
                 detalleProcedimiento: 'Detallar inventario de trámites pendientes, procesos jurídicos a cargo, claves de acceso y estado del archivo en gestión.',
                 posiblesEvidencias: [
                   'Formato 2311300-FT-436 suscrito por el funcionario saliente y su jefe inmediato.',
+                ],
+                documentosAdjuntos: [
+                  {
+                    id: 'doc-ft436-entrega-cargo',
+                    nombre: '2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx',
+                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx')}`,
+                    fechaSubida: '2026-08-01',
+                    size: 236240,
+                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  },
+                ],
+              },
+              {
+                id: 'dc3_acta_gestion',
+                label: 'Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: 'ACTA-GESTION-951',
+                norma: 'Ley 951 de 2005, Art. 8 • Directiva Distrital 001 de 2018',
+                notaNormativa: 'Obligación legal de entregar informe pormenorizado de los asuntos a su cargo y remitir copia auténtica a la Oficina de Control Interno dentro de los 15 días hábiles.',
+                textoNormativo: 'Ley 951 de 2005, Art. 8: Todo servidor público que se retire o haga entrega de su cargo está obligado a presentar un informe de gestión a quien lo reemplace o a su superior jerárquico.',
+                detalleProcedimiento: 'Diligenciar el acta de gestión institucional según plantilla oficial y allegar copia radicada a la Oficina de Control Interno dentro de los 15 días hábiles siguientes.',
+                posiblesEvidencias: [
+                  'Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita.',
+                  'Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.',
+                ],
+                documentosAdjuntos: [
+                  {
+                    id: 'doc-acta-ley951-gestion',
+                    nombre: 'Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx',
+                    uri: `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent('Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx')}`,
+                    fechaSubida: '2026-08-01',
+                    size: 194212,
+                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  },
                 ],
               },
               {
@@ -3830,7 +3889,17 @@ export function sincronizarEtapasCaso(
           radicadoSoporte: reqG.radicadoSoporte !== undefined ? reqG.radicadoSoporte : reqM.radicadoSoporte,
           usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
           noAplica: noAplicaFinal,
-          documentosAdjuntos: Array.isArray(reqG.documentosAdjuntos) ? reqG.documentosAdjuntos : (reqM.documentosAdjuntos || []),
+          documentosAdjuntos: (() => {
+            let docsBase = Array.isArray(reqG.documentosAdjuntos) ? [...reqG.documentosAdjuntos] : [];
+            if (Array.isArray(reqM.documentosAdjuntos)) {
+              reqM.documentosAdjuntos.forEach((dM) => {
+                if (!docsBase.some((d) => d.nombre === dM.nombre || d.id === dM.id)) {
+                  docsBase.push(dM);
+                }
+              });
+            }
+            return docsBase.length > 0 ? docsBase : (reqM.documentosAdjuntos || []);
+          })(),
           tipoCobroUsoLista: reqG.tipoCobroUsoLista !== undefined ? reqG.tipoCobroUsoLista : reqM.tipoCobroUsoLista,
           numeroResolucionPago: reqG.numeroResolucionPago !== undefined ? reqG.numeroResolucionPago : reqM.numeroResolucionPago,
           idValidacionIngresos: reqG.idValidacionIngresos !== undefined ? reqG.idValidacionIngresos : reqM.idValidacionIngresos,
@@ -4091,6 +4160,18 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     requisitosAsociados: ['vc5_ft095'],
   },
   {
+    id: 'FT-018',
+    codigo: '2311520-FT-018',
+    nombre: 'Memorando de Retiro / Solicitud de Personal (Formato 2311520-FT-018)',
+    version: 'V3',
+    archivo: '2311520-FT-018 Memorando V3.doc',
+    tipo: 'DOC',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Causal & Soportes Legales', 'Recepción Documento Soporte'],
+    descripcion: 'Formato institucional oficial de memorando para el soporte, verificación y radicación del retiro del servicio.',
+    requisitosAsociados: ['dc1_1', 'dp1_1', 'dl1_1'],
+  },
+  {
     id: 'FT-219',
     codigo: '2311300-FT-219',
     nombre: 'Evaluación de Retiro de Servidores Públicos',
@@ -4098,10 +4179,10 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     archivo: '2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx',
     tipo: 'XLSX',
     proceso: 'DESVINCULACION',
-    fasesRecomendadas: ['Circuito de Paz y Salvo', 'Cierre y Liquidación'],
+    fasesRecomendadas: ['Formatos Entrega de Cargo', 'Cierre y Liquidación'],
     formularioGoogleUrl: GOOGLE_FORMS_EVALUACION_RETIRO,
     descripcion: 'Encuesta oficial de valoración de la experiencia laboral del servidor público saliente. Disponible en línea en Google Forms o en Excel.',
-    requisitosAsociados: ['dp4_3', 'dc4_3', 'dl4_3', 'dp4_2', 'dc4_2', 'dl4_2'],
+    requisitosAsociados: ['dc3_1', 'dp3_1', 'dl3_3'],
   },
   {
     id: 'FT-436',
@@ -4111,9 +4192,9 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     archivo: '2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx',
     tipo: 'XLSX',
     proceso: 'DESVINCULACION',
-    fasesRecomendadas: ['Entrega de Cargo y Bienes', 'Paz y Salvo Dependencia'],
+    fasesRecomendadas: ['Formatos Entrega de Cargo', 'Paz y Salvo Dependencia'],
     descripcion: 'Matriz en Excel para relacionar inventario físico, equipos, expedientes archivísticos, procesos en trámite y claves asignadas.',
-    requisitosAsociados: ['dp2_1', 'dc2_1', 'dl2_1', 'dp2_2', 'dc2_2', 'dl2_2'],
+    requisitosAsociados: ['dc3_2', 'dp3_2', 'dl3_2'],
   },
   {
     id: 'ACTA-LEY-951',
@@ -4123,9 +4204,9 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     archivo: 'Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx',
     tipo: 'DOCX',
     proceso: 'DESVINCULACION',
-    fasesRecomendadas: ['Control Interno (Directivos y LNR)'],
+    fasesRecomendadas: ['Formatos Entrega de Cargo', 'Control Interno (Directivos y LNR)'],
     descripcion: 'Acta formal obligatoria para radicar ante la Oficina de Control Interno dentro de los 15 días hábiles siguientes al retiro.',
-    requisitosAsociados: ['dl2_3', 'dl2_1'],
+    requisitosAsociados: ['dc3_acta_gestion', 'dl3_1', 'dp3_acta_gestion'],
   },
   {
     id: 'PR-VINC-01',
@@ -4426,6 +4507,10 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
 
   // Control de KPIs
   const [mostrarKpis, setMostrarKpis] = useState(true);
+
+  // Referencia y scroll para Header adaptado dinámicamente al funcionario
+  const scrollViewPrincipalRef = useRef<ScrollView>(null);
+  const [scrollYPrincipal, setScrollYPrincipal] = useState<number>(0);
 
   // Filtros de búsqueda específicos para Ingresos
   const [filtroModalidadIngreso, setFiltroModalidadIngreso] = useState<'TODAS' | ModalidadPersonal>('TODAS');
@@ -8871,28 +8956,249 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }}>
         {/* ============================================================== */}
-        {/* CABECERA INSTITUCIONAL ÚNICA (AZUL MARCA-900, IDÉNTICA A NÓMINA)*/}
+        {/* CABECERA SUPERIOR DINÁMICA: GENERAL (ARRIBA) / FUNCIONARIO (SCROLL) */}
         {/* ============================================================== */}
-        <View
-          style={{
-            backgroundColor: THEME.marca900,
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-            paddingHorizontal: isDesktop ? 32 : 16,
-            paddingVertical: 14,
-            width: '100%',
-          }}
-        >
-          <View
-            style={{
-              width: '100%',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}
-          >
+        {(() => {
+          const esScrolleadoCaso = Boolean(casoActivo && scrollYPrincipal > 320);
+          const infoModalidadCasoActivo = casoActivo ? obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso) : null;
+          const inicialesCasoActivo = casoActivo
+            ? casoActivo.servidor_nombre
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase() || '')
+                .join('')
+            : '';
+          const totalRequisitosCasoActivo = casoActivo ? casoActivo.etapas.flatMap((e) => e.requisitos || []).filter((r) => !r.noAplica).length : 0;
+          const requisitosCumplidosCasoActivo = casoActivo ? casoActivo.etapas.flatMap((e) => e.requisitos || []).filter((r) => r.cumplido && !r.noAplica).length : 0;
+          const porcentajeProgresoCasoActivo = totalRequisitosCasoActivo > 0 ? Math.round((requisitosCumplidosCasoActivo / totalRequisitosCasoActivo) * 100) : 0;
+          const esTerminadoCasoActivo = porcentajeProgresoCasoActivo === 100 || (casoActivo?.etapas.every((e) => e.estado === 'completed') ?? false);
+
+          return (
+            <View
+              style={{
+                backgroundColor: esScrolleadoCaso ? '#0F172A' : THEME.marca900,
+                borderBottomWidth: 1,
+                borderBottomColor: esScrolleadoCaso ? 'rgba(51, 65, 85, 0.7)' : 'rgba(255, 255, 255, 0.1)',
+                paddingHorizontal: isDesktop ? 32 : 16,
+                paddingVertical: esScrolleadoCaso ? 10 : 14,
+                width: '100%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: esScrolleadoCaso ? 3 : 1 },
+                shadowOpacity: esScrolleadoCaso ? 0.25 : 0.1,
+                shadowRadius: esScrolleadoCaso ? 5 : 2,
+                elevation: esScrolleadoCaso ? 4 : 2,
+                zIndex: 50,
+              }}
+            >
+              {esScrolleadoCaso && casoActivo ? (
+                /* Header adaptado al funcionario en vinculación o desvinculación */
+                <View
+                  style={{
+                    width: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  {/* Lado izquierdo: Botón volver + Avatar + Nombre + Cédula + Cargo */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
+                    {!enMenu && (
+                      <Pressable
+                        onPress={() => router.replace('/rrhh')}
+                        accessibilityLabel="Volver al Portal"
+                        style={({ pressed }) => ({
+                          paddingHorizontal: 8,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                        })}
+                      >
+                        <Ionicons name="arrow-back" size={14} color="#94A3B8" />
+                        {isDesktop && (
+                          <Text style={{ color: '#E2E8F0', fontSize: 11, fontWeight: '600' }}>
+                            Portal
+                          </Text>
+                        )}
+                      </Pressable>
+                    )}
+
+                    {/* Avatar circular del servidor */}
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: casoActivo.tipo_proceso === 'VINCULACION' ? '#0891B2' : '#E11D48',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1.5,
+                        borderColor: casoActivo.tipo_proceso === 'VINCULACION' ? '#67E8F9' : '#FDA4AF',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
+                        {inicialesCasoActivo || 'FN'}
+                      </Text>
+                    </View>
+
+                    {/* Nombre & Datos clave del funcionario */}
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: '#FFFFFF',
+                            fontSize: 14.5,
+                            fontWeight: '800',
+                            textTransform: 'uppercase',
+                            letterSpacing: -0.2,
+                          }}
+                        >
+                          {casoActivo.servidor_nombre}
+                        </Text>
+
+                        {/* Chip de Modalidad / Régimen */}
+                        <View
+                          style={{
+                            backgroundColor: casoActivo.tipo_proceso === 'VINCULACION' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                            borderWidth: 1,
+                            borderColor: casoActivo.tipo_proceso === 'VINCULACION' ? '#06B6D4' : '#F43F5E',
+                            borderRadius: 4,
+                            paddingHorizontal: 6,
+                            paddingVertical: 1.5,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              fontWeight: '700',
+                              color: casoActivo.tipo_proceso === 'VINCULACION' ? '#38BDF8' : '#FDA4AF',
+                            }}
+                          >
+                            {infoModalidadCasoActivo?.titulo || (casoActivo.tipo_proceso === 'VINCULACION' ? 'Vinculación' : 'Desvinculación')}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: '#94A3B8',
+                          fontSize: 11,
+                          marginTop: 1,
+                        }}
+                      >
+                        CC {casoActivo.servidor_cedula} • <Text style={{ color: '#E2E8F0', fontWeight: '600' }}>{casoActivo.cargo || 'Funcionario'}</Text> • {casoActivo.dependencia || 'Secretaría Jurídica Distrital'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Lado derecho: Widget de Progreso de Requisitos + Botón Subir a Ficha */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    {/* Barra y contador de avance */}
+                    <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Ionicons
+                          name={esTerminadoCasoActivo ? "checkmark-circle" : "hourglass-outline"}
+                          size={13}
+                          color={esTerminadoCasoActivo ? '#4ADE80' : '#38BDF8'}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '700',
+                            color: esTerminadoCasoActivo ? '#4ADE80' : '#38BDF8',
+                          }}
+                        >
+                          {requisitosCumplidosCasoActivo}/{totalRequisitosCasoActivo} Reqs ({porcentajeProgresoCasoActivo}%)
+                        </Text>
+                      </View>
+
+                      {/* Barra de progreso visual compacta */}
+                      <View
+                        style={{
+                          width: 85,
+                          height: 5,
+                          borderRadius: 3,
+                          backgroundColor: '#334155',
+                          overflow: 'hidden',
+                          marginTop: 3,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: `${Math.min(100, Math.max(0, porcentajeProgresoCasoActivo))}%`,
+                            height: '100%',
+                            backgroundColor: esTerminadoCasoActivo ? '#22C55E' : '#06B6D4',
+                            borderRadius: 3,
+                          }}
+                        />
+                      </View>
+                    </View>
+
+                    {/* Botón rápido para volver arriba a la ficha del funcionario */}
+                    <Pressable
+                      onPress={() => scrollViewPrincipalRef.current?.scrollTo({ y: 0, animated: true })}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: pressed ? '#1E293B' : 'rgba(30, 41, 59, 0.95)',
+                        borderWidth: 1,
+                        borderColor: '#334155',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                      })}
+                    >
+                      <Ionicons name="arrow-up" size={13} color="#06B6D4" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#06B6D4' }}>
+                        Ver Ficha
+                      </Text>
+                    </Pressable>
+
+                    {/* Botón rápido para abrir catálogo de Formatos Oficiales */}
+                    <Pressable
+                      onPress={() => setModalFormatosVisible(true)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: pressed ? '#047857' : '#059669',
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                      })}
+                    >
+                      <Ionicons name="document-text-outline" size={13} color="#FFFFFF" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
+                        Formatos
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                /* Header General institucional */
+                <View
+                  style={{
+                    width: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
             {/* Lado izquierdo: Regresar + Título con subtítulo */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               {!enMenu && (
@@ -9022,12 +9328,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               </Pressable>
             </View>
           </View>
-        </View>
+        )}
+      </View>
+    );
+  })()}
 
         {/* ============================================================== */}
         {/* CUERPO PRINCIPAL (USA EL 100% DEL ANCHO, IDÉNTICO A NÓMINA)    */}
         {/* ============================================================== */}
         <ScrollView
+          ref={scrollViewPrincipalRef}
+          onScroll={(e) => {
+            setScrollYPrincipal(e.nativeEvent.contentOffset.y);
+          }}
+          scrollEventThrottle={16}
           style={{ flex: 1, width: '100%' }}
           contentContainerStyle={{
             paddingHorizontal: isDesktop ? 32 : 16,
@@ -12788,12 +13102,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         if (f.requisitosAsociados && f.requisitosAsociados.includes(reqId)) return true;
                                         if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
                                         if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
-                                        if (reqLabel.includes('retiro') && (f.id === 'FT-219' || f.id === 'FT-436')) return true;
+                                        if ((reqLabel.includes('2311520-ft-018') || reqId === 'dc1_1') && f.id === 'FT-018') return true;
+                                        if ((reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || reqId === 'dc3_1' || reqId === 'dp3_1' || reqId === 'dl3_3') && f.id === 'FT-219') return true;
                                         if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
                                         if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
                                         if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
                                         if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
-                                        if (reqLabel.includes('entrega de cargo') && (f.id === 'FT-436' || f.id === 'ACTA-LEY-951')) return true;
+                                        if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
+                                        if ((reqLabel.includes('acta de informe de gestión') || reqLabel.includes('acta de gestión') || reqLabel.includes('informe de gestión') || reqLabel.includes('ley 951') || reqId === 'dc3_acta_gestion' || reqId === 'dl3_1' || reqId === 'dp3_acta_gestion') && (f.id === 'ACTA-LEY-951' || f.id === 'ACTA-GESTION-951')) return true;
                                         return false;
                                       });
 
@@ -12953,7 +13269,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </View>
                                                     )}
 
-                                                    {req.codigoFormato && (
+                                                    {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
                                                       <View
                                                         style={{
                                                           backgroundColor: '#FFFFFF',
@@ -13253,7 +13569,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     </Text>
                                                   </View>
 
-                                                  {req.codigoFormato && (
+                                                  {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
                                                     <View
                                                       style={{
                                                         backgroundColor: '#F8FAFC',
@@ -13667,7 +13983,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </Text>
                                                     </View>
                                                   )}
-                                                  {req.codigoFormato && (
+                                                  {req.codigoFormato && !req.label.includes(req.codigoFormato) && (
                                                     <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
                                                       <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
                                                         📄 {req.codigoFormato}
@@ -13922,6 +14238,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                                                 {formatosSugeridos.map((f) => {
                                                   const nombreCorto =
+                                                    f.id === 'FT-018' ? 'Memorando Retiro' :
                                                     f.id === 'FT-319' ? 'Verificación de Títulos' :
                                                     f.id === 'FT-127' ? 'Acta de Posesión' :
                                                     f.id === 'FT-318' ? 'Validación Requisitos' :
@@ -18755,7 +19072,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   </View>
                 )}
 
-                {modalReqContext?.req.codigoFormato && (
+                {modalReqContext?.req.codigoFormato && !modalReqContext.req.label.includes(modalReqContext.req.codigoFormato) && (
                   <Text style={{ fontSize: 11, color: THEME.slate600, fontWeight: '600' }}>
                     📄 Formato Institucional: {modalReqContext.req.codigoFormato}
                   </Text>
@@ -18814,12 +19131,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   if (f.requisitosAsociados && f.requisitosAsociados.includes(reqId)) return true;
                   if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
                   if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
-                  if (reqLabel.includes('retiro') && (f.id === 'FT-219' || f.id === 'FT-436')) return true;
+                  if ((reqLabel.includes('2311520-ft-018') || reqId === 'dc1_1') && f.id === 'FT-018') return true;
+                  if ((reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || reqId === 'dc3_1' || reqId === 'dp3_1' || reqId === 'dl3_3') && f.id === 'FT-219') return true;
                   if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
                   if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
                   if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
                   if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
-                  if (reqLabel.includes('entrega de cargo') && (f.id === 'FT-436' || f.id === 'ACTA-LEY-951')) return true;
+                  if ((reqLabel.includes('entrega de cargo por ausencia') || reqLabel.includes('2311300-ft-436') || reqId === 'dc3_2' || reqId === 'dp3_2' || reqId === 'dl3_2') && !reqLabel.includes('acta') && !reqLabel.includes('informe de gestión') && !reqLabel.includes('ley 951') && reqId !== 'dc3_acta_gestion' && reqId !== 'dl3_1' && f.id === 'FT-436') return true;
+                  if ((reqLabel.includes('acta de informe de gestión') || reqLabel.includes('acta de gestión') || reqLabel.includes('informe de gestión') || reqLabel.includes('ley 951') || reqId === 'dc3_acta_gestion' || reqId === 'dl3_1' || reqId === 'dp3_acta_gestion') && (f.id === 'ACTA-LEY-951' || f.id === 'ACTA-GESTION-951')) return true;
                   return false;
                 });
 
