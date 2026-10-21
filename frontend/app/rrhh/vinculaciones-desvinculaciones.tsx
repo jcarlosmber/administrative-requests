@@ -3734,20 +3734,169 @@ export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[
   });
 }
 
+/**
+ * Ajusta y exime automáticamente (marca con noAplica: true) los requisitos que legalmente
+ * no aplican de acuerdo con la Causal Normativa de Retiro del Artículo 41 de la Ley 909 de 2004.
+ */
+export function aplicarExencionesPorCausalRetiro(
+  etapas: EtapaFlujo[],
+  causal: string,
+  cargo?: string
+): EtapaFlujo[] {
+  if (!causal || !etapas || !Array.isArray(etapas)) return etapas;
+
+  const causalNorm = causal.toLowerCase();
+  const cargoNorm = (cargo || '').toLowerCase();
+  const esDirectivoOAsesor =
+    cargoNorm.includes('director') ||
+    cargoNorm.includes('asesor') ||
+    cargoNorm.includes('secretario') ||
+    cargoNorm.includes('jefe');
+
+  const esPension =
+    causalNorm.includes('pensión') ||
+    causalNorm.includes('pension') ||
+    causalNorm.includes('jubilación') ||
+    causalNorm.includes('invalidez') ||
+    causalNorm.includes('lit. e') ||
+    causalNorm.includes('lit. f');
+
+  const esRenuncia = causalNorm.includes('renuncia') || causalNorm.includes('lit. d');
+  const esEdadRetiro = causalNorm.includes('edad') || causalNorm.includes('70') || causalNorm.includes('lit. g');
+  const esInsubsistencia = causalNorm.includes('insubsistencia') || causalNorm.includes('lit. a') || causalNorm.includes('lit. b');
+  const esDestitucion = causalNorm.includes('destitución') || causalNorm.includes('destitucion') || causalNorm.includes('disciplinario') || causalNorm.includes('lit. h');
+  const esMuerte = causalNorm.includes('muerte') || causalNorm.includes('fallecimiento') || causalNorm.includes('lit. m');
+  const esSupresion = causalNorm.includes('supresión') || causalNorm.includes('supresion') || causalNorm.includes('lit. l');
+  const esAbandono = causalNorm.includes('abandono') || causalNorm.includes('lit. i');
+
+  return etapas.map((etapa) => {
+    const nuevosReqs = etapa.requisitos.map((req) => {
+      // 1. Verificación de inclusión en nómina pensional (dc1_3 o similar)
+      if (
+        req.id === 'dc1_3' ||
+        req.label.toLowerCase().includes('nómina pensional') ||
+        req.label.toLowerCase().includes('nomina pensional')
+      ) {
+        if (esRenuncia || esEdadRetiro || esInsubsistencia || esDestitucion || esSupresion || esMuerte || esAbandono) {
+          const motivoCausal = causal.split('(')[0].replace(/^Art\.\s*41\s*lit\.\s*[a-z]\)\s*/i, '').trim();
+          return {
+            ...req,
+            cumplido: true,
+            noAplica: true,
+            obligatorio: false,
+            observaciones: `No aplica: Retiro por "${motivoCausal}" (no requiere verificación de nómina pensional)`,
+          };
+        } else if (esPension) {
+          return {
+            ...req,
+            noAplica: false,
+            obligatorio: true,
+            observaciones: req.observaciones?.startsWith('No aplica:') ? undefined : req.observaciones,
+          };
+        }
+      }
+
+      // 2. Si la causal es Muerte del servidor público (lit. m)
+      if (esMuerte) {
+        if (
+          req.id.includes('dc3_1') ||
+          req.id.includes('dc3_2') ||
+          req.id.includes('dc3_acta_gestion') ||
+          req.label.toLowerCase().includes('evaluación de retiro') ||
+          req.label.toLowerCase().includes('entrega de cargo') ||
+          req.label.toLowerCase().includes('examen médico') ||
+          req.label.toLowerCase().includes('paz y salvo')
+        ) {
+          return {
+            ...req,
+            cumplido: true,
+            noAplica: true,
+            obligatorio: false,
+            observaciones: 'No aplica por fuerza mayor: Fallecimiento del servidor público (trámite a cargo de causahabientes)',
+          };
+        }
+      }
+
+      // 3. Acta de Gestión Ley 951 de 2005 (dc3_acta_gestion)
+      if (
+        req.id === 'dc3_acta_gestion' ||
+        req.label.toLowerCase().includes('ley 951') ||
+        req.codigoFormato === 'ACTA-GESTION-951'
+      ) {
+        if (esMuerte) {
+          return {
+            ...req,
+            cumplido: true,
+            noAplica: true,
+            obligatorio: false,
+            observaciones: 'No aplica por fallecimiento del funcionario',
+          };
+        }
+        if (!esDirectivoOAsesor) {
+          if (
+            cargoNorm.includes('auxiliar') ||
+            cargoNorm.includes('asistencial') ||
+            cargoNorm.includes('secretari') ||
+            cargoNorm.includes('conductor') ||
+            cargoNorm.includes('operativo')
+          ) {
+            return {
+              ...req,
+              cumplido: true,
+              noAplica: true,
+              obligatorio: false,
+              observaciones: 'No aplica: Empleo asistencial/técnico no obligado por Ley 951 a informe de gestión pormenorizado',
+            };
+          }
+        }
+      }
+
+      // 4. Verificación de Estabilidad Ocupacional / Retén Social (dp1_2 y dp1_3 en provisionalidad)
+      if (req.id === 'dp1_2' || req.id === 'dp1_3') {
+        if (esRenuncia || esPension || esEdadRetiro || esMuerte || esDestitucion) {
+          return {
+            ...req,
+            cumplido: true,
+            noAplica: true,
+            obligatorio: false,
+            observaciones: `No aplica: Retiro legal objetivo por ${causal.split('(')[0].trim()} (no por desplazamiento de elegibles)`,
+          };
+        }
+      }
+
+      return req;
+    });
+
+    const todosNoAplica = nuevosReqs.length > 0 && nuevosReqs.every((r) => r.noAplica);
+    const todosObligatoriosCumplidos = nuevosReqs.filter((r) => r.obligatorio && !r.noAplica).every((r) => r.cumplido);
+
+    return {
+      ...etapa,
+      estado: todosNoAplica ? 'completed' : todosObligatoriosCumplidos ? 'completed' : etapa.estado,
+      requisitos: nuevosReqs,
+    };
+  });
+}
+
 export function sincronizarEtapasCaso(
   etapasGuardadas: EtapaFlujo[] | undefined,
   tipoProceso: TipoProceso,
   modalidad: ModalidadPersonal,
-  subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
+  subtipoConcurso?: 'ABIERTO' | 'ASCENSO',
+  causal?: string,
+  cargo?: string
 ): EtapaFlujo[] {
   const etapasMaestras = generarEtapasParaCaso(tipoProceso, modalidad, subtipoConcurso);
   if (!etapasGuardadas || !Array.isArray(etapasGuardadas) || etapasGuardadas.length === 0) {
+    if (tipoProceso === 'DESVINCULACION' && causal) {
+      return aplicarExencionesPorCausalRetiro(etapasMaestras, causal, cargo);
+    }
     return etapasMaestras;
   }
 
   const esAsc = modalidad === 'ASCENSO' || subtipoConcurso === 'ASCENSO';
 
-  return etapasMaestras.map((etapaM) => {
+  const resultado = etapasMaestras.map((etapaM) => {
     const etapaG = etapasGuardadas.find(
       (eg) => eg.id === etapaM.id || eg.numero === etapaM.numero
     );
@@ -3901,6 +4050,12 @@ export function sincronizarEtapasCaso(
       requisitos: requisitosSincronizados,
     };
   });
+
+  if (tipoProceso === 'DESVINCULACION' && causal) {
+    return aplicarExencionesPorCausalRetiro(resultado, causal, cargo);
+  }
+
+  return resultado;
 }
 
 export function generarEtapasParaCasoConEstado(
@@ -6727,10 +6882,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [inputRadicadoRpcaCaso, setInputRadicadoRpcaCaso] = useState('');
   const [inputEstadoSimoCaso, setInputEstadoSimoCaso] = useState<'PENDIENTE_REPORTE' | 'REPORTADO_SIMO' | 'RPCA_CANCELADO'>('PENDIENTE_REPORTE');
 
-  // Estados y funciones para modificar la Modalidad / Régimen del Caso
+  // Estados y funciones para modificar la Modalidad / Régimen y Causal del Caso
   const [modalCambiarModalidadCasoVisible, setModalCambiarModalidadCasoVisible] = useState(false);
   const [modalidadSeleccionadaModal, setModalidadSeleccionadaModal] = useState<ModalidadPersonal>('CARRERA_ADMINISTRATIVA');
   const [subtipoConcursoModal, setSubtipoConcursoModal] = useState<'ABIERTO' | 'ASCENSO'>('ABIERTO');
+  const [causalSeleccionadaModal, setCausalSeleccionadaModal] = useState<string>('');
+  const [mostrarDetalleArt41Modal, setMostrarDetalleArt41Modal] = useState<boolean>(false);
 
   const abrirModalCambiarModalidad = () => {
     if (!casoActivo) return;
@@ -6738,6 +6895,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const esAsc = casoActivo.subtipo_concurso === 'ASCENSO' || modActual === 'ASCENSO';
     setModalidadSeleccionadaModal(modActual === 'ASCENSO' ? 'CARRERA_ADMINISTRATIVA' : modActual);
     setSubtipoConcursoModal(esAsc ? 'ASCENSO' : 'ABIERTO');
+    setCausalSeleccionadaModal(casoActivo.causal || '');
+    setMostrarDetalleArt41Modal(false);
     setModalCambiarModalidadCasoVisible(true);
   };
 
@@ -6747,15 +6906,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const esAsc = esCarrera && subtipoConcursoModal === 'ASCENSO';
     const nuevaModFinal: ModalidadPersonal = esAsc ? 'ASCENSO' : modalidadSeleccionadaModal;
     const nuevoSubtipoFinal: 'ABIERTO' | 'ASCENSO' | undefined = esCarrera ? (esAsc ? 'ASCENSO' : 'ABIERTO') : undefined;
+    const nuevaCausalFinal: string | undefined = casoActivo.tipo_proceso === 'DESVINCULACION'
+      ? (causalSeleccionadaModal || casoActivo.causal || '')
+      : undefined;
 
     setCasos((prevCasos) => {
       const actualizados = prevCasos.map((c) => {
         if (c.id !== casoActivo.id) return c;
-        const nuevasEtapas = sincronizarEtapasCaso(c.etapas, c.tipo_proceso, nuevaModFinal, nuevoSubtipoFinal);
+        const nuevasEtapas = sincronizarEtapasCaso(
+          c.etapas,
+          c.tipo_proceso,
+          nuevaModFinal,
+          nuevoSubtipoFinal,
+          nuevaCausalFinal,
+          c.cargo
+        );
         return {
           ...c,
           modalidad: nuevaModFinal,
           subtipo_concurso: nuevoSubtipoFinal,
+          causal: nuevaCausalFinal || c.causal,
           etapas: nuevasEtapas,
         };
       });
@@ -6767,9 +6937,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setModalCambiarModalidadCasoVisible(false);
 
     const infoMod = obtenerInfoModalidad(nuevaModFinal, casoActivo.tipo_proceso);
+    const mensajeComplemento = nuevaCausalFinal
+      ? ` y causal "${nuevaCausalFinal.split('(')[0].trim()}". Los requisitos han sido ajustados con "No Aplica" según la normativa aplicable.`
+      : '. Las etapas y requisitos normativos han sido sincronizados.';
+
     mostrarModal(
-      'Modalidad Actualizada',
-      `El trámite de ${casoActivo.servidor_nombre} ahora está asignado como "${infoMod.titulo}". Las etapas y requisitos normativos han sido sincronizados.`,
+      'Régimen y Causal Actualizados',
+      `El trámite de ${casoActivo.servidor_nombre} ahora está asignado como "${infoMod.titulo}"${mensajeComplemento}`,
       'success'
     );
   };
@@ -24737,26 +24911,217 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
             {/* Contenido con opciones */}
             <ScrollView style={{ padding: 20 }} contentContainerStyle={{ gap: 14 }}>
+              {/* Tarjeta Informativa del Funcionario y Cargo Actual */}
               <View
                 style={{
-                  backgroundColor: '#F1F5F9',
-                  borderRadius: 8,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 10,
                   padding: 12,
                   borderWidth: 1,
-                  borderColor: '#E2E8F0',
-                  gap: 4,
+                  borderColor: '#CBD5E1',
+                  gap: 6,
                 }}
               >
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>
-                  Ajuste de Régimen Constitucional
-                </Text>
-                <Text style={{ fontSize: 11, color: THEME.slate600, lineHeight: 16 }}>
-                  Seleccione el régimen o naturaleza jurídica correspondiente. Al guardar, las fases y requisitos del trámite se sincronizarán preservando los soportes y avances ya diligenciados.
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                    👤 {casoActivo?.servidor_nombre}
+                  </Text>
+                  <View style={{ backgroundColor: '#E2E8F0', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#334155' }}>
+                      CC: {casoActivo?.servidor_cedula}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                  <View style={{ minWidth: 140 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                      Cargo en el que está / estaba:
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', marginTop: 1 }}>
+                      {casoActivo?.cargo} {casoActivo?.codigo ? `(${casoActivo?.codigo}-${casoActivo?.grado})` : ''}
+                    </Text>
+                  </View>
+
+                  <View style={{ minWidth: 140 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                      Dependencia:
+                    </Text>
+                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#334155', marginTop: 1 }}>
+                      {casoActivo?.dependencia || 'Secretaría Jurídica Distrital'}
+                    </Text>
+                  </View>
+
+                  <View style={{ minWidth: 130 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                      Tipo de Trámite:
+                    </Text>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: casoActivo?.tipo_proceso === 'DESVINCULACION' ? '#B91C1C' : '#047857', marginTop: 1 }}>
+                      {casoActivo?.tipo_proceso === 'DESVINCULACION' ? 'Desvinculación / Retiro de Personal' : 'Vinculación / Ingreso'}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
+              {/* Causal de Retiro (Solo si es DESVINCULACIÓN) */}
+              {casoActivo?.tipo_proceso === 'DESVINCULACION' && (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: THEME.slate900, fontSize: 12, fontWeight: '800' }}>
+                      Causal Normativa de Retiro (Ley 909 de 2004, Art. 41) *
+                    </Text>
+                    <Pressable
+                      onPress={() => setMostrarDetalleArt41Modal(!mostrarDetalleArt41Modal)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4, backgroundColor: THEME.slate100, cursor: 'pointer' }}
+                    >
+                      <Ionicons name={mostrarDetalleArt41Modal ? "chevron-up" : "chevron-down"} size={14} color={THEME.marca700} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
+                        {mostrarDetalleArt41Modal ? "Ocultar Artículo 41" : "Ver Artículo 41 Completo"}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Caja con la Causal Seleccionada Actualmente */}
+                  <View style={{ backgroundColor: THEME.marca50, borderRadius: 8, borderWidth: 1.5, borderColor: THEME.marca600, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="checkmark-circle" size={18} color={THEME.marca700} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
+                        Causal Seleccionada para el Trámite:
+                      </Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, marginTop: 1 }}>
+                        {causalSeleccionadaModal || 'Seleccione una causal del Artículo 41'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Componente Desplegable Completo del Artículo 41 */}
+                  {mostrarDetalleArt41Modal && (
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: THEME.slate300,
+                        padding: 12,
+                        maxHeight: 260,
+                      }}
+                    >
+                      <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.slate200, paddingBottom: 6, marginBottom: 8 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.slate900 }}>
+                          ARTÍCULO 41. Causales de retiro del servicio.
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate600, marginTop: 2, fontStyle: 'italic' }}>
+                          Al seleccionar la causal, los requisitos no aplicables se marcarán automáticamente con "No Aplica".
+                        </Text>
+                      </View>
+
+                      <ScrollView nestedScrollEnabled={true} style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+                        <View style={{ gap: 8, paddingRight: 4 }}>
+                          {CAUSALES_ARTICULO_41_LEY_909.map((item) => {
+                            const seleccionada =
+                              causalSeleccionadaModal.includes(`lit. ${item.literal}`) ||
+                              causalSeleccionadaModal.startsWith(`${item.literal})`) ||
+                              causalSeleccionadaModal === item.texto;
+                            return (
+                              <View
+                                key={item.literal}
+                                style={{
+                                  backgroundColor: item.inexequible ? '#FFF1F2' : seleccionada ? THEME.marca50 : THEME.slate50,
+                                  borderWidth: 1,
+                                  borderColor: item.inexequible ? '#FDA4AF' : seleccionada ? THEME.marca600 : THEME.slate200,
+                                  borderRadius: 8,
+                                  padding: 8,
+                                  gap: 4,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                  <View
+                                    style={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: 10,
+                                      backgroundColor: item.inexequible ? '#BE123C' : seleccionada ? THEME.marca700 : THEME.slate300,
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 10.5,
+                                        fontWeight: '800',
+                                        color: item.inexequible || seleccionada ? THEME.white : THEME.slate700,
+                                      }}
+                                    >
+                                      {item.literal}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ flex: 1 }}>
+                                    <Text
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: seleccionada ? '700' : '500',
+                                        color: item.inexequible ? '#9F1239' : THEME.slate900,
+                                        lineHeight: 15,
+                                      }}
+                                    >
+                                      {item.literal}) {item.texto}
+                                    </Text>
+
+                                    {item.inexequible && (
+                                      <View style={{ marginTop: 3 }}>
+                                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#BE123C' }}>
+                                          INEXEQUIBLE • NO APLICABLE
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {item.notaCorte && !item.inexequible && (
+                                      <View style={{ marginTop: 3 }}>
+                                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#92400E' }}>
+                                          CONDICIONADO POR LA CORTE
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+
+                                  {!item.inexequible && (
+                                    <Pressable
+                                      onPress={() => setCausalSeleccionadaModal(`Art. 41 lit. ${item.literal}) ${item.texto.split(';')[0].replace(/\n.*/g, '')}`)}
+                                      style={{
+                                        paddingVertical: 3,
+                                        paddingHorizontal: 8,
+                                        borderRadius: 4,
+                                        backgroundColor: seleccionada ? THEME.marca700 : THEME.white,
+                                        borderWidth: 1,
+                                        borderColor: seleccionada ? THEME.marca800 : THEME.slate300,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <Text
+                                        style={{
+                                          fontSize: 10.5,
+                                          fontWeight: '700',
+                                          color: seleccionada ? THEME.white : THEME.slate700,
+                                        }}
+                                      >
+                                        {seleccionada ? '✓ Seleccionada' : 'Seleccionar'}
+                                      </Text>
+                                    </Pressable>
+                                  )}
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+
               <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.slate800, marginTop: 4 }}>
-                Seleccione la Modalidad:
+                Seleccione la Modalidad / Régimen:
               </Text>
 
               {/* Opciones */}
