@@ -2692,10 +2692,10 @@ function generarEtapasParaCasoInterno(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: 'ACTA-GESTION-951',
-                norma: 'Ley 951 de 2005, Art. 8 • Directiva Distrital 001 de 2018',
-                notaNormativa: 'Obligación legal de entregar informe pormenorizado de los asuntos a su cargo y remitir copia auténtica a la Oficina de Control Interno dentro de los 15 días hábiles.',
-                textoNormativo: 'Ley 951 de 2005, Art. 8: Todo servidor público que se retire o haga entrega de su cargo está obligado a presentar un informe de gestión a quien lo reemplace o a su superior jerárquico.',
-                detalleProcedimiento: 'Diligenciar el acta de gestión institucional según plantilla oficial y allegar copia radicada a la Oficina de Control Interno dentro de los 15 días hábiles siguientes.',
+                norma: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD',
+                notaNormativa: 'Deber legal e institucional de rendir informe de gestión y formalizar la entrega de los asuntos, bienes, expedientes y documentación a cargo conforme a la Ley 951 de 2005 (Arts. 1, 5, 9 y 10) y el procedimiento institucional de la entidad, con remisión formal a la Oficina de Control Interno.',
+                textoNormativo: 'Ley 951 de 2005, Arts. 1 y 5: Todo servidor público comprendido en el ámbito de la ley, al separarse de su cargo o finalizar su gestión, está obligado a entregar a quien lo sustituya legalmente o a su superior jerárquico un informe detallado de los asuntos a su cargo y de los recursos puestos a su disposición mediante acta individual.',
+                detalleProcedimiento: 'Diligenciar el Acta de Informe de Gestión y Entrega de Cargo según plantilla oficial institucional (Formato ACTA-GESTION-951), detallando inventario de trámites pendientes, procesos a cargo, estado de archivos y bienes asignados; suscribirla conjuntamente con el receptor o superior jerárquico y allegar copia radicada a la Oficina de Control Interno conforme a los lineamientos institucionales.',
                 posiblesEvidencias: [
                   'Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita.',
                   'Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.',
@@ -3251,9 +3251,9 @@ function generarEtapasParaCasoInterno(
             estado: 'in_progress',
             tiempoEstimadoDias: 2,
             responsable: 'Directivo saliente / Control Interno',
-            normaGeneral: 'Ley 951 de 2005, Art. 8; Ley 2013 de 2019; Procedimiento PR-074 SJD',
+            normaGeneral: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10; Ley 2013 de 2019; Procedimiento PR-074 SJD',
             plazoLegal: 'Informe de entrega dentro de 15 días hábiles a Control Interno (Ley 951/2005)',
-            procedimientoDetallado: 'Obligación imperativa de todo servidor de nivel directivo y asesor de suscribir el Acta de Informe de Gestión (FT-333) y remitir copia a la Oficina de Control Interno dentro de los 15 días hábiles, además de diligenciar los formatos FT-436, FT-219 y la declaración de SIDEAP Retiro.',
+            procedimientoDetallado: 'Obligación legal de todo servidor público saliente de suscribir el Acta de Informe de Gestión (FT-333) y remitir copia a la Oficina de Control Interno dentro de los 15 días hábiles, además de diligenciar los formatos FT-436, FT-219 y la declaración de SIDEAP Retiro.',
             requisitos: [
               {
                 id: 'dl3_1',
@@ -3261,9 +3261,9 @@ function generarEtapasParaCasoInterno(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-333',
-                norma: 'Ley 951 de 2005, Art. 8 • Directiva Presidencial 01 de 2018',
-                notaNormativa: 'Obligación legal indelegable de rendir informe de entrega del despacho a quien lo suceda o al superior jerárquico, con copia a Control Interno dentro de los 15 días hábiles.',
-                textoNormativo: 'Ley 951 de 2005, artículo 8: El servidor público saliente deberá entregar a quien lo sustituya legalmente un informe general de los asuntos a su cargo y del estado de los recursos puestos a su disposición, con copia a la Oficina de Control Interno.',
+                norma: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD',
+                notaNormativa: 'Obligación legal e institucional de rendir informe de entrega del despacho a quien lo suceda o al superior jerárquico, con copia a Control Interno dentro de los 15 días hábiles.',
+                textoNormativo: 'Ley 951 de 2005, Arts. 1, 5 y 9: El servidor público saliente deberá entregar a quien lo sustituya legalmente un informe general de los asuntos a su cargo y del estado de los recursos puestos a su disposición mediante acta individual, remitiendo copia auténtica a la Oficina de Control Interno.',
                 detalleProcedimiento: 'Elaborar el informe exhaustivo del estado del despacho, metas del plan de acción, asuntos judiciales pendientes y remitir copia oficial a Control Interno.',
                 posiblesEvidencias: [
                   'Acta de Informe de Gestión y Entrega en formato 2311300-FT-333 suscrita.',
@@ -3419,17 +3419,17 @@ function generarEtapasParaCasoInterno(
             estado: 'pending',
             tiempoEstimadoDias: 2,
             responsable: 'Profesional TH / Archivo',
-            normaGeneral: 'Ley 951 de 2005, Art. 8; Ley 594 de 2000; Formato 2311520-FT-244',
+            normaGeneral: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10; Ley 594 de 2000; Formato 2311520-FT-244',
             plazoLegal: '15 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Constatar la radicación formal de la copia del Acta de Entrega en la Oficina de Control Interno y realizar la foliación y archivo definitivo del expediente directivo.',
+            procedimientoDetallado: 'Constatar la radicación formal de la copia auténtica del Acta de Entrega en la Oficina de Control Interno y realizar la foliación y archivo definitivo del expediente.',
             requisitos: [
               {
                 id: 'dl6_1',
                 label: 'Constatación y archivo de radicado de entrega de copia a Control Interno (Ley 951/2005)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 951 de 2005, Art. 8',
-                textoNormativo: 'De conformidad con el artículo 8 de la Ley 951 de 2005, el servidor público que se separe de su empleo en el nivel directivo o asesor deberá remitir copia formal de su informe de entrega a la Oficina de Control Interno dentro de los 15 días hábiles siguientes.',
+                norma: 'Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento PR-074 SJD',
+                textoNormativo: 'De conformidad con los artículos 1, 5 y 9 de la Ley 951 de 2005 y los procedimientos de la entidad, el servidor público que se separe de su empleo deberá remitir copia formal de su informe de entrega a la Oficina de Control Interno dentro de los 15 días hábiles siguientes.',
                 detalleProcedimiento: 'Verificar la existencia del radicado oficial de correspondencia de entrega del informe de gestión a la Oficina de Control Interno.',
                 posiblesEvidencias: [
                   'Oficio con sello y radicado oficial de recibido de la Oficina de Control Interno.',
@@ -3830,26 +3830,16 @@ export function aplicarExencionesPorCausalRetiro(
             cumplido: true,
             noAplica: true,
             obligatorio: false,
-            observaciones: 'No aplica por fallecimiento del funcionario',
+            observaciones: 'No aplica por fuerza mayor: Fallecimiento del servidor público (Art. 8 Ley 951 de 2005: acta levantada por superior o comisión designada)',
           };
         }
-        if (!esDirectivoOAsesor) {
-          if (
-            cargoNorm.includes('auxiliar') ||
-            cargoNorm.includes('asistencial') ||
-            cargoNorm.includes('secretari') ||
-            cargoNorm.includes('conductor') ||
-            cargoNorm.includes('operativo')
-          ) {
-            return {
-              ...req,
-              cumplido: true,
-              noAplica: true,
-              obligatorio: false,
-              observaciones: 'No aplica: Empleo asistencial/técnico no obligado por Ley 951 a informe de gestión pormenorizado',
-            };
-          }
-        }
+        // El procedimiento institucional PR-074 exige el acta de gestión y entrega a todo servidor saliente: se mantiene activo y obligatorio
+        return {
+          ...req,
+          noAplica: false,
+          obligatorio: true,
+          observaciones: req.observaciones?.includes('asistencial') ? undefined : req.observaciones,
+        };
       }
 
       // 4. Verificación de Estabilidad Ocupacional / Retén Social (dp1_2 y dp1_3 en provisionalidad)
@@ -4030,6 +4020,28 @@ export function sincronizarEtapasCaso(
           fecha_cumplimiento: reqG?.fecha_cumplimiento || new Date().toISOString().split('T')[0],
           usuarioRegistro: reqG?.usuarioRegistro || 'SIGA Trámites / TH',
         };
+      }
+
+      // Reconciliación especial para Acta de Informe de Gestión Ley 951: el procedimiento institucional lo exige activo
+      if (
+        reqM.id === 'dc3_acta_gestion' ||
+        reqM.codigoFormato === 'ACTA-GESTION-951' ||
+        reqM.label.toLowerCase().includes('acta de informe de gestión')
+      ) {
+        const eraExentoAsistencial = Boolean(
+          reqG?.observaciones?.includes('asistencial/técnico no obligado') ||
+          reqG?.observaciones?.includes('asistencial')
+        );
+        if (eraExentoAsistencial) {
+          return {
+            ...reqM,
+            cumplido: false,
+            noAplica: false,
+            obligatorio: true,
+            observaciones: undefined,
+            documentosAdjuntos: Array.isArray(reqG?.documentosAdjuntos) ? reqG.documentosAdjuntos : [],
+          };
+        }
       }
 
       // Reconciliación para Requisito 4 de la Fase 6 (Renuncia al cargo anterior en Ascenso)

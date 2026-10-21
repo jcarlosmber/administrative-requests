@@ -615,9 +615,13 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **📁 Posibles Evidencias**: Formato 2311300-FT-436 debidamente diligenciado con inventario de asuntos en curso y firma de recibido del superior jerárquico.
 
 #### Requisito 4.3 (`dc3_acta_gestion`): Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005) - Formato ACTA-GESTION-951
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005, Art. 8 • Directiva Distrital 001 de 2018.
-* **📁 Posibles Evidencias**: Acta de gestión suscrita y constancia de radicación ante la Oficina de Control Interno dentro de los 15 días hábiles.
+* **Obligatorio**: Sí (Activo para todos los servidores salientes según procedimiento institucional; sólo exceptuado por fallecimiento conforme al Art. 8)
+* **⚖️ Fundamento Jurídico Aplicable**: Ley 951 de 2005, Arts. 1, 5, 9 y 10 • Procedimiento 2311420-PR-074 SJD • Formato ACTA-GESTION-951.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Deber legal e institucional de rendir informe de gestión y formalizar la entrega de los asuntos, bienes, expedientes y documentación a cargo conforme a la Ley 951 de 2005 (Arts. 1, 5, 9 y 10) y el procedimiento de la entidad, con remisión formal a la Oficina de Control Interno.
+* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Ley 951 de 2005, Arts. 1 y 5*: Todo servidor público comprendido en la ley, al separarse de su cargo, está obligado a entregar a quien lo sustituya o a su superior jerárquico un informe detallado de los asuntos a su cargo y de los recursos puestos a su disposición mediante acta individual.
+* **📁 Posibles Evidencias**:
+  1. Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita con inventario y estado de trámites.
+  2. Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.
 
 #### Requisito 4.4 (`dc4_3`): Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro
 * **Obligatorio**: Sí
