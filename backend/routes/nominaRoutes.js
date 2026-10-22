@@ -1505,7 +1505,12 @@ Secretaría Jurídica Distrital
           SELECT * FROM public.planta_personal_sjd pl
           WHERE pl.encargo_cedula = per.cedula 
              OR pl.titular_cedula = per.cedula 
-             OR (per.posicion_planta IS NOT NULL AND pl.id_perno = per.posicion_planta)
+             OR (
+               (per.estado_funcionario != 'R' AND per.fecha_retiro IS NULL) 
+               AND per.posicion_planta IS NOT NULL 
+               AND pl.id_perno = per.posicion_planta
+               AND UPPER(TRIM(pl.cargo)) = UPPER(TRIM(per.cargo))
+             )
           ORDER BY 
             CASE 
               WHEN pl.encargo_cedula = per.cedula THEN 1

@@ -1354,18 +1354,30 @@ export default function NominaScreen() {
     if (!pernoModal) return null;
     const listPlazas = todasLasPlazas;
     const pCed = String(pernoModal.cedula || '').trim();
-    const matchPlaza = listPlazas.find(
-      (pl) =>
-        (pCed && (
-          String(pl.titular_cedula || '').trim() === pCed ||
-          String(pl.encargo_cedula || '').trim() === pCed ||
-          String(pl.servidor_activo_cedula || '').trim() === pCed
-        )) ||
-        (pernoModal.posicion_planta && (
-          Number(pl.id_perno) === Number(pernoModal.posicion_planta) ||
-          Number(pl.id_plaza) === Number(pernoModal.posicion_planta)
-        ))
-    );
+    const esRetirado = pernoModal.estado_funcionario === 'R' || !!pernoModal.fecha_retiro;
+
+    // 1. Coincidencia estricta por cédula (titular, encargo o servidor activo)
+    let matchPlaza = pCed
+      ? listPlazas.find(
+          (pl) =>
+            String(pl.titular_cedula || '').trim() === pCed ||
+            String(pl.encargo_cedula || '').trim() === pCed ||
+            String(pl.servidor_activo_cedula || '').trim() === pCed
+        )
+      : null;
+
+    // 2. Si no coincide por cédula, SOLO buscar por posicion_planta si el funcionario NO está retirado
+    // y si el cargo coincide para evitar falsos positivos con plazas activas de otros funcionarios
+    if (!matchPlaza && !esRetirado && pernoModal.posicion_planta) {
+      matchPlaza = listPlazas.find(
+        (pl) =>
+          (Number(pl.id_perno) === Number(pernoModal.posicion_planta) ||
+            Number(pl.id_plaza) === Number(pernoModal.posicion_planta)) &&
+          (!pernoModal.cargo ||
+            !pl.cargo ||
+            pl.cargo.trim().toUpperCase() === pernoModal.cargo.trim().toUpperCase())
+      );
+    }
 
     if (!matchPlaza) return pernoModal;
 
