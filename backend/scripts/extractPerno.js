@@ -5,26 +5,46 @@ const path = require('path');
 function cleanText(val) {
   if (val === null || val === undefined) return '';
   let str = String(val).trim();
+  if (!str || str.toLowerCase().includes('[object object]')) return '';
+
+  if (/[ÃÂâ\u00C2\u00C3]/.test(str)) {
+    try {
+      const decoded = Buffer.from(str, 'latin1').toString('utf8');
+      if (!decoded.includes('\uFFFD') && !/[ÃÂ\u00C2\u00C3]/.test(decoded)) {
+        str = decoded;
+      }
+    } catch (e) {}
+  }
+
   str = str
-    .replace(/Ã¡/g, 'á')
-    .replace(/Ã©/g, 'é')
-    .replace(/Ã­/g, 'í')
-    .replace(/Ã³/g, 'ó')
-    .replace(/Ãº/g, 'ú')
-    .replace(/Ã /g, 'Á')
-    .replace(/Ã‰/g, 'É')
-    .replace(/Ã /g, 'Í')
-    .replace(/Ã“/g, 'Ó')
-    .replace(/Ãš/g, 'Ú')
-    .replace(/Ã±/g, 'ñ')
-    .replace(/Ã‘/g, 'Ñ')
-    .replace(/SECRETARÃA/gi, 'SECRETARÍA')
-    .replace(/JURÃDICA/gi, 'JURÍDICA')
-    .replace(/DIRECCIÃN/gi, 'DIRECCIÓN')
-    .replace(/ADMINISTRACIÃN/gi, 'ADMINISTRACIÓN')
-    .replace(/GESTIÃN/gi, 'GESTIÓN')
-    .replace(/PLANEACIÃN/gi, 'PLANEACIÓN')
-    .replace(/INSPECCIÃN/gi, 'INSPECCIÓN');
+    .replace(/\u00C3[\u0080-\u009F]?\u0081|Ã[\u0080-\u009F]?\x81/g, 'Á')
+    .replace(/\u00C3[\u0080-\u009F]?\u0089|Ã[\u0080-\u009F]?\x89/g, 'É')
+    .replace(/\u00C3[\u0080-\u009F]?\u008D|Ã[\u0080-\u009F]?\x8D|Ã\s*D/g, (m) => m.includes('D') ? 'ÍD' : 'Í')
+    .replace(/\u00C3[\u0080-\u009F]?\u0093|Ã[\u0080-\u009F]?\x93|Ã“|Ã”/g, 'Ó')
+    .replace(/\u00C3[\u0080-\u009F]?\u009A|Ã[\u0080-\u009F]?\x9A|Ãš/g, 'Ú')
+    .replace(/\u00C3[\u0080-\u009F]?\u0091|Ã[\u0080-\u009F]?\x91|Ã‘/g, 'Ñ')
+    .replace(/\u00C3[\u0080-\u009F]?\u00A1|Ã¡/g, 'á')
+    .replace(/\u00C3[\u0080-\u009F]?\u00A9|Ã©/g, 'é')
+    .replace(/\u00C3[\u0080-\u009F]?\u00AD|Ã­|Ã\u00AD/g, 'í')
+    .replace(/\u00C3[\u0080-\u009F]?\u00B3|Ã³/g, 'ó')
+    .replace(/\u00C3[\u0080-\u009F]?\u00BA|Ãº/g, 'ú')
+    .replace(/\u00C3[\u0080-\u009F]?\u00B1|Ã±/g, 'ñ')
+    .replace(/\u00C2[\u0080-\u009F]?\u00BA|Âº/g, 'º')
+    .replace(/\u00C2[\u0080-\u009F]?\u00B0|Â°/g, '°')
+    .replace(/SUBSECRETARÃ[\x80-\x9F\s]?A/gi, 'SUBSECRETARÍA')
+    .replace(/SECRETARÃ[\x80-\x9F\s]?A/gi, 'SECRETARÍA')
+    .replace(/JURÃ[\x80-\x9F\s]?DICA/gi, 'JURÍDICA')
+    .replace(/JURÃ[\x80-\x9F\s]?DICO/gi, 'JURÍDICO')
+    .replace(/POLÃ[\x80-\x9F\s]?TICA/gi, 'POLÍTICA')
+    .replace(/DIRECCIÃ[\x80-\x9F\s]?N/gi, 'DIRECCIÓN')
+    .replace(/ADMINISTRACIÃ[\x80-\x9F\s]?N/gi, 'ADMINISTRACIÓN')
+    .replace(/GESTIÃ[\x80-\x9F\s]?N/gi, 'GESTIÓN')
+    .replace(/PLANEACIÃ[\x80-\x9F\s]?N/gi, 'PLANEACIÓN')
+    .replace(/INSPECCIÃ[\x80-\x9F\s]?N/gi, 'INSPECCIÓN')
+    .replace(/Ã[\x80-\x9F\s]?A/g, 'ÍA')
+    .replace(/Ã[\x80-\x9F\s]?a/g, 'ía')
+    .replace(/[\u0080-\u009F]/g, '');
+
   return str.replace(/\s+/g, ' ').trim();
 }
 
@@ -53,11 +73,18 @@ function cleanMoney(val) {
 }
 
 async function run() {
-  const filePath = path.resolve(__dirname, '../../Scratch/PLANTA.xlsx');
+  let filePath = path.resolve(__dirname, '../../Scratch/Plantilla_Planta_Perno_SJD.xlsx');
+  if (!fs.existsSync(filePath)) {
+    filePath = path.resolve(__dirname, '../../Scratch/PLANTA.xlsx');
+  }
   console.log('Leyendo:', filePath);
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(filePath);
   const ws = wb.getWorksheet('PLANTA PERNO');
+  if (!ws) {
+    console.error('No se encontró la hoja PLANTA PERNO en', filePath);
+    return;
+  }
   const list = [];
   
   for (let r = 10; r <= ws.rowCount; r++) {

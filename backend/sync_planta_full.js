@@ -12,15 +12,61 @@ const pool = new Pool({
   port: parseInt(process.env.PGPORT || '5432', 10),
 });
 
+function cleanText(val) {
+  if (val === null || val === undefined) return '';
+  let str = String(val).trim();
+  if (!str || str.toLowerCase().includes('[object object]')) return '';
+
+  if (/[ÃÂâ\u00C2\u00C3]/.test(str)) {
+    try {
+      const decoded = Buffer.from(str, 'latin1').toString('utf8');
+      if (!decoded.includes('\uFFFD') && !/[ÃÂ\u00C2\u00C3]/.test(decoded)) {
+        str = decoded;
+      }
+    } catch (e) {}
+  }
+
+  str = str
+    .replace(/\u00C3[\u0080-\u009F]?\u0081|Ã[\u0080-\u009F]?\x81/g, 'Á')
+    .replace(/\u00C3[\u0080-\u009F]?\u0089|Ã[\u0080-\u009F]?\x89/g, 'É')
+    .replace(/\u00C3[\u0080-\u009F]?\u008D|Ã[\u0080-\u009F]?\x8D|Ã\s*D/g, (m) => m.includes('D') ? 'ÍD' : 'Í')
+    .replace(/\u00C3[\u0080-\u009F]?\u0093|Ã[\u0080-\u009F]?\x93|Ã“|Ã”/g, 'Ó')
+    .replace(/\u00C3[\u0080-\u009F]?\u009A|Ã[\u0080-\u009F]?\x9A|Ãš/g, 'Ú')
+    .replace(/\u00C3[\u0080-\u009F]?\u0091|Ã[\u0080-\u009F]?\x91|Ã‘/g, 'Ñ')
+    .replace(/\u00C3[\u0080-\u009F]?\u00A1|Ã¡/g, 'á')
+    .replace(/\u00C3[\u0080-\u009F]?\u00A9|Ã©/g, 'é')
+    .replace(/\u00C3[\u0080-\u009F]?\u00AD|Ã­|Ã\u00AD/g, 'í')
+    .replace(/\u00C3[\u0080-\u009F]?\u00B3|Ã³/g, 'ó')
+    .replace(/\u00C3[\u0080-\u009F]?\u00BA|Ãº/g, 'ú')
+    .replace(/\u00C3[\u0080-\u009F]?\u00B1|Ã±/g, 'ñ')
+    .replace(/\u00C2[\u0080-\u009F]?\u00BA|Âº/g, 'º')
+    .replace(/\u00C2[\u0080-\u009F]?\u00B0|Â°/g, '°')
+    .replace(/SUBSECRETARÃ[\x80-\x9F\s]?A/gi, 'SUBSECRETARÍA')
+    .replace(/SECRETARÃ[\x80-\x9F\s]?A/gi, 'SECRETARÍA')
+    .replace(/JURÃ[\x80-\x9F\s]?DICA/gi, 'JURÍDICA')
+    .replace(/JURÃ[\x80-\x9F\s]?DICO/gi, 'JURÍDICO')
+    .replace(/POLÃ[\x80-\x9F\s]?TICA/gi, 'POLÍTICA')
+    .replace(/DIRECCIÃ[\x80-\x9F\s]?N/gi, 'DIRECCIÓN')
+    .replace(/ADMINISTRACIÃ[\x80-\x9F\s]?N/gi, 'ADMINISTRACIÓN')
+    .replace(/GESTIÃ[\x80-\x9F\s]?N/gi, 'GESTIÓN')
+    .replace(/PLANEACIÃ[\x80-\x9F\s]?N/gi, 'PLANEACIÓN')
+    .replace(/INSPECCIÃ[\x80-\x9F\s]?N/gi, 'INSPECCIÓN')
+    .replace(/Ã[\x80-\x9F\s]?A/g, 'ÍA')
+    .replace(/Ã[\x80-\x9F\s]?a/g, 'ía')
+    .replace(/[\u0080-\u009F]/g, '');
+
+  return str.replace(/\s+/g, ' ').trim();
+}
+
 function getVal(cell) {
   if (!cell) return null;
   const v = cell.value;
   if (v === null || v === undefined) return null;
   if (typeof v === 'object') {
-    if ('result' in v) return v.result;
-    if ('text' in v) return v.text;
+    if ('result' in v) return cleanText(v.result);
+    if ('text' in v) return cleanText(v.text);
   }
-  return v;
+  return typeof v === 'string' ? cleanText(v) : v;
 }
 
 function parseFunctions(funcionesText) {

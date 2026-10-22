@@ -126,52 +126,66 @@ module.exports = function (pool) {
     let str = String(val).trim();
     if (!str || str.toLowerCase().includes('[object object]')) return '';
 
-    // Si tiene secuencias típicas de mojibake (ej: DIRECCIÃ“N, SECRETARÃA)
-    if (/[ÃÂâ]/.test(str)) {
+    // 1. Intento de decodificación limpia UTF-8 desde Latin1 / Binary
+    if (/[ÃÂâ\u00C2\u00C3]/.test(str)) {
       try {
-        const decoded = Buffer.from(str, 'binary').toString('utf8');
-        if (!decoded.includes('') && !/[ÃÂ]/.test(decoded)) {
+        const decoded = Buffer.from(str, 'latin1').toString('utf8');
+        if (!decoded.includes('\uFFFD') && !/[ÃÂ\u00C2\u00C3]/.test(decoded)) {
           str = decoded;
         }
       } catch (e) {}
     }
 
-    // Diccionario de correcciones de mojibake frecuentes en exportaciones de SIDEAP/PERNO
+    // 2. Diccionario exhaustivo y tolerante a bytes de control (0x80 a 0x9F)
     str = str
-      .replace(/Ã¡/g, 'á')
-      .replace(/Ã©/g, 'é')
-      .replace(/Ã­/g, 'í')
-      .replace(/Ã³/g, 'ó')
-      .replace(/Ãº/g, 'ú')
-      .replace(/Ã/g, 'Á')
-      .replace(/Ã‰/g, 'É')
-      .replace(/Ã/g, 'Í')
-      .replace(/Ã“/g, 'Ó')
-      .replace(/Ã”/g, 'Ô')
-      .replace(/Ãš/g, 'Ú')
-      .replace(/Ã±/g, 'ñ')
-      .replace(/Ã‘/g, 'Ñ')
-      .replace(/â€œ/g, '"')
-      .replace(/â€/g, '"')
+      // Mayúsculas con tilde o virgulilla
+      .replace(/\u00C3[\u0080-\u009F]?\u0081|Ã[\u0080-\u009F]?\x81/g, 'Á')
+      .replace(/\u00C3[\u0080-\u009F]?\u0089|Ã[\u0080-\u009F]?\x89/g, 'É')
+      .replace(/\u00C3[\u0080-\u009F]?\u008D|Ã[\u0080-\u009F]?\x8D|Ã\s*D/g, (m) => m.includes('D') ? 'ÍD' : 'Í')
+      .replace(/\u00C3[\u0080-\u009F]?\u0093|Ã[\u0080-\u009F]?\x93|Ã“|Ã”/g, 'Ó')
+      .replace(/\u00C3[\u0080-\u009F]?\u009A|Ã[\u0080-\u009F]?\x9A|Ãš/g, 'Ú')
+      .replace(/\u00C3[\u0080-\u009F]?\u0091|Ã[\u0080-\u009F]?\x91|Ã‘/g, 'Ñ')
+      
+      // Minúsculas con tilde o virgulilla
+      .replace(/\u00C3[\u0080-\u009F]?\u00A1|Ã¡/g, 'á')
+      .replace(/\u00C3[\u0080-\u009F]?\u00A9|Ã©/g, 'é')
+      .replace(/\u00C3[\u0080-\u009F]?\u00AD|Ã­|Ã\u00AD/g, 'í')
+      .replace(/\u00C3[\u0080-\u009F]?\u00B3|Ã³/g, 'ó')
+      .replace(/\u00C3[\u0080-\u009F]?\u00BA|Ãº/g, 'ú')
+      .replace(/\u00C3[\u0080-\u009F]?\u00B1|Ã±/g, 'ñ')
+      
+      // Símbolos de grados, ordinales y comillas
+      .replace(/\u00C2[\u0080-\u009F]?\u00BA|Âº/g, 'º')
+      .replace(/\u00C2[\u0080-\u009F]?\u00B0|Â°/g, '°')
+      .replace(/â€œ|â€/g, '"')
       .replace(/â€“/g, '-')
       .replace(/â€”/g, '—')
-      .replace(/SECRETARÃA/gi, 'SECRETARÍA')
-      .replace(/JURÃDICA/gi, 'JURÍDICA')
-      .replace(/JURÃDICO/gi, 'JURÍDICO')
-      .replace(/DIRECCIÃN/gi, 'DIRECCIÓN')
-      .replace(/ADMINISTRACIÃN/gi, 'ADMINISTRACIÓN')
-      .replace(/GESTIÃN/gi, 'GESTIÓN')
-      .replace(/PLANEACIÃN/gi, 'PLANEACIÓN')
-      .replace(/INSPECCIÃN/gi, 'INSPECCIÓN')
-      .replace(/COMISIÃN/gi, 'COMISIÓN')
-      .replace(/DISCIPLINARIÃ/gi, 'DISCIPLINARIA')
-      .replace(/VINCULACIÃN/gi, 'VINCULACIÓN')
-      .replace(/SITUACIÃN/gi, 'SITUACIÓN')
-      .replace(/ASIGNACIÃN/gi, 'ASIGNACIÓN')
-      .replace(/ÃA/g, 'ÍA')
-      .replace(/Ãa/g, 'ía')
-      .replace(/ÃO/g, 'ÍO')
-      .replace(/Ão/g, 'ío');
+
+      // Palabras institucionales clave de SIDEAP / PERNO
+      .replace(/SUBSECRETARÃ[\x80-\x9F\s]?A/gi, 'SUBSECRETARÍA')
+      .replace(/SECRETARÃ[\x80-\x9F\s]?A/gi, 'SECRETARÍA')
+      .replace(/JURÃ[\x80-\x9F\s]?DICA/gi, 'JURÍDICA')
+      .replace(/JURÃ[\x80-\x9F\s]?DICO/gi, 'JURÍDICO')
+      .replace(/POLÃ[\x80-\x9F\s]?TICA/gi, 'POLÍTICA')
+      .replace(/DIRECCIÃ[\x80-\x9F\s]?N/gi, 'DIRECCIÓN')
+      .replace(/ADMINISTRACIÃ[\x80-\x9F\s]?N/gi, 'ADMINISTRACIÓN')
+      .replace(/GESTIÃ[\x80-\x9F\s]?N/gi, 'GESTIÓN')
+      .replace(/PLANEACIÃ[\x80-\x9F\s]?N/gi, 'PLANEACIÓN')
+      .replace(/INSPECCIÃ[\x80-\x9F\s]?N/gi, 'INSPECCIÓN')
+      .replace(/COMISIÃ[\x80-\x9F\s]?N/gi, 'COMISIÓN')
+      .replace(/DISCIPLINARIÃ[\x80-\x9F\s]?/gi, 'DISCIPLINARIA')
+      .replace(/VINCULACIÃ[\x80-\x9F\s]?N/gi, 'VINCULACIÓN')
+      .replace(/SITUACIÃ[\x80-\x9F\s]?N/gi, 'SITUACIÓN')
+      .replace(/ASIGNACIÃ[\x80-\x9F\s]?N/gi, 'ASIGNACIÓN')
+      .replace(/TECNOLOGÃ[\x80-\x9F\s]?A/gi, 'TECNOLOGÍA')
+      .replace(/ALCALDÃ[\x80-\x9F\s]?A/gi, 'ALCALDÍA')
+      .replace(/Ã[\x80-\x9F\s]?A/g, 'ÍA')
+      .replace(/Ã[\x80-\x9F\s]?a/g, 'ía')
+      .replace(/Ã[\x80-\x9F\s]?O/g, 'ÍO')
+      .replace(/Ã[\x80-\x9F\s]?o/g, 'ío')
+      
+      // Limpieza de caracteres de control restantes (0x80 a 0x9F)
+      .replace(/[\u0080-\u009F]/g, '');
 
     return str.replace(/\s+/g, ' ').trim();
   }
@@ -182,6 +196,9 @@ module.exports = function (pool) {
     if (!dep) return '';
 
     // Normalizaciones canónicas exactas de la entidad
+    if (dep.includes('SUBSECRETAR')) {
+      return 'SUBSECRETARÍA JURÍDICA DISTRITAL';
+    }
     if (dep.includes('DOCTRINA') && dep.includes('NORMATIV')) {
       return 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS';
     }
@@ -213,6 +230,11 @@ module.exports = function (pool) {
       return 'OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES';
     }
     if (dep.includes('CORPORATIVA') || dep.includes('GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
+      return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
+    }
+
+    return dep;
+  }GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
       return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
     }
 

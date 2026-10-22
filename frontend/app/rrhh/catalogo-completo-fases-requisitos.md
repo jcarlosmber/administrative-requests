@@ -519,16 +519,25 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Plazo Legal**: 30 días para resolver renuncias (Art. 2.2.11.1.2)
 * **Procedimiento General de Fase**: Radicar y constatar la causal jurídica de retiro del servicio de carrera (renuncia libre y espontánea, pensión de vejez/invalidez, declaratoria de insubsistencia por período de prueba o EDL no satisfactoria, retiro forzoso a los 70 años según Ley 1821 de 2016 o supresión de empleo con derechos preferenciales de reincorporación o indemnización).
 
-#### Requisito 1.1 (`dc1_1`): Recepción del documento soporte de retiro de carrera (Formato 2311520-FT-018)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 909 de 2004, Art. 41 • Decreto 1083 de 2015, Art. 2.2.11.1.1 • Formato 2311520-FT-018.
-* **💡 Resumen Jurídico (`notaNormativa`)**: El retiro del servicio de carrera procede taxativamente por causales legales objetivas que deben estar respaldadas documentalmente en el expediente antes de proferir el acto de desvinculación.
-* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Ley 909 de 2004, Art. 41*: «El retiro del servicio de quienes estén desempeñando empleos de libre nombramiento y remoción y de carrera administrativa se produce por las siguientes causales: a) Por declaratoria de insubsistencia del nombramiento en los empleos de libre nombramiento y remoción; b) Por declaratoria de insubsistencia del nombramiento, como consecuencia del resultado no satisfactorio en la evaluación del desempeño laboral de un empleado de carrera administrativa [...]».
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Radicar en el sistema documental el soporte formal de retiro con firma auténtica del servidor de carrera, acto administrativo de reconocimiento pensional o constancia de calificación insatisfactoria en firme.
+#### Requisito 1.0 (`dc1_vacancia_113`): 1.13. Vacancia temporal por nombramiento en periodo de prueba en otra entidad pública
+* **Obligatorio**: No (Aplica condicionado cuando el servidor de carrera supera concurso de méritos en otra entidad)
+* **⚖️ Fundamento Jurídico Aplicable**: Reglamento Interno SJD Numeral 1.13 • Decreto 1083 de 2015, Art. 2.2.5.5.52 • Ley 909 de 2004.
+* **💡 Resumen Jurídico (`notaNormativa`)**: El servidor nombrado en periodo de prueba en otra entidad pública, luego de superar las etapas de un concurso de méritos, deberá informarlo a la Dirección de Gestión Corporativa mediante memorando con antelación no menor a cinco (5) días hábiles, anexando copia del acto que lo nombra en periodo de prueba.
+* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Numeral 1.13 SJD*: «El servidor nombrado en periodo de prueba en otra entidad pública, luego de superar las etapas de un concurso de méritos, deberá informarlo a la Dirección de Gestión Corporativa mediante memorando con antelación no menor a cinco (5) días hábiles, anexando copia del acto que lo nombra en periodo de prueba.»
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Radicar y verificar el memorando dirigido a la Dirección de Gestión Corporativa presentado con antelación mínima de cinco (5) días hábiles antes de posesionarse en la otra entidad pública, verificando que contenga copia auténtica del acto administrativo de nombramiento en período de prueba producto del concurso de méritos.
 * **📁 Posibles Evidencias Documentales**:
-  1. Memorial de renuncia libre y espontánea radicado en el sistema de gestión documental.
-  2. Resolución de reconocimiento pensional expedida por Colpensiones o fondo privado de pensiones.
-  3. Formato institucional 2311520-FT-018 de verificación de trámite de retiro de personal.
+  1. Memorando radicado en correspondencia oficial dirigido a la Dirección de Gestión Corporativa con antelación ≥ 5 días hábiles.
+  2. Copia del acto administrativo de nombramiento en periodo de prueba expedido por la entidad pública receptora.
+
+#### Requisito 1.1 (`dc1_1`): 1.14. Recepción del documento soporte de renuncia / retiro (Formato 2311520-FT-018)
+* **Obligatorio**: Sí
+* **⚖️ Fundamento Jurídico Aplicable**: Reglamento Interno SJD Numeral 1.14 • Ley 909 de 2004, Art. 41 lit. d • Decreto 1083 de 2015, Art. 2.2.11.1.1 al 2.2.11.1.2 • Formato 2311520-FT-018.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Numeral 1.14 SJD: Renuncia. El servidor puede presentar renuncia irrevocable no motivada en cualquier tiempo, por escrito, radicada mediante memorando dirigido a la autoridad nominadora. La fecha de retiro podrá concederse hasta treinta (30) días siguientes a su presentación; cumplido este plazo, el empleado podrá separarse del cargo sin incurrir en abandono del cargo. El servidor debe hacer entrega formal del cargo y diligenciar el paz y salvo con las dependencias de la Entidad.
+* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Numeral 1.14 SJD*: «Renuncia. El servidor puede presentar renuncia irrevocable no motivada en cualquier tiempo, por escrito, radicada mediante memorando dirigido a la autoridad nominadora. La fecha de retiro podrá concederse hasta treinta (30) días siguientes a su presentación; cumplido este plazo, el empleado podrá separarse del cargo sin incurrir en abandono del cargo. El servidor debe hacer entrega formal del cargo y diligenciar el paz y salvo con las dependencias de la Entidad. Si tiene créditos con descuento de nómina, del valor de la liquidación se consignará a las entidades acreedoras la proporción adeudada, previos los descuentos autorizados y de ley; el saldo a favor se consignará en la cuenta bancaria registrada por el servidor.»
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Radicar en el sistema documental el memorial escrito de renuncia irrevocable dirigido a la autoridad nominadora, constatar que la fecha de efectividad no exceda de treinta (30) días, verificar entrega de inventarios/bienes y tramitar paz y salvo con dependencias.
+* **📁 Posibles Evidencias Documentales**:
+  1. Memorando de renuncia irrevocable radicado ante la autoridad nominadora.
+  2. Formato institucional 2311520-FT-018 de trámite de personal con visto bueno de Talento Humano.
 
 #### Requisito 1.2 (`dc1_2`): Verificación estricta de la causal y garantías de carrera (Art. 41 y 44 Ley 909)
 * **Obligatorio**: Sí
@@ -618,10 +627,14 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   1. Acta de Informe de Gestión y Entrega de Cargo (Formato ACTA-GESTION-951) debidamente suscrita con inventario y estado de trámites.
   2. Radicado formal de remisión de copia auténtica a la Oficina de Control Interno.
 
-#### Requisito 4.3 (`dc4_3`): SIDEAP: Declaración Juramentada de Bienes y Rentas. (Novedad retiro)
+#### Requisito 4.3 (`dc4_3`): o. Formato de Bienes y Rentas (Formato 2310460-FT-079 V02 • Circular 1/2016 SJD • Novedad Retiro)
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • SIDEAP Distrital.
-* **📁 Posibles Evidencias**: Certificado digital de radicación de la declaración juramentada de bienes y rentas en SIDEAP con marcación de Novedad Retiro.
+* **⚖️ Fundamento Jurídico Aplicable**: Circular N° 1 de 2016 SJD • Formato 2310460-FT-079 Versión 02 • Ley 190 de 1995 • Decreto 736 de 1996 • Ley 2013 de 2019 • SIDEAP Distrital.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Numeral o. De conformidad con la Ley 190 de 1995 y el Decreto 736 de 1996, la información del Formulario Único de Bienes y Rentas debe actualizarse a más tardar el último día del mes de marzo de cada anualidad. Todo cambio relacionado con la declaración de bienes y rentas debe ser comunicado por el funcionario a la Entidad, mediante la actualización del formato correspondiente, dentro de los dos (2) meses siguientes a su ocurrencia.
+* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Circular N° 1 de 2016 SJD / Ley 190 de 1995 / Decreto 736 de 1996*: «De conformidad con la Ley 190 de 1995 y el Decreto 736 de 1996, la información del Formulario Único de Bienes y Rentas debe actualizarse a más tardar el último día del mes de marzo de cada anualidad. Todo cambio relacionado con la declaración de bienes y rentas debe ser comunicado por el funcionario a la Entidad, mediante la actualización del formato correspondiente, dentro de los dos (2) meses siguientes a su ocurrencia.» Al momento del retiro del servicio es indispensable radicar la declaración actualizada con opción Novedad Retiro.
+* **📁 Posibles Evidencias**:
+  1. Formulario Único de Declaración de Bienes y Rentas diligenciado en formato oficial 2310460-FT-079 Versión 02.
+  2. Certificado digital de radicación de la declaración juramentada de bienes y rentas en SIDEAP con marcación de Novedad Retiro.
 
 #### Requisito 4.4 (`dc4_sideap_conflictos`): SIDEAP: Declaración Juramentada de Conflictos de interés (Novedad retiro)
 * **Obligatorio**: Sí
@@ -664,10 +677,16 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **⚖️ Fundamento Jurídico Aplicable**: Decreto 1083 de 2015 • Procedimiento de Nómina SJD.
 * **📁 Posibles Evidencias**: Reporte de novedad de retiro procesado en PERNO y captura de estado inactivo en SIDEAP.
 
-#### Requisito 6.2 (`dc6_2_nom`): Liquidación técnica de prestaciones sociales de carrera (Dec. Ley 1045/1978)
+#### Requisito 6.2 (`dc6_2_nom`): Liquidación técnica y compensación de créditos de nómina (Numeral 1.14 SJD • Dec. Ley 1045/1978)
 * **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**: Decreto Ley 1045 de 1978 • Ley 909 de 2004.
-* **📁 Posibles Evidencias**: Hoja de liquidación técnica detallando cesantías, intereses, prima de servicios, vacaciones compensadas y bonificaciones proporcionales.
+* **⚖️ Fundamento Jurídico Aplicable**: Reglamento Interno SJD Numeral 1.14 • Decreto Ley 1045 de 1978 • Ley 909 de 2004 • Decreto Distrital 514 de 2006.
+* **💡 Resumen Jurídico (`notaNormativa`)**: Numeral 1.14 SJD: Si el servidor saliente tiene créditos con descuento de nómina (libranzas o convenios financieros), del valor liquidado se consignará a las entidades acreedoras la proporción adeudada, previos los descuentos autorizados y de ley; el saldo neto a favor se consignará en la cuenta bancaria registrada por el servidor.
+* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**: *Numeral 1.14 SJD*: «Si tiene créditos con descuento de nómina, del valor de la liquidación se consignará a las entidades acreedoras la proporción adeudada, previos los descuentos autorizados y de ley; el saldo a favor se consignará en la cuenta bancaria registrada por el servidor.»
+* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**: Liquidar conceptos y factores salariales; cruzar cartera con los reportes de libranzas de PERNO, retener y pagar las acreencias pendientes a las entidades financieras/cooperativas y dispersar el saldo neto resultante en la cuenta bancaria registrada.
+* **📁 Posibles Evidencias**:
+  1. Hoja técnica de liquidación de prestaciones sociales con discriminación de descuentos de ley y créditos autorizados.
+  2. Certificaciones de saldo de entidades acreedoras o estado de cuenta de libranzas.
+  3. Comprobante de ordenación y giro a favor de entidades acreedoras y beneficiario.
 
 #### Requisito 6.3 (`dc6_3_nom`): Elaboración de Resolución de Reconocimiento y Liquidación (Formato 2311520-FT-130)
 * **Obligatorio**: Sí

@@ -1,0 +1,172 @@
+{
+  "asignaciones": [
+    {
+      "simoId": 8,
+      "opec": "228169",
+      "estado": "Disponible",
+      "plazaId": 40
+    },
+    {
+      "simoId": 9,
+      "opec": "238023",
+      "estado": "Disponible",
+      "plazaId": 39
+    },
+    {
+      "simoId": 10,
+      "opec": "238023",
+      "estado": "Disponible",
+      "plazaId": 35
+    },
+    {
+      "simoId": 11,
+      "opec": "254169",
+      "estado": "Disponible",
+      "plazaId": 34
+    },
+    {
+      "simoId": 12,
+      "opec": "263315",
+      "estado": "Disponible",
+      "plazaId": 42
+    },
+    {
+      "simoId": 31,
+      "opec": "222793",
+      "estado": "Disponible",
+      "plazaId": 129
+    },
+    {
+      "simoId": 32,
+      "opec": "223181",
+      "estado": "Disponible",
+      "plazaId": 145
+    },
+    {
+      "simoId": 33,
+      "opec": "224312",
+      "estado": "Disponible",
+      "plazaId": 121
+    },
+    {
+      "simoId": 34,
+      "opec": "228165",
+      "estado": "Disponible",
+      "plazaId": 52
+    },
+    {
+      "simoId": 35,
+      "opec": "229786",
+      "estado": "Disponible",
+      "plazaId": 79
+    },
+    {
+      "simoId": 36,
+      "opec": "230462",
+      "estado": "Disponible",
+      "plazaId": 141
+    },
+    {
+      "simoId": 37,
+      "opec": "234160",
+      "estado": "Disponible",
+      "plazaId": 134
+    },
+    {
+      "simoId": 38,
+      "opec": "238025",
+      "estado": "Disponible",
+      "plazaId": 123
+    },
+    {
+      "simoId": 39,
+      "opec": "245268",
+      "estado": "Disponible",
+      "plazaId": 76
+    },
+    {
+      "simoId": 40,
+      "opec": "246277",
+      "estado": "Disponible",
+      "plazaId": 117
+    },
+    {
+      "simoId": 41,
+      "opec": "246278",
+      "estado": "Disponible",
+      "plazaId": 130
+    },
+    {
+      "simoId": 42,
+      "opec": "246804",
+      "estado": "Disponible",
+      "plazaId": 105
+    },
+    {
+      "simoId": 43,
+      "opec": "249019",
+      "estado": "Disponible",
+      "plazaId": 149
+    },
+    {
+      "simoId": 44,
+      "opec": "261997",
+      "estado": "Disponible",
+      "plazaId": 97
+    },
+    {
+      "simoId": 45,
+      "opec": "263025",
+      "estado": "Disponible",
+      "plazaId": 137
+    },
+    {
+      "simoId": 46,
+      "opec": "264040",
+      "estado": "Disponible",
+      "plazaId": 141
+    },
+    {
+      "simoId": 49,
+      "opec": "236227",
+      "estado": "Disponible",
+      "plazaId": 169
+    },
+    {
+      "simoId": 50,
+      "opec": "236228",
+      "estado": "Disponible",
+      "plazaId": 157
+    },
+    {
+      "simoId": 51,
+      "opec": "246257",
+      "estado": "Disponible",
+      "plazaId": 162
+    },
+    {
+      "simoId": 4,
+      "opec": "170495",
+      "estado": "Ofertado",
+      "plazaId": 15
+    },
+    {
+      "simoId": 22,
+      "opec": "196954",
+      "estado": "Ofertado",
+      "plazaId": 116
+    },
+    {
+      "simoId": 26,
+      "opec": "203062",
+      "estado": "Ofertado",
+      "plazaId": 82
+    },
+    {
+      "simoId": 47,
+      "opec": "194717",
+      "estado": "Ofertado",
+      "plazaId": 155
+    }
+  ]
+}

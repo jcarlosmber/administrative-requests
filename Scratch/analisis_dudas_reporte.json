@@ -1,0 +1,1421 @@
+{
+  "seguras": [
+    {
+      "idSimo": 1,
+      "opec": "155418",
+      "cargo": "SECRETARIO EJECUTIVO",
+      "codGrado": "425-20",
+      "estado": "Ofertado",
+      "plazaId": 17,
+      "motivo": "Única plaza en planta con este cargo (Plaza #17)"
+    },
+    {
+      "idSimo": 2,
+      "opec": "164300",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codGrado": "407-27",
+      "estado": "Ofertado",
+      "plazaId": 8,
+      "motivo": "Única plaza en planta con este cargo (Plaza #8)"
+    },
+    {
+      "idSimo": 3,
+      "opec": "170494",
+      "cargo": "SECRETARIO EJECUTIVO",
+      "codGrado": "425-21",
+      "estado": "Ofertado",
+      "plazaId": 13,
+      "motivo": "Única plaza en planta con este cargo (Plaza #13)"
+    },
+    {
+      "idSimo": 4,
+      "opec": "170495",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codGrado": "407-20",
+      "estado": "Ofertado",
+      "plazaId": 15,
+      "motivo": "Única plaza en dependencia (Plaza #15)"
+    },
+    {
+      "idSimo": 8,
+      "opec": "228169",
+      "cargo": "AUXILIAR DE SERVICIOS GENERALES",
+      "codGrado": "470-7",
+      "estado": "Disponible",
+      "plazaId": 40,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #40)"
+    },
+    {
+      "idSimo": 9,
+      "opec": "238023",
+      "cargo": "SECRETARIO",
+      "codGrado": "440-9",
+      "estado": "Disponible",
+      "plazaId": 39,
+      "motivo": "Única plaza en dependencia (Plaza #39)"
+    },
+    {
+      "idSimo": 10,
+      "opec": "238023",
+      "cargo": "SECRETARIO",
+      "codGrado": "440-9",
+      "estado": "Disponible",
+      "plazaId": 35,
+      "motivo": "Única plaza en dependencia (Plaza #35)"
+    },
+    {
+      "idSimo": 11,
+      "opec": "254169",
+      "cargo": "SECRETARIO",
+      "codGrado": "440-11",
+      "estado": "Disponible",
+      "plazaId": 34,
+      "motivo": "Única plaza en planta con este cargo (Plaza #34)"
+    },
+    {
+      "idSimo": 12,
+      "opec": "263315",
+      "cargo": "AUXILIAR DE SERVICIOS GENERALES",
+      "codGrado": "470-3",
+      "estado": "Disponible",
+      "plazaId": 42,
+      "motivo": "Única plaza en planta con este cargo (Plaza #42)"
+    },
+    {
+      "idSimo": 13,
+      "opec": "264031",
+      "cargo": "SECRETARIO",
+      "codGrado": "440-19",
+      "estado": "Disponible",
+      "plazaId": 18,
+      "motivo": "Única plaza en planta con este cargo (Plaza #18)"
+    },
+    {
+      "idSimo": 14,
+      "opec": "264112",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codGrado": "407-26",
+      "estado": "Disponible",
+      "plazaId": 10,
+      "motivo": "Única plaza en planta con este cargo (Plaza #10)"
+    },
+    {
+      "idSimo": 16,
+      "opec": "161279",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-19",
+      "estado": "Provisto - Uso de Listas: ME",
+      "plazaId": 102,
+      "motivo": "Única plaza en dependencia (Plaza #102)"
+    },
+    {
+      "idSimo": 21,
+      "opec": "194528",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-26",
+      "estado": "Ofertado",
+      "plazaId": 77,
+      "motivo": "Única plaza en dependencia (Plaza #77)"
+    },
+    {
+      "idSimo": 22,
+      "opec": "196954",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Ofertado",
+      "plazaId": 107,
+      "motivo": "Propósito funcional exacto coincide con plaza #107"
+    },
+    {
+      "idSimo": 23,
+      "opec": "198515",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-19",
+      "estado": "Ofertado",
+      "plazaId": 103,
+      "motivo": "Única plaza en dependencia (Plaza #103)"
+    },
+    {
+      "idSimo": 31,
+      "opec": "222793",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-15",
+      "estado": "Disponible",
+      "plazaId": 129,
+      "motivo": "Única plaza en dependencia (Plaza #129)"
+    },
+    {
+      "idSimo": 32,
+      "opec": "223181",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-1",
+      "estado": "Disponible",
+      "plazaId": 144,
+      "motivo": "Propósito funcional exacto coincide con plaza #144"
+    },
+    {
+      "idSimo": 33,
+      "opec": "224312",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Disponible",
+      "plazaId": 121,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #121)"
+    },
+    {
+      "idSimo": 34,
+      "opec": "228165",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Disponible",
+      "plazaId": 52,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #52)"
+    },
+    {
+      "idSimo": 35,
+      "opec": "229786",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-24",
+      "estado": "Disponible",
+      "plazaId": 79,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #79)"
+    },
+    {
+      "idSimo": 36,
+      "opec": "230462",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-8",
+      "estado": "Disponible",
+      "plazaId": 141,
+      "motivo": "Única plaza en dependencia (Plaza #141)"
+    },
+    {
+      "idSimo": 37,
+      "opec": "234160",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-13",
+      "estado": "Disponible",
+      "plazaId": 134,
+      "motivo": "Única plaza en dependencia (Plaza #134)"
+    },
+    {
+      "idSimo": 38,
+      "opec": "238025",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Disponible",
+      "plazaId": 123,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #123)"
+    },
+    {
+      "idSimo": 39,
+      "opec": "245268",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-26",
+      "estado": "Disponible",
+      "plazaId": 76,
+      "motivo": "Única plaza en dependencia (Plaza #76)"
+    },
+    {
+      "idSimo": 40,
+      "opec": "246277",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Disponible",
+      "plazaId": 117,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #117)"
+    },
+    {
+      "idSimo": 41,
+      "opec": "246278",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-15",
+      "estado": "Disponible",
+      "plazaId": 130,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #130)"
+    },
+    {
+      "idSimo": 42,
+      "opec": "246804",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Disponible",
+      "plazaId": 105,
+      "motivo": "Única plaza en dependencia (Plaza #105)"
+    },
+    {
+      "idSimo": 43,
+      "opec": "249019",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-1",
+      "estado": "Disponible",
+      "plazaId": 149,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #149)"
+    },
+    {
+      "idSimo": 44,
+      "opec": "261997",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-21",
+      "estado": "Disponible",
+      "plazaId": 97,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #97)"
+    },
+    {
+      "idSimo": 45,
+      "opec": "263025",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-10",
+      "estado": "Disponible",
+      "plazaId": 137,
+      "motivo": "Única plaza en dependencia (Plaza #137)"
+    },
+    {
+      "idSimo": 46,
+      "opec": "264040",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-8",
+      "estado": "Disponible",
+      "plazaId": 142,
+      "motivo": "Única plaza en dependencia (Plaza #142)"
+    },
+    {
+      "idSimo": 48,
+      "opec": "199731",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codGrado": "314-20",
+      "estado": "Ofertado",
+      "plazaId": 155,
+      "motivo": "Propósito funcional exacto coincide con plaza #155"
+    },
+    {
+      "idSimo": 49,
+      "opec": "236227",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codGrado": "314-9",
+      "estado": "Disponible",
+      "plazaId": 169,
+      "motivo": "Única plaza en dependencia (Plaza #169)"
+    },
+    {
+      "idSimo": 50,
+      "opec": "236228",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codGrado": "314-20",
+      "estado": "Disponible",
+      "plazaId": 157,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #157)"
+    },
+    {
+      "idSimo": 51,
+      "opec": "246257",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codGrado": "314-15",
+      "estado": "Disponible",
+      "plazaId": 162,
+      "motivo": "Única plaza VACANTE DEFINITIVA en dependencia (Plaza #162)"
+    }
+  ],
+  "conDudas": [
+    {
+      "idSimo": 5,
+      "opec": "187900",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codGrado": "407-11",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "proposito": "REALIZAR LAS LABORES ASISTENCIALES CON OPORTUNIDAD Y EFICIENCIA PARA SATISFACER LAS NECESIDADES INSTITUCIONALES DE CARACTER ADMINISTRATIVO.",
+      "candidatas": [
+        {
+          "id_plaza": 32,
+          "cargo": "AUXILIAR ADMINISTRATIVO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "EDGAR ANDRES GARCIA GARAVITO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203205",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 33,
+          "cargo": "AUXILIAR ADMINISTRATIVO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "ERIKA MARCELA MEDINA SANTANA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "209337",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 6,
+      "opec": "187900",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codGrado": "407-11",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "OFICINA ASESORA DE PLANEACIÓN",
+      "proposito": "REALIZAR LAS LABORES ASISTENCIALES CON OPORTUNIDAD Y EFICIENCIA PARA SATISFACER LAS NECESIDADES INSTITUCIONALES DE CARACTER ADMINISTRATIVO.",
+      "candidatas": [
+        {
+          "id_plaza": 32,
+          "cargo": "AUXILIAR ADMINISTRATIVO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "EDGAR ANDRES GARCIA GARAVITO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203205",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 33,
+          "cargo": "AUXILIAR ADMINISTRATIVO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "ERIKA MARCELA MEDINA SANTANA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "209337",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 7,
+      "opec": "196953",
+      "cargo": "CONDUCTOR",
+      "codGrado": "480-13",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "proposito": "PRESTAR EL SERVICIO DE CONDUCCION, EFECTUAR LAS DILIGENCIAS QUE LE SEAN ASIGNADAS Y LLEVAR A MANTENIMIENTO EL VEHICULO, CON LA OPORTUNIDAD REQUERIDA",
+      "candidatas": [
+        {
+          "id_plaza": 29,
+          "cargo": "CONDUCTOR",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "LUIS DAUVINY DUARTE ROA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203191",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 30,
+          "cargo": "CONDUCTOR",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "JAUMI MANFRED MARROQUIN",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 31,
+          "cargo": "CONDUCTOR",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "titular": "EDUARDO ALEJANDRO URREGO BECERRA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 15,
+      "opec": "161279",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-19",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+      "proposito": "ADELANTAR JURIDICAMENTE LA SUSTANCIACION DE LOS PROCESOS DISCIPLINARIOS DE COMPETENCIA DEL/LA ALCALDE/SA MAYOR E INTERNOS DE LA SECRETARIA JURIDICA DISTRITAL, CON EL OBJETO DE PREVENIR Y SANCIONAR LA OCURRENCIA DE COMPORTAMIENTOS O CONDUCTAS QUE AFECTEN LA FUNCION PUBLICA, APLICANDO  LOS PRINCIPIOS DE LA FUNCION ADMINISTRATIVA.",
+      "candidatas": [
+        {
+          "id_plaza": 100,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "titular": "LEIDY JOHANNA HERRERA MENDEZ",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 101,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "titular": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203196",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 17,
+      "opec": "194527",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "proposito": "REALIZAR ACTIVIDADES DE DEFENSA JUDICIAL Y EXTRAJUDICIAL, ASI COMO EL ANALISIS Y SEGUIMIENTO DE LA INFORMACION JURIDICA, ENCAMINADAS A LA SALVAGUARDA DE LOS INTERESES LITIGIOSOS DEL DISTRITO CAPITAL, EN LOS PROCESOS JUDICIALES Y EXTRAJUDICIALES EN LOS QUE HAGA PARTE BOGOTA D.C, CON OPORTUNIDAD Y EFICACIA.",
+      "candidatas": [
+        {
+          "id_plaza": 58,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 59,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "situacion": "EN ENCARGO",
+          "encargo": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "opecPlaza": "203198",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 60,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 62,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO ARDILA MORA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 63,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 64,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO CAMILO BERNATE NAVARRO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 65,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MARTHA YANETH ORTIZ LEON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 66,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MAGDA EDITH GUERRERO BONILLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 18,
+      "opec": "194527",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "proposito": "REALIZAR ACTIVIDADES DE DEFENSA JUDICIAL Y EXTRAJUDICIAL, ASI COMO EL ANALISIS Y SEGUIMIENTO DE LA INFORMACION JURIDICA, ENCAMINADAS A LA SALVAGUARDA DE LOS INTERESES LITIGIOSOS DEL DISTRITO CAPITAL, EN LOS PROCESOS JUDICIALES Y EXTRAJUDICIALES EN LOS QUE HAGA PARTE BOGOTA D.C, CON OPORTUNIDAD Y EFICACIA.",
+      "candidatas": [
+        {
+          "id_plaza": 58,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 59,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "situacion": "EN ENCARGO",
+          "encargo": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "opecPlaza": "203198",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 60,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 62,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO ARDILA MORA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 63,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 64,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO CAMILO BERNATE NAVARRO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 65,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MARTHA YANETH ORTIZ LEON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 66,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MAGDA EDITH GUERRERO BONILLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 19,
+      "opec": "194527",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "proposito": "REALIZAR ACTIVIDADES DE DEFENSA JUDICIAL Y EXTRAJUDICIAL, ASI COMO EL ANALISIS Y SEGUIMIENTO DE LA INFORMACION JURIDICA, ENCAMINADAS A LA SALVAGUARDA DE LOS INTERESES LITIGIOSOS DEL DISTRITO CAPITAL, EN LOS PROCESOS JUDICIALES Y EXTRAJUDICIALES EN LOS QUE HAGA PARTE BOGOTA D.C, CON OPORTUNIDAD Y EFICACIA.",
+      "candidatas": [
+        {
+          "id_plaza": 58,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 59,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "situacion": "EN ENCARGO",
+          "encargo": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "opecPlaza": "203198",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 60,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 62,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO ARDILA MORA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 63,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 64,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO CAMILO BERNATE NAVARRO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 65,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MARTHA YANETH ORTIZ LEON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 66,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MAGDA EDITH GUERRERO BONILLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 20,
+      "opec": "194527",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "proposito": "REALIZAR ACTIVIDADES DE DEFENSA JUDICIAL Y EXTRAJUDICIAL, ASI COMO EL ANALISIS Y SEGUIMIENTO DE LA INFORMACION JURIDICA, ENCAMINADAS A LA SALVAGUARDA DE LOS INTERESES LITIGIOSOS DEL DISTRITO CAPITAL, EN LOS PROCESOS JUDICIALES Y EXTRAJUDICIALES EN LOS QUE HAGA PARTE BOGOTA D.C, CON OPORTUNIDAD Y EFICACIA.",
+      "candidatas": [
+        {
+          "id_plaza": 58,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 59,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "situacion": "EN ENCARGO",
+          "encargo": "LUIS ALFONSO CASTIBLANCO URQUIJO",
+          "opecPlaza": "203198",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 60,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 62,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO ARDILA MORA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 63,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 64,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "ALVARO CAMILO BERNATE NAVARRO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 65,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MARTHA YANETH ORTIZ LEON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 66,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "titular": "MAGDA EDITH GUERRERO BONILLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 24,
+      "opec": "203050",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-15",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "proposito": "DESARROLLAR LOS PROCESOS Y MECANISMOS ESTIPULADOS POR EL MARCO LEGAL DE INSPECCION, CONTROL Y VIGILANCIA, TENDIENTES A IMPULSAR LOS PROCESOS INVESTIGATIVOS SANCIONATORIOS, QUE SE DEBEN ADELANTAR CONTRA LOS SUJETOS DE CONTROL POR INFRACCION A LA LEY QUE LAS REGULA, CON BASE EN LOS INFORMES DE LA INFORMACION CONTABLE Y FINANCIERA.",
+      "candidatas": [
+        {
+          "id_plaza": 130,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": "HELVER MANUEL MORA MONTOYA",
+          "opecPlaza": "",
+          "score": 0.88,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 131,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "JUAN CAMILO RUIZ ZAMUDIO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.88,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 132,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203195",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 133,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "MAGDA PATRICIA PUENTES PARDO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 25,
+      "opec": "203050",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-15",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "proposito": "DESARROLLAR LOS PROCESOS Y MECANISMOS ESTIPULADOS POR EL MARCO LEGAL DE INSPECCION, CONTROL Y VIGILANCIA, TENDIENTES A IMPULSAR LOS PROCESOS INVESTIGATIVOS SANCIONATORIOS, QUE SE DEBEN ADELANTAR CONTRA LOS SUJETOS DE CONTROL POR INFRACCION A LA LEY QUE LAS REGULA, CON BASE EN LOS INFORMES DE LA INFORMACION CONTABLE Y FINANCIERA.",
+      "candidatas": [
+        {
+          "id_plaza": 130,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": "HELVER MANUEL MORA MONTOYA",
+          "opecPlaza": "",
+          "score": 0.88,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 131,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "JUAN CAMILO RUIZ ZAMUDIO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.88,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 132,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203195",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 133,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "MAGDA PATRICIA PUENTES PARDO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 26,
+      "opec": "203062",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-24",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "proposito": "PROYECTAR, ANALIZAR Y EFECTUAR REVISION DE LEGALIDAD DE LOS ACTOS ADMINISTRATIVOS DE MEDIANA COMPLEJIDAD, PROYECTAR CONCEPTOS DE MEDIANA COMPLEJIDAD Y ATENDER PETICIONES Y SOLICITUDES DE CONTROL POLITICO, CON EL FIN DE PREVENIR EL DANO ANTIJURIDICO Y GARANTIZAR LA SEGURIDAD JURIDICA.",
+      "candidatas": [
+        {
+          "id_plaza": 82,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 83,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "LUZ ANDREA CUBILLOS GUALDRON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203194",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 84,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "DANIEL YIDID GRANADOS GELVES",
+          "situacion": "EN ENCARGO",
+          "encargo": "JOHANA PATRICIA GAMEZ GOMEZ",
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 85,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "FERNANDO PACHON PIÑEROS",
+          "situacion": "EN ENCARGO",
+          "encargo": "DIEGO ALEJANDRO SOLANO FERNANDEZ",
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 27,
+      "opec": "203062",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-24",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "proposito": "PROYECTAR, ANALIZAR Y EFECTUAR REVISION DE LEGALIDAD DE LOS ACTOS ADMINISTRATIVOS DE MEDIANA COMPLEJIDAD, PROYECTAR CONCEPTOS DE MEDIANA COMPLEJIDAD Y ATENDER PETICIONES Y SOLICITUDES DE CONTROL POLITICO, CON EL FIN DE PREVENIR EL DANO ANTIJURIDICO Y GARANTIZAR LA SEGURIDAD JURIDICA.",
+      "candidatas": [
+        {
+          "id_plaza": 82,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 83,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "LUZ ANDREA CUBILLOS GUALDRON",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203194",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 84,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "DANIEL YIDID GRANADOS GELVES",
+          "situacion": "EN ENCARGO",
+          "encargo": "JOHANA PATRICIA GAMEZ GOMEZ",
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 85,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "titular": "FERNANDO PACHON PIÑEROS",
+          "situacion": "EN ENCARGO",
+          "encargo": "DIEGO ALEJANDRO SOLANO FERNANDEZ",
+          "opecPlaza": "220274",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 28,
+      "opec": "207514",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codGrado": "222-27",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "proposito": "ESTUDIAR, ANALIZAR Y APLICAR LAS HERRAMIENTAS FINANCIERAS Y CONTABLES PARA REALIZAR EL PROCESO SANCIONATORIO O LAS ACCIONES LEGALES NECESARIAS SOBRE LOS SUJETOS DE CONTROL HACIENDO USO DE LOS PROCEDIMIENTOS Y RECURSOS A SU DISPOSICION CON EL FIN DE EJERCER LA FUNCION DE INSPECCION, VIGILANCIA Y CONTROL.",
+      "candidatas": [
+        {
+          "id_plaza": 72,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "JORGE ELIECER HERNANDEZ ALBARRACIN",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.79,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 73,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "MARTHA LILIANA BARRERA DIAZ",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "220283",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 74,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "YUDY ZULEYMA RODRIGUEZ BLANCO",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.79,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 75,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "OCTAVIO QUINTERO LARA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.79,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    },
+    {
+      "idSimo": 29,
+      "opec": "215625",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Ofertado",
+      "dependencia": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "proposito": "EFECTUAR LAS ACCIONES DE VERIFICACION SOBRE LOS SUJETOS DE CONTROL HACIENDO USO DE LOS PROCEDIMIENTOS Y RECURSOS A SU DISPOSICION  ASI COMO ANALIZAR LA INFORMACION DE LAS ENTIDADES SIN ANIMO DE LUCRO, CON EL FIN DE EMITIR UN CONCEPTO SOBRE LA SITUACION FINANCIERA OBSERVADA QUE SIRVA COMO SOPORTE PARA LA TOMA DE DECISIONES.",
+      "candidatas": [
+        {
+          "id_plaza": 122,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "HUGO ALFONSO CABARCAS AYOLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "220287",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 123,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": "MONICA JULIANA SANMIGUEL ROJAS",
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 124,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "MIGUEL PINTO SEGURA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 125,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "FERNAN ENRIQUE PEREZ FORTICH",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 126,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "IVAN DAVID RAMIREZ VALENCIA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.25,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 127,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "SANDRA NICOLASA ORGANISTA BUILES",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 128,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "ANDRES FABIAN NOSSA GUZMAN",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 30,
+      "opec": "215625",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codGrado": "219-18",
+      "estado": "Provisto - Uso de Listas: ME",
+      "dependencia": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "proposito": "EFECTUAR LAS ACCIONES DE VERIFICACION SOBRE LOS SUJETOS DE CONTROL HACIENDO USO DE LOS PROCEDIMIENTOS Y RECURSOS A SU DISPOSICION  ASI COMO ANALIZAR LA INFORMACION DE LAS ENTIDADES SIN ANIMO DE LUCRO, CON EL FIN DE EMITIR UN CONCEPTO SOBRE LA SITUACION FINANCIERA OBSERVADA QUE SIRVA COMO SOPORTE PARA LA TOMA DE DECISIONES.",
+      "candidatas": [
+        {
+          "id_plaza": 122,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "HUGO ALFONSO CABARCAS AYOLA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "220287",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 123,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "VACANTE DEFINITIVA",
+          "situacion": "VACANTE DEFINITIVA",
+          "encargo": "MONICA JULIANA SANMIGUEL ROJAS",
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": true,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 124,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "MIGUEL PINTO SEGURA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 125,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "FERNAN ENRIQUE PEREZ FORTICH",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 126,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "IVAN DAVID RAMIREZ VALENCIA",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.25,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 127,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "SANDRA NICOLASA ORGANISTA BUILES",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 0.75,
+          "esVacante": false,
+          "esIngreso2026": false
+        },
+        {
+          "id_plaza": 128,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "titular": "ANDRES FABIAN NOSSA GUZMAN",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        }
+      ]
+    },
+    {
+      "idSimo": 47,
+      "opec": "194717",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codGrado": "314-20",
+      "estado": "Ofertado",
+      "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+      "proposito": "PRESTAR SOPORTE TECNICO DE FORMA OPORTUNA PARA GARANTIZAR EL USO ADECUADO DE LAS HERRAMIENTAS TECNOLOGICAS EXISTENTES EN LA ENTIDAD, CON EL FIN DE GARANTIZAR SU FUNCIONALIDAD.",
+      "candidatas": [
+        {
+          "id_plaza": 152,
+          "cargo": "TÉCNICO OPERATIVO",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+          "titular": "RODRIGO DIDIER MUÑOZ CONTRERAS",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "203201",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": true
+        },
+        {
+          "id_plaza": 153,
+          "cargo": "TÉCNICO OPERATIVO",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+          "titular": "WILLIAM FONSECA APERADOR",
+          "situacion": "EN PROPIEDAD",
+          "encargo": null,
+          "opecPlaza": "",
+          "score": 1,
+          "esVacante": false,
+          "esIngreso2026": false
+        }
+      ]
+    }
+  ]
+}
