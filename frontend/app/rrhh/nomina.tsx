@@ -3182,32 +3182,6 @@ export default function NominaScreen() {
         </View>
       ),
     },
-    {
-      id: 'ficha',
-      label: 'Ficha',
-      width: '5%',
-      minWidth: 60,
-      align: 'center',
-      sortable: false,
-      render: (p) => (
-        <View
-          style={{
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 6,
-            backgroundColor: THEME.marca50,
-            borderWidth: 1,
-            borderColor: THEME.marca100,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 3,
-          }}
-        >
-          <Ionicons name="eye-outline" size={13} color={THEME.marca700} />
-          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.marca700 }}>Ver</Text>
-        </View>
-      ),
-    },
   ], []);
 
   // Columnas adaptadas para el componente PremiumTable
@@ -3554,30 +3528,6 @@ export default function NominaScreen() {
             {formatearDinero(Number(p.total_devengado) > 0 ? p.total_devengado : p.asignacion_basica)}
           </Text>
           <Text style={{ fontSize: 9.5, color: THEME.slate400 }}>COP / Mes</Text>
-        </View>
-      ),
-    },
-    {
-      label: 'Ficha',
-      proportion: 5,
-      minWidth: 65,
-      align: 'center',
-      render: (p) => (
-        <View
-          style={{
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 6,
-            backgroundColor: THEME.marca50,
-            borderWidth: 1,
-            borderColor: THEME.marca100,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 3,
-          }}
-        >
-          <Ionicons name="eye-outline" size={13} color={THEME.marca700} />
-          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.marca700 }}>Ver</Text>
         </View>
       ),
     },
@@ -13094,28 +13044,312 @@ export default function NominaScreen() {
                             ) : null}
                           </View>
                         ) : (
-                          <View
-                            style={{
-                              backgroundColor: THEME.slate50,
-                              borderRadius: 10,
-                              padding: 24,
-                              borderWidth: 1,
-                              borderColor: THEME.slate200,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Ionicons name="folder-open-outline" size={42} color={THEME.slate300} />
-                            <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate700, marginTop: 12 }}>
-                              Sin Plaza Activa Asignada en Planta Vigente
-                            </Text>
-                            <Text style={{ fontSize: 13, color: THEME.slate500, textAlign: 'center', marginTop: 4, maxWidth: 520, lineHeight: 19 }}>
-                              Este servidor es un exfuncionario retirado / desvinculado o su plaza actual no registra ocupación activa en la planta oficial vigente.
-                            </Text>
-                            <View style={{ marginTop: 16, backgroundColor: THEME.white, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 480 }}>
-                              <Text style={{ fontSize: 12, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Último Cargo Registrado en Nómina PERNO:</Text>
-                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.cargo || 'Sin cargo'}</Text>
-                              <Text style={{ fontSize: 12, color: THEME.slate600, marginTop: 1 }}>{pernoModalEnriquecida.dependencia || 'Sin dependencia'}</Text>
+                          <View style={{ gap: 16, width: '100%' }}>
+                            {/* Alerta / Contexto */}
+                            <View
+                              style={{
+                                backgroundColor: '#FFF7ED',
+                                borderRadius: 10,
+                                padding: 16,
+                                borderWidth: 1,
+                                borderColor: '#FFEDD5',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 12,
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 20,
+                                  backgroundColor: '#FED7AA',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Ionicons name="folder-open" size={22} color="#C2410C" />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 14, fontWeight: '800', color: '#9A3412' }}>
+                                  Sin Plaza Activa Asignada en Planta Vigente
+                                </Text>
+                                <Text style={{ fontSize: 12.5, color: '#C2410C', marginTop: 2, lineHeight: 18 }}>
+                                  Este servidor figura en el sistema como retirado / desvinculado o su empleo corresponde a un registro histórico en nómina PERNO sin plaza ocupada actualmente en la planta oficial.
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Ficha Detallada: Último Cargo Registrado en Nómina PERNO */}
+                            <View
+                              style={{
+                                backgroundColor: THEME.white,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                padding: 20,
+                                gap: 14,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.04,
+                                shadowRadius: 3,
+                              }}
+                            >
+                              {/* Encabezado de la Ficha */}
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'flex-start',
+                                  flexWrap: 'wrap',
+                                  gap: 10,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: THEME.slate100,
+                                  paddingBottom: 14,
+                                }}
+                              >
+                                <View style={{ flex: 1, minWidth: 260 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="briefcase-outline" size={16} color={THEME.marca700} />
+                                    <Text
+                                      style={{
+                                        fontSize: 12,
+                                        color: THEME.marca800,
+                                        fontWeight: '700',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5,
+                                      }}
+                                    >
+                                      Último Cargo Registrado en Nómina PERNO
+                                    </Text>
+                                  </View>
+                                  <Text
+                                    style={{
+                                      fontSize: 17,
+                                      fontWeight: '800',
+                                      color: THEME.slate900,
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    {pernoModalEnriquecida.cargo || 'Sin cargo registrado'}
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: 13,
+                                      color: THEME.slate600,
+                                      marginTop: 2,
+                                      fontWeight: '500',
+                                    }}
+                                  >
+                                    {pernoModalEnriquecida.dependencia || 'Sin dependencia asignada'}
+                                    {pernoModalEnriquecida.dependencia_cod ? ` • Cód. ${pernoModalEnriquecida.dependencia_cod}` : ''}
+                                  </Text>
+                                </View>
+
+                                {/* Badges de Estado y Nivel */}
+                                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  {(pernoModalEnriquecida.cargo_cod || pernoModalEnriquecida.grado) ? (
+                                    <View
+                                      style={{
+                                        backgroundColor: THEME.marca50,
+                                        borderColor: THEME.marca100,
+                                        borderWidth: 1,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 3,
+                                        borderRadius: 6,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 11.5, fontWeight: '800', color: THEME.marca800 }}>
+                                        Cód. {pernoModalEnriquecida.cargo_cod || 'N/A'} • Grado {pernoModalEnriquecida.grado || 'N/A'}
+                                      </Text>
+                                    </View>
+                                  ) : null}
+
+                                  {(pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? (
+                                    <View
+                                      style={{
+                                        backgroundColor: '#FEE2E2',
+                                        borderColor: '#FCA5A5',
+                                        borderWidth: 1,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 3,
+                                        borderRadius: 6,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#991B1B' }}>
+                                        DESVINCULADO / RETIRADO
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <View
+                                      style={{
+                                        backgroundColor: '#ECFDF5',
+                                        borderColor: '#A7F3D0',
+                                        borderWidth: 1,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 3,
+                                        borderRadius: 6,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#065F46' }}>
+                                        {pernoModalEnriquecida.estado_descripcion || 'ACTIVO EN NÓMINA'}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+
+                              {/* Grilla de Datos Relevantes */}
+                              <View
+                                style={{
+                                  flexDirection: isDesktop ? 'row' : 'column',
+                                  gap: 16,
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                {/* Bloque 1: Código y Grado */}
+                                <View style={{ flex: 1, minWidth: 160, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                    Código & Grado
+                                  </Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900, marginTop: 3 }}>
+                                    {pernoModalEnriquecida.cargo_cod || 'S/N'} - Grado {pernoModalEnriquecida.grado || 'S/N'}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                                    Posición Nómina: #{pernoModalEnriquecida.posicion_planta || 'N/A'}
+                                  </Text>
+                                </View>
+
+                                {/* Bloque 2: Fecha de Retiro (Destacada) */}
+                                <View
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 180,
+                                    backgroundColor: (pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? '#FEF2F2' : THEME.slate50,
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: (pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? '#FECACA' : THEME.slate200,
+                                  }}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                    <Ionicons
+                                      name="exit-outline"
+                                      size={14}
+                                      color={(pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? '#DC2626' : THEME.slate600}
+                                    />
+                                    <Text
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: '700',
+                                        textTransform: 'uppercase',
+                                        color: (pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? '#991B1B' : THEME.slate600,
+                                      }}
+                                    >
+                                      Fecha de Retiro / Desvinculación
+                                    </Text>
+                                  </View>
+                                  <Text
+                                    style={{
+                                      fontSize: 14,
+                                      fontWeight: '800',
+                                      color: (pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? '#B91C1C' : THEME.slate800,
+                                      marginTop: 3,
+                                    }}
+                                  >
+                                    {formatFecha(pernoModalEnriquecida.fecha_retiro) || (pernoModalEnriquecida.estado_funcionario === 'R' ? 'Retirado (Sin fecha exacta)' : 'No aplica (Activo)')}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                                    Estado: {pernoModalEnriquecida.estado_descripcion || (pernoModalEnriquecida.estado_funcionario === 'R' ? 'Retirado' : 'Activo')}
+                                  </Text>
+                                </View>
+
+                                {/* Bloque 3: Fechas de Ingreso y Permanencia */}
+                                <View style={{ flex: 1, minWidth: 180, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                    Fecha de Ingreso Entidad
+                                  </Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900, marginTop: 3 }}>
+                                    {formatFecha(pernoModalEnriquecida.fecha_ingreso_entidad) || 'No registrada'}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                                    Distrito: {formatFecha(pernoModalEnriquecida.fecha_ingreso_distrito) || 'N/A'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Fila 2: Tipo de Nombramiento, Acto y Asignación Básica */}
+                              <View
+                                style={{
+                                  flexDirection: isDesktop ? 'row' : 'column',
+                                  gap: 16,
+                                  flexWrap: 'wrap',
+                                  borderTopWidth: 1,
+                                  borderTopColor: THEME.slate100,
+                                  paddingTop: 12,
+                                }}
+                              >
+                                {/* Tipo Nombramiento */}
+                                <View style={{ flex: 1, minWidth: 170 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                    Tipo de Nombramiento
+                                  </Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                    {pernoModalEnriquecida.tipo_nombramiento || 'No especificado'}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                    Naturaleza: {pernoModalEnriquecida.tipo_funcionario || 'EMPLEADO DE PLANTA'}
+                                  </Text>
+                                </View>
+
+                                {/* Acto Administrativo */}
+                                <View style={{ flex: 1, minWidth: 170 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                    Acto Administrativo Nombramiento
+                                  </Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                    {pernoModalEnriquecida.acto_nombramiento || 'Nombramiento'} #{pernoModalEnriquecida.numero_acto_nombramiento || 'S/N'}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                    Fecha Acto: {formatFecha(pernoModalEnriquecida.fecha_acto_nombramiento) || 'N/A'} • Posesión: {formatFecha(pernoModalEnriquecida.fecha_efectiva_nombramiento) || 'N/A'}
+                                  </Text>
+                                </View>
+
+                                {/* Asignación Básica */}
+                                <View style={{ flex: 1, minWidth: 160 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                    Última Asignación Básica
+                                  </Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.emeraldText, marginTop: 2 }}>
+                                    {formatMoneda(pernoModalEnriquecida.asignacion_basica)}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                    Total Devengado: {formatMoneda(pernoModalEnriquecida.total_devengado || pernoModalEnriquecida.asignacion_basica)}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Novedad de Encargo si existió */}
+                              {(pernoModalEnriquecida.numero_acto_encargo || pernoModalEnriquecida.fecha_acto_encargo || pernoModalEnriquecida.fecha_efectiva_encargo) ? (
+                                <View
+                                  style={{
+                                    backgroundColor: '#FFFBEB',
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: '#FDE68A',
+                                    padding: 10,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                  }}
+                                >
+                                  <Ionicons name="ribbon-outline" size={16} color="#92400E" />
+                                  <Text style={{ fontSize: 11.5, color: '#92400E' }}>
+                                    <Text style={{ fontWeight: '700' }}>Registro Histórico de Encargo: </Text>
+                                    Resolución #{pernoModalEnriquecida.numero_acto_encargo || 'S/N'} del {formatFecha(pernoModalEnriquecida.fecha_acto_encargo) || 'S/F'} (Efectiva: {formatFecha(pernoModalEnriquecida.fecha_efectiva_encargo) || 'S/F'})
+                                  </Text>
+                                </View>
+                              ) : null}
                             </View>
                           </View>
                         )}

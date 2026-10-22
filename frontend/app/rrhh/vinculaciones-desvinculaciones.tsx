@@ -35,6 +35,7 @@ import {
   RegistroSimoOpec,
   EstadoProvisionSimo,
   ESTADOS_PROVISION_SIMO_CONFIG,
+  PlazaVinculadaSimo,
 } from '../../lib/reporteSimoData';
 import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
 import {
@@ -813,7 +814,6 @@ export const CARGO_RESPONSABLE_MAP: Record<string, string> = {
   "vc7_4_definitiva": "Servidor de Carrera",
   "vc7_5_declaratoria": "Secretario(a) Jurídico(a) Distrital (Nominador)",
   "vp1_1": "Profesional Universitario TH",
-  "vp1_3": "Profesional Universitario TH / Administrador SIMO",
   "vp2_1": "Profesional Universitario TH",
   "vp2_2": "Profesional Universitario TH",
   "vp2_3": "Director(a) de Gestión Corporativa",
@@ -1802,8 +1802,8 @@ function generarEtapasParaCasoInterno(
             estado: 'completed',
             tiempoEstimadoDias: 2,
             responsable: 'Profesional Universitario TH',
-            normaGeneral: 'Ley 909 de 2004, Arts. 24 y 25; Decreto 1083 de 2015, Arts. 2.2.5.3.1 y 2.2.5.3.2; Ley 1960 de 2019',
-            plazoLegal: 'Verificación previa y reporte obligatorio en SIMO',
+            normaGeneral: 'Ley 909 de 2004, Arts. 24 y 25; Decreto 1083 de 2015, Arts. 2.2.5.3.1 y 2.2.5.3.2',
+            plazoLegal: 'Verificación previa a la provisión transitoria',
             procedimientoDetallado: 'Constatar las alternativas de provisión por mérito en el Banco Nacional de Listas de Elegibles de la CNSC y expedir constancia suscrita de no existencia de listas aplicables antes de acudir a la provisión transitoria.',
             requisitos: [
               {
@@ -1820,21 +1820,6 @@ function generarEtapasParaCasoInterno(
                   'Captura de pantalla de la consulta por denominación, código y grado en SIMO con fecha y hora.',
                   'Constancia oficial de inexistencia de listas aplicables suscrita por Dirección de Gestión Corporativa.',
                   'Memorando interno de resultados radicado en el sistema de gestión documental.',
-                ],
-              },
-              {
-                id: 'vp1_3',
-                label: 'Reporte previo de vacancia definitiva a la CNSC en SIMO (Ley 1960/2019)',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Ley 1960 de 2019, Art. 1, Parágrafo 2 • Decreto 1083 de 2015, Art. 2.2.6.34 • Circular Externa CNSC 011 de 2021',
-                notaNormativa: 'Las entidades deben informar a la Comisión Nacional del Servicio Civil (CNSC) la existencia de las vacantes definitivas en empleos de carrera administrativa antes de su provisión mediante encargo o nombramiento provisional. El reporte debe realizarse a través del aplicativo SIMO, conforme a los lineamientos y plazos establecidos por la CNSC, con el propósito de garantizar la adecuada administración de la Oferta Pública de Empleos de Carrera (OPEC).',
-                textoNormativo: 'Ley 1960 de 2019, artículo 1, parágrafo 2: «Previo a proveer vacantes definitivas mediante encargo o nombramiento provisional, el nominador o en quien este haya delegado, informará la existencia de la vacante a la Comisión Nacional del Servicio Civil a través del medio que esta indique».\n\nCircular Externa 011 de 2021 de la CNSC: Establece que las entidades deben reportar las vacantes definitivas de empleos de carrera administrativa en el aplicativo SIMO dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad, de acuerdo con las instrucciones y el procedimiento definidos por la Comisión.',
-                detalleProcedimiento: 'Reportar en SIMO la vacante definitiva del empleo de carrera administrativa antes de efectuar su provisión transitoria, dentro del plazo establecido por la CNSC. Verificar que la información registrada en la OPEC esté completa y actualizada, y conservar la evidencia del reporte, incluyendo el registro de la vacante y los soportes que permitan acreditar el cumplimiento de esta obligación.',
-                posiblesEvidencias: [
-                  'Comprobante electrónico de reporte de vacante definitiva emitido por SIMO.',
-                  'Captura de pantalla del módulo OPEC institucional con la novedad registrada.',
-                  'Acuse de cargue ante la CNSC dentro de los 5 días hábiles siguientes a la novedad.',
                 ],
               },
             ],
@@ -4249,8 +4234,15 @@ export const esTerminadoDefault2026 = (id: string, tipo: string): boolean => {
 const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => {
   const esAsc = c.modalidad === 'ASCENSO';
   const subtipo = esAsc ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined);
+  let opecPlaza = (c as any).concurso_opec;
+  if (!opecPlaza && c.id_plaza) {
+    const pl = (mockPlazasData as any[]).find((p) => p.id_plaza === c.id_plaza);
+    if (pl?.opec) opecPlaza = String(pl.opec);
+  }
   return {
     ...c,
+    concurso_opec: opecPlaza,
+    concurso_convocatoria: (c as any).concurso_convocatoria || 'Convocatoria Distrito Capital 6 - CNSC',
     subtipo_concurso: subtipo,
     etapas: generarEtapasParaCasoConEstado(
       c.tipo_proceso,
@@ -4781,8 +4773,12 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [filtroEstadoSimo, setFiltroEstadoSimo] = useState<'TODOS' | EstadoProvisionSimo>('TODOS');
   const [registroSimoSeleccionado, setRegistroSimoSeleccionado] = useState<RegistroSimoOpec | null>(null);
   const [modalDetalleSimoVisible, setModalDetalleSimoVisible] = useState(false);
+  const [modalDetalleSimoTab, setModalDetalleSimoTab] = useState<'general' | 'perfil' | 'funciones' | 'perno'>('general');
   const [modalEstadoSimoVisible, setModalEstadoSimoVisible] = useState(false);
   const [nuevoEstadoSimoValor, setNuevoEstadoSimoValor] = useState<EstadoProvisionSimo>('Disponible');
+  const [modalVincularPlazaSimoVisible, setModalVincularPlazaSimoVisible] = useState(false);
+  const [registroSimoParaVincular, setRegistroSimoParaVincular] = useState<RegistroSimoOpec | null>(null);
+  const [busquedaPlazaParaVincular, setBusquedaPlazaParaVincular] = useState('');
 
   // Estados para modal de gestión de OPEC
   const [modalGestionOpecVisible, setModalGestionOpecVisible] = useState(false);
@@ -4903,9 +4899,15 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         const subtipo = c.subtipo_concurso || (c.modalidad === 'ASCENSO' ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined));
         const conv = c.concurso_convocatoria
           ? c.concurso_convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6')
-          : c.concurso_convocatoria;
+          : 'Convocatoria Distrito Capital 6 - CNSC';
+        let opecPlaza = c.concurso_opec;
+        if (!opecPlaza && c.id_plaza) {
+          const pl = (mockPlazasData as any[]).find((p) => p.id_plaza === c.id_plaza);
+          if (pl?.opec) opecPlaza = String(pl.opec);
+        }
         return {
           ...c,
+          concurso_opec: opecPlaza,
           concurso_convocatoria: conv,
           subtipo_concurso: subtipo,
           etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad, subtipo),
@@ -5391,36 +5393,302 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     );
   };
 
-  const handleIniciarVinculacionDesdeSimo = (r: RegistroSimoOpec) => {
-    setNuevoTipoProceso('VINCULACION');
-    const esAsc = r.esAscenso || r.vacanteAscenso;
-    setNuevaModalidad(esAsc ? 'ASCENSO' : 'CARRERA_ADMINISTRATIVA');
-    setSubtipoConcursoInput(esAsc ? 'ASCENSO' : 'ABIERTO');
-    setOpecInput(r.opec);
-    setConvocatoriaInput('Convocatoria Distrito Capital 6 - CNSC (SIMO 4.0)');
-    setCargoInput(r.denominacion);
-    setDependenciaInput(r.dependencia);
-    setNombreInput('');
-    setCedulaInput('');
+  const handleAbrirModalVincularPlaza = (r: RegistroSimoOpec) => {
+    setRegistroSimoParaVincular(r);
+    setBusquedaPlazaParaVincular('');
+    setModalVincularPlazaSimoVisible(true);
+  };
+
+  const handleAsignarPlazaAVacanteSimo = (r: RegistroSimoOpec, plaza: PlazaNomina) => {
+    const titularUpper = String(plaza.titular_nombre || '').toUpperCase();
+    const situacionUpper = String(plaza.situacion_administrativa || '').toUpperCase();
+    const esVacDef = titularUpper.includes('VACANTE') || situacionUpper.includes('VACANCIA') || situacionUpper.includes('DEFINITIVA');
+
+    const plazaVinculadaData: PlazaVinculadaSimo = {
+      idPlaza: plaza.id_plaza,
+      denominacion: plaza.cargo,
+      codigo: String(plaza.codigo || '---'),
+      grado: String(plaza.grado || '---'),
+      dependencia: plaza.dependencia_cargo,
+      titular: plaza.titular_nombre || 'VACANTE DEFINITIVA',
+      situacion: plaza.situacion_administrativa || (esVacDef ? 'VACANCIA DEFINITIVA' : 'OCUPADO'),
+      encargo: plaza.es_encargo ? (plaza.encargo_nombre || null) : null,
+      tipoVinculacion: plaza.tipo_vinculacion || 'CARRERA ADMINISTRATIVA',
+      asignacionBasica: String(plaza.asignacion_basica || '$0'),
+      esVacanteDefinitiva: esVacDef,
+    };
+
+    const actualizados = registrosSimo.map((item) =>
+      item.id === r.id
+        ? {
+            ...item,
+            idPlazaVinculada: plaza.id_plaza,
+            plazaVinculada: plazaVinculadaData,
+          }
+        : item
+    );
+
+    setRegistrosSimo(actualizados);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem('rrhh_reportes_simo_4_0_v1', JSON.stringify(actualizados));
+      } catch (e) {
+        console.warn('Error guardando rrhh_reportes_simo_4_0_v1', e);
+      }
+    }
+
+    if (registroSimoSeleccionado && registroSimoSeleccionado.id === r.id) {
+      setRegistroSimoSeleccionado({
+        ...registroSimoSeleccionado,
+        idPlazaVinculada: plaza.id_plaza,
+        plazaVinculada: plazaVinculadaData,
+      });
+    }
+
+    setModalVincularPlazaSimoVisible(false);
+    setRegistroSimoParaVincular(null);
+    mostrarModal(
+      'Cargo en Planta Vinculado',
+      `La vacante OPEC #${r.opec} (${r.denominacion}) ha sido vinculada al cargo ${plaza.cargo} (Plaza #${plaza.id_plaza} - ${plaza.dependencia_cargo}).`,
+      'success'
+    );
+  };
+
+  const handleDesvincularPlazaDeVacanteSimo = (r: RegistroSimoOpec) => {
+    const actualizados = registrosSimo.map((item) =>
+      item.id === r.id
+        ? {
+            ...item,
+            idPlazaVinculada: undefined,
+            plazaVinculada: undefined,
+          }
+        : item
+    );
+
+    setRegistrosSimo(actualizados);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem('rrhh_reportes_simo_4_0_v1', JSON.stringify(actualizados));
+      } catch (e) {
+        console.warn('Error guardando rrhh_reportes_simo_4_0_v1', e);
+      }
+    }
+
+    if (registroSimoSeleccionado && registroSimoSeleccionado.id === r.id) {
+      setRegistroSimoSeleccionado({
+        ...registroSimoSeleccionado,
+        idPlazaVinculada: undefined,
+        plazaVinculada: undefined,
+      });
+    }
+
+    setModalVincularPlazaSimoVisible(false);
+    setRegistroSimoParaVincular(null);
+    mostrarModal(
+      'Vinculación Retirada',
+      `Se ha retirado la vinculación de plaza de la vacante OPEC #${r.opec}.`,
+      'info'
+    );
+  };
+
+  const plazasCandidatasParaVincular = useMemo(() => {
+    if (!registroSimoParaVincular) return [];
+    const todasLasPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    const q = busquedaPlazaParaVincular.toLowerCase().trim();
+    const denom = (registroSimoParaVincular.denominacion || '').toLowerCase().trim();
+    const cod = String(registroSimoParaVincular.codigo || '').trim();
+    const gr = String(registroSimoParaVincular.grado || '').trim();
+
+    return todasLasPlazas
+      .filter((p) => {
+        if (q) {
+          const txt = `${p.id_plaza} ${p.cargo} ${p.codigo || ''} ${p.grado || ''} ${p.dependencia_cargo} ${p.titular_nombre || ''} ${p.situacion_administrativa || ''}`.toLowerCase();
+          return txt.includes(q);
+        }
+        const titularUpper = String(p.titular_nombre || '').toUpperCase();
+        const esVacDef = titularUpper.includes('VACANTE') || String(p.situacion_administrativa || '').toUpperCase().includes('VACANCIA');
+        const pCargo = (p.cargo || '').toLowerCase().trim();
+        const coincideCargo = pCargo === denom || pCargo.includes(denom) || denom.includes(pCargo);
+        const coincideCod = cod && String(p.codigo || '').trim() === cod;
+        const coincideGrado = gr && String(p.grado || '').trim() === gr;
+
+        return coincideCargo || (coincideCod && coincideGrado) || esVacDef;
+      })
+      .sort((a, b) => {
+        const aCargo = (a.cargo || '').toLowerCase().trim() === denom;
+        const bCargo = (b.cargo || '').toLowerCase().trim() === denom;
+        if (aCargo && !bCargo) return -1;
+        if (!aCargo && bCargo) return 1;
+
+        const aVacDef = String(a.titular_nombre || '').toUpperCase().includes('VACANTE');
+        const bVacDef = String(b.titular_nombre || '').toUpperCase().includes('VACANTE');
+        if (aVacDef && !bVacDef) return -1;
+        if (!aVacDef && bVacDef) return 1;
+
+        return a.id_plaza - b.id_plaza;
+      });
+  }, [registroSimoParaVincular, busquedaPlazaParaVincular]);
+
+  const obtenerTitularGeneradorVacante = (r: RegistroSimoOpec): PersonaPerno | null => {
+    if (!r) return null;
+    const todasLasPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    const todoElPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
+
+    let plaza: PlazaNomina | undefined;
     if (r.idPlazaVinculada) {
-      setPlazaSeleccionadaId(r.idPlazaVinculada);
-    } else {
-      setPlazaSeleccionadaId(null);
+      plaza = todasLasPlazas.find((p) => p.id_plaza === r.idPlazaVinculada);
     }
-    if (r.estadoProvision === 'Provisto - Uso de Listas: ME') {
-      setMecanismoMeritoInput('MOVILIDAD_MISMO_EMPLEO');
-    } else if (r.estadoProvision === 'Provisto - Uso de Listas: EE') {
-      setMecanismoMeritoInput('MOVILIDAD_EMPLEO_EQUIVALENTE');
-    } else {
-      setMecanismoMeritoInput('LISTA_DIRECTA_OPEC');
+    if (!plaza && r.plazaVinculada?.idPlaza) {
+      plaza = todasLasPlazas.find((p) => p.id_plaza === r.plazaVinculada?.idPlaza);
     }
-    setModalModoEntrada('MANUAL');
-    setModalRegistroVisible(true);
+    if (!plaza) {
+      const denom = (r.denominacion || '').toLowerCase().trim();
+      const cod = String(r.codigo || '').trim();
+      const gr = String(r.grado || '').trim();
+      plaza = todasLasPlazas.find((p) => {
+        const cCargo = (p.cargo || '').toLowerCase().trim() === denom;
+        const cCod = String(p.codigo || '').trim() === cod;
+        const cGr = String(p.grado || '').trim() === gr;
+        return cCargo && cCod && cGr;
+      });
+    }
+
+    if (!plaza || !plaza.id_perno) return null;
+
+    const idPerno = Number(plaza.id_perno);
+    const registrosPerno = todoElPerno.filter(
+      (p) => Number(p.posicion_planta) === idPerno
+    );
+
+    const retirados = registrosPerno
+      .filter((p) => p.fecha_retiro || p.estado_funcionario === 'R')
+      .sort((a, b) => {
+        const timeA = a.fecha_retiro ? new Date(a.fecha_retiro).getTime() : 0;
+        const timeB = b.fecha_retiro ? new Date(b.fecha_retiro).getTime() : 0;
+        return timeB - timeA;
+      });
+
+    return retirados.length > 0 ? retirados[0] : null;
+  };
+
+  const handleAbrirFichaSimo = (r: RegistroSimoOpec) => {
+    setRegistroSimoSeleccionado(r);
+    setModalDetalleSimoTab('general');
+    setModalDetalleSimoVisible(true);
+  };
+
+  const infoPernoVacanteSimo = useMemo(() => {
+    if (!registroSimoSeleccionado) return null;
+
+    const todasLasPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    const todoElPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
+
+    let plaza: PlazaNomina | undefined;
+    if (registroSimoSeleccionado.idPlazaVinculada) {
+      plaza = todasLasPlazas.find((p) => p.id_plaza === registroSimoSeleccionado.idPlazaVinculada);
+    }
+    if (!plaza && registroSimoSeleccionado.plazaVinculada?.idPlaza) {
+      plaza = todasLasPlazas.find((p) => p.id_plaza === registroSimoSeleccionado.plazaVinculada?.idPlaza);
+    }
+    if (!plaza) {
+      const denom = (registroSimoSeleccionado.denominacion || '').toLowerCase().trim();
+      const cod = String(registroSimoSeleccionado.codigo || '').trim();
+      const gr = String(registroSimoSeleccionado.grado || '').trim();
+      plaza = todasLasPlazas.find((p) => {
+        const cCargo = (p.cargo || '').toLowerCase().trim() === denom;
+        const cCod = String(p.codigo || '').trim() === cod;
+        const cGr = String(p.grado || '').trim() === gr;
+        return cCargo && cCod && cGr;
+      });
+    }
+
+    if (!plaza || !plaza.id_perno) {
+      return {
+        plaza,
+        idPerno: plaza?.id_perno || null,
+        titularGeneradorVacante: null,
+        historialPerno: [],
+      };
+    }
+
+    const idPerno = Number(plaza.id_perno);
+    const registrosPerno = todoElPerno.filter(
+      (p) => Number(p.posicion_planta) === idPerno
+    );
+
+    // Ordenar de más reciente a más antiguo por fecha_retiro
+    const historialOrdenado = [...registrosPerno].sort((a, b) => {
+      const timeA = a.fecha_retiro ? new Date(a.fecha_retiro).getTime() : 0;
+      const timeB = b.fecha_retiro ? new Date(b.fecha_retiro).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      const nombA = a.fecha_efectiva_nombramiento ? new Date(a.fecha_efectiva_nombramiento).getTime() : 0;
+      const nombB = b.fecha_efectiva_nombramiento ? new Date(b.fecha_efectiva_nombramiento).getTime() : 0;
+      return nombB - nombA;
+    });
+
+    // El titular que generó la vacante definitiva es el que tiene la fecha de retiro más reciente
+    const retirados = historialOrdenado.filter((p) => p.fecha_retiro || p.estado_funcionario === 'R');
+    const titularGeneradorVacante = retirados.length > 0 ? retirados[0] : (historialOrdenado[0] || null);
+
+    return {
+      plaza,
+      idPerno,
+      titularGeneradorVacante,
+      historialPerno: historialOrdenado,
+    };
+  }, [registroSimoSeleccionado]);
+
+  const funcionesSimoDesglosadas = useMemo(() => {
+    if (!registroSimoSeleccionado) return [];
+    const texto =
+      registroSimoSeleccionado.funciones ||
+      (infoPernoVacanteSimo?.plaza?.funciones
+        ? Array.isArray(infoPernoVacanteSimo.plaza.funciones)
+          ? infoPernoVacanteSimo.plaza.funciones.join('\n')
+          : String(infoPernoVacanteSimo.plaza.funciones)
+        : '');
+    if (!texto || !texto.trim()) {
+      return [
+        '1. Asesorar y ejecutar las actividades técnicas, jurídicas y operativas del empleo conforme a la misión institucional de la Secretaría Jurídica Distrital.',
+        '2. Desarrollar y verificar actos administrativos, conceptos técnicos y documentos de gestión asignados.',
+        '3. Atender oportunamente las solicitudes, peticiones y requerimientos de entes de control y ciudadanía.',
+        '4. Apoyar la implementación del Sistema Integrado de Gestión y el cumplimiento de las metas del plan de acción.',
+        '5. Desempeñar las demás funciones asignadas conforme a la naturaleza y nivel del empleo.',
+      ];
+    }
+    const partes = texto
+      .split(/(?=(?:^|\n|[\.\s])\d+[\.\)]\s*[A-ZÁÉÍÓÚÑ])/g)
+      .map((p) => p.replace(/^[\s\.\,\;\-]+/, '').trim())
+      .filter((p) => p.length > 5);
+    if (partes.length > 1) {
+      return partes.map((f, i) => {
+        const clean = f.replace(/^\d+[\.\)]\s*/, '').trim();
+        return `${i + 1}. ${clean}`;
+      });
+    }
+    const lineas = texto.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (lineas.length > 1) {
+      return lineas.map((f, i) => {
+        const clean = f.replace(/^\d+[\.\)]\s*/, '').trim();
+        return `${i + 1}. ${clean}`;
+      });
+    }
+    return [texto];
+  }, [registroSimoSeleccionado, infoPernoVacanteSimo]);
+
+  const handleIniciarVinculacionDesdeSimo = (r: RegistroSimoOpec) => {
+    handleAbrirModalVincularPlaza(r);
   };
 
   const handleVerEnDesvinculaciones = (r: RegistroSimoOpec) => {
+    const titular = obtenerTitularGeneradorVacante(r);
+    if (!titular) {
+      // Si no existe, no debería llevar a ningún lado
+      return;
+    }
     setTabActiva('desvinculaciones');
-    setBusquedaDesvinculaciones(r.denominacion);
+    setFiltroEstadoDesvinculacion('TODOS');
+    setBusquedaDesvinculaciones(titular.nombre_completo || titular.cedula);
   };
 
   const handleExportarSimoCsv = () => {
@@ -5489,8 +5757,21 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   };
 
   const casosConcursoElegibles = useMemo(() => {
-    return casos.filter((c) => c.modalidad === 'CARRERA_ADMINISTRATIVA' || !!c.concurso_opec);
-  }, [casos]);
+    return casos
+      .filter((c) => c.tipo_proceso === 'VINCULACION' && (c.modalidad === 'CARRERA_ADMINISTRATIVA' || c.modalidad === 'ASCENSO' || !!c.concurso_opec))
+      .map((c) => {
+        let opec = c.concurso_opec;
+        if (!opec && c.id_plaza) {
+          const pl = (mockPlazasData as unknown as PlazaNomina[]).find((p) => p.id_plaza === c.id_plaza);
+          const custom = opecPersonalizadasPlazas[c.id_plaza];
+          opec = custom?.opec || (pl?.opec ? String(pl.opec) : undefined);
+        }
+        return {
+          ...c,
+          concurso_opec: opec || c.concurso_opec,
+        };
+      });
+  }, [casos, opecPersonalizadasPlazas]);
 
   const handleGuardarOpecPlaza = () => {
     if (!plazaOpecSeleccionada) return;
@@ -9599,7 +9880,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         {/* CABECERA SUPERIOR DINÁMICA: GENERAL (ARRIBA) / FUNCIONARIO (SCROLL) */}
         {/* ============================================================== */}
         {(() => {
-          const esScrolleadoCaso = Boolean(casoActivo && scrollYPrincipal > 320);
+          const esScrolleadoCaso = Boolean(
+            casoActivo &&
+            (tabActiva === 'ingresos' || tabActiva === 'desvinculaciones') &&
+            scrollYPrincipal > 320
+          );
           const infoModalidadCasoActivo = casoActivo ? obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso) : null;
           const inicialesCasoActivo = casoActivo
             ? casoActivo.servidor_nombre
@@ -15211,7 +15496,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                        Postulado/a: <Text style={{ fontWeight: '700', color: '#0F172A' }}>{casoActivo.servidor_nombre}</Text> (C.C. {casoActivo.servidor_cedula}) • Cargo: <Text style={{ fontWeight: '700', color: '#0F172A' }}>{casoActivo.cargo}</Text>
                                                      </Text>
                                                      <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                                                       Certificación que acredita que no existen listas de elegibles vigentes ni personal con derecho de encargo preferente (Arts. 24 y 25 Ley 909 de 2004).
+                                                       Certificación que acredita la inexistencia de listas de elegibles vigentes y aplicables en el Banco Nacional de Listas de Elegibles (SIMO / BNLE) de la CNSC (Decreto 1083 de 2015, Art. 2.2.5.3.1).
                                                      </Text>
                                                    </View>
                                                  </View>
@@ -16240,7 +16525,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         flexDirection: 'column',
                       }}
                     >
-                      <View style={{ width: '100%', minWidth: 1380 }}>
+                      <View style={{ width: '100%', minWidth: 1520 }}>
                         {/* Cabecera de Tabla */}
                         <View
                           style={{
@@ -16252,37 +16537,42 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             width: '100%',
                           }}
                         >
-                          <View style={{ width: '10%', minWidth: 100, paddingRight: 6 }}>
+                          <View style={{ width: '8%', minWidth: 95, paddingRight: 6 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
                               OPEC / ID
                             </Text>
                           </View>
-                          <View style={{ width: '19%', minWidth: 190, paddingRight: 8 }}>
+                          <View style={{ width: '16%', minWidth: 175, paddingRight: 8 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
                               Empleo, Código & Grado
                             </Text>
                           </View>
-                          <View style={{ width: '15%', minWidth: 150, paddingRight: 8 }}>
+                          <View style={{ width: '13%', minWidth: 140, paddingRight: 8 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
                               Dependencia
                             </Text>
                           </View>
-                          <View style={{ width: '19%', minWidth: 190, paddingRight: 8 }}>
+                          <View style={{ width: '15%', minWidth: 165, paddingRight: 8 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-                              🏛️ Plaza Vinculada (Planta)
+                              🏛️ Plaza Vinculada
                             </Text>
                           </View>
-                          <View style={{ width: '11%', minWidth: 110, paddingRight: 6 }}>
+                          <View style={{ width: '18%', minWidth: 200, paddingRight: 8 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              👤 Generó Vacante (PERNO)
+                            </Text>
+                          </View>
+                          <View style={{ width: '10%', minWidth: 105, paddingRight: 6 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
                               Asignación Básica
                             </Text>
                           </View>
-                          <View style={{ width: '14%', minWidth: 140, paddingRight: 6 }}>
+                          <View style={{ width: '11%', minWidth: 125, paddingRight: 6 }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-                              Estado Provisión SIMO
+                              Estado Provisión
                             </Text>
                           </View>
-                          <View style={{ width: '12%', minWidth: 135, alignItems: 'center' }}>
+                          <View style={{ width: '9%', minWidth: 110, alignItems: 'center' }}>
                             <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
                               Acciones
                             </Text>
@@ -16299,6 +16589,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         ) : (
                           registrosSimoFiltrados.map((r, idx) => {
+                            const titularGenerador = obtenerTitularGeneradorVacante(r);
                             const cfg = ESTADOS_PROVISION_SIMO_CONFIG[r.estadoProvision] || {
                               label: r.estadoProvision,
                               descripcion: '',
@@ -16310,21 +16601,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             };
 
                             return (
-                              <View
+                              <Pressable
                                 key={`simo-row-${r.id}-${r.opec}-${idx}`}
-                                style={{
+                                onPress={() => handleAbrirFichaSimo(r)}
+                                style={({ pressed }) => ({
                                   flexDirection: 'row',
                                   paddingVertical: 12,
                                   paddingHorizontal: 16,
                                   alignItems: 'center',
-                                  backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                                  backgroundColor: pressed ? '#F0F9FF' : (idx % 2 === 0 ? THEME.white : THEME.slate50),
                                   borderBottomWidth: 1,
                                   borderBottomColor: THEME.slate100,
                                   width: '100%',
-                                }}
+                                  cursor: 'pointer',
+                                })}
                               >
                                 {/* OPEC / ID */}
-                                <View style={{ width: '10%', minWidth: 100, paddingRight: 6 }}>
+                                <View style={{ width: '8%', minWidth: 95, paddingRight: 6 }}>
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                                     <Ionicons name="ribbon-outline" size={13} color={THEME.marca700} />
                                     <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca800 }}>
@@ -16348,7 +16641,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
 
                                 {/* Cargo, Código y Grado */}
-                                <View style={{ width: '19%', minWidth: 190, paddingRight: 8 }}>
+                                <View style={{ width: '16%', minWidth: 175, paddingRight: 8 }}>
                                   <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }} numberOfLines={2}>
                                     {r.denominacion}
                                   </Text>
@@ -16367,7 +16660,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
 
                                 {/* Dependencia */}
-                                <View style={{ width: '15%', minWidth: 150, paddingRight: 8 }}>
+                                <View style={{ width: '13%', minWidth: 140, paddingRight: 8 }}>
                                   <Text style={{ fontSize: 11.5, color: THEME.slate700, fontWeight: '500' }} numberOfLines={2}>
                                     {r.dependencia}
                                   </Text>
@@ -16377,7 +16670,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
 
                                 {/* Plaza Vinculada (Planta) */}
-                                <View style={{ width: '19%', minWidth: 190, paddingRight: 8 }}>
+                                <View style={{ width: '15%', minWidth: 165, paddingRight: 8 }}>
                                   {r.plazaVinculada ? (
                                     <View style={{ gap: 2 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
@@ -16389,7 +16682,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         {r.plazaVinculada.esVacanteDefinitiva ? (
                                           <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}>
                                             <Text style={{ fontSize: 9, fontWeight: '800', color: '#92400E' }}>
-                                              VACANTE DEFINITIVA
+                                              VACANTE DEF.
                                             </Text>
                                           </View>
                                         ) : (
@@ -16417,8 +16710,50 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   )}
                                 </View>
 
+                                {/* Generó Vacante Definitiva (PERNO) - NUEVA COLUMNA */}
+                                <View style={{ width: '18%', minWidth: 200, paddingRight: 8 }}>
+                                  {titularGenerador ? (
+                                    <View style={{ gap: 2 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <Ionicons name="person" size={12} color="#991B1B" />
+                                        <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>
+                                          {titularGenerador.nombre_completo}
+                                        </Text>
+                                      </View>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                        <Text style={{ fontSize: 10, color: THEME.slate500, fontWeight: '600' }}>
+                                          C.C. {titularGenerador.cedula}
+                                        </Text>
+                                        {titularGenerador.fecha_retiro ? (
+                                          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                                            <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#991B1B' }}>
+                                              📅 Retiro: {titularGenerador.fecha_retiro}
+                                            </Text>
+                                          </View>
+                                        ) : (
+                                          <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#166534' }}>
+                                              {titularGenerador.estado_descripcion || 'Activo'}
+                                            </Text>
+                                          </View>
+                                        )}
+                                      </View>
+                                      <Text style={{ fontSize: 9.5, color: THEME.slate500 }} numberOfLines={1}>
+                                        {titularGenerador.cargo} (Pos. #{titularGenerador.posicion_planta})
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                      <Ionicons name="remove-circle-outline" size={13} color={THEME.slate400} />
+                                      <Text style={{ fontSize: 11, color: THEME.slate400, fontStyle: 'italic' }}>
+                                        Sin retiro en nómina
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+
                                 {/* Asignación Básica */}
-                                <View style={{ width: '11%', minWidth: 110, paddingRight: 6 }}>
+                                <View style={{ width: '10%', minWidth: 105, paddingRight: 6 }}>
                                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
                                     {formatMoneda(r.salario)}
                                   </Text>
@@ -16428,9 +16763,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
 
                                 {/* Estado Provisión SIMO 4.0 */}
-                                <View style={{ width: '14%', minWidth: 140, paddingRight: 6 }}>
+                                <View style={{ width: '11%', minWidth: 125, paddingRight: 6 }}>
                                   <Pressable
-                                    onPress={() => {
+                                    onPress={(e) => {
+                                      e?.stopPropagation?.();
                                       setRegistroSimoSeleccionado(r);
                                       setNuevoEstadoSimoValor(r.estadoProvision);
                                       setModalEstadoSimoVisible(true);
@@ -16462,81 +16798,57 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
 
                                 {/* Acciones */}
-                                <View style={{ width: '12%', minWidth: 135, flexDirection: 'row', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <View style={{ width: '9%', minWidth: 110, flexDirection: 'row', gap: 5, justifyContent: 'center', flexWrap: 'wrap' }}>
                                   <Pressable
-                                    onPress={() => {
-                                      setRegistroSimoSeleccionado(r);
-                                      setModalDetalleSimoVisible(true);
+                                    onPress={(e) => {
+                                      e?.stopPropagation?.();
+                                      handleAbrirModalVincularPlaza(r);
                                     }}
                                     style={({ pressed }) => ({
-                                      paddingVertical: 4,
-                                      paddingHorizontal: 6,
-                                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
-                                      borderRadius: 5,
-                                      borderWidth: 1,
-                                      borderColor: THEME.slate300,
+                                      paddingVertical: 4.5,
+                                      paddingHorizontal: 8,
+                                      backgroundColor: r.plazaVinculada ? (pressed ? '#15803D' : '#16A34A') : (pressed ? 'rgb(4, 75, 55)' : 'rgb(6, 95, 70)'),
+                                      borderRadius: 6,
                                       cursor: 'pointer',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 3,
                                     })}
                                   >
-                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate700 }}>
-                                      👁️ Ficha
-                                    </Text>
-                                  </Pressable>
-
-                                  <Pressable
-                                    onPress={() => {
-                                      setRegistroSimoSeleccionado(r);
-                                      setNuevoEstadoSimoValor(r.estadoProvision);
-                                      setModalEstadoSimoVisible(true);
-                                    }}
-                                    style={({ pressed }) => ({
-                                      paddingVertical: 4,
-                                      paddingHorizontal: 6,
-                                      backgroundColor: pressed ? '#FEF3C7' : '#FFFBEB',
-                                      borderRadius: 5,
-                                      borderWidth: 1,
-                                      borderColor: '#FDE68A',
-                                      cursor: 'pointer',
-                                    })}
-                                  >
-                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#92400E' }}>
-                                      ✏️ Estado
-                                    </Text>
-                                  </Pressable>
-
-                                  <Pressable
-                                    onPress={() => handleIniciarVinculacionDesdeSimo(r)}
-                                    style={({ pressed }) => ({
-                                      paddingVertical: 4,
-                                      paddingHorizontal: 6,
-                                      backgroundColor: pressed ? 'rgb(4, 75, 55)' : 'rgb(6, 95, 70)',
-                                      borderRadius: 5,
-                                      cursor: 'pointer',
-                                    })}
-                                  >
+                                    <Ionicons name="link" size={12} color="#ffffff" />
                                     <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#ffffff' }}>
-                                      ➕ Vincular
+                                      {r.plazaVinculada ? 'Modificar' : 'Vincular'}
                                     </Text>
                                   </Pressable>
 
-                                  <Pressable
-                                    onPress={() => handleVerEnDesvinculaciones(r)}
-                                    style={({ pressed }) => ({
-                                      paddingVertical: 4,
-                                      paddingHorizontal: 6,
-                                      backgroundColor: pressed ? '#FFE4E6' : '#FFF1F2',
-                                      borderRadius: 5,
-                                      borderWidth: 1,
-                                      borderColor: '#FECDD3',
-                                      cursor: 'pointer',
-                                    })}
-                                  >
-                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#BE123C' }}>
-                                      🚪 Retiros
-                                    </Text>
-                                  </Pressable>
+                                  {/* Acción Retiros: solo se muestra si existe titular generador de vacante definitiva */}
+                                  {titularGenerador ? (
+                                    <Pressable
+                                      onPress={(e) => {
+                                        e?.stopPropagation?.();
+                                        handleVerEnDesvinculaciones(r);
+                                      }}
+                                      style={({ pressed }) => ({
+                                        paddingVertical: 4.5,
+                                        paddingHorizontal: 8,
+                                        backgroundColor: pressed ? '#FFE4E6' : '#FFF1F2',
+                                        borderRadius: 6,
+                                        borderWidth: 1,
+                                        borderColor: '#FECDD3',
+                                        cursor: 'pointer',
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 3,
+                                      })}
+                                    >
+                                      <Ionicons name="exit-outline" size={12} color="#BE123C" />
+                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#BE123C' }}>
+                                        Retiros
+                                      </Text>
+                                    </Pressable>
+                                  ) : null}
                                 </View>
-                              </View>
+                              </Pressable>
                             );
                           })
                         )}
@@ -16717,7 +17029,31 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               ) : null}
                             </View>
 
-                            <View style={{ justifyContent: 'center', alignItems: isDesktop ? 'flex-end' : 'flex-start' }}>
+                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: isDesktop ? 'flex-end' : 'flex-start' }}>
+                              <Pressable
+                                onPress={() => {
+                                  setTabActiva('ingresos');
+                                  setCasoSeleccionadoId(caso.id);
+                                }}
+                                style={({ pressed }) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                                  borderWidth: 1,
+                                  borderColor: THEME.slate300,
+                                  paddingVertical: 7,
+                                  paddingHorizontal: 12,
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                })}
+                              >
+                                <Ionicons name="folder-open-outline" size={14} color={THEME.slate700} />
+                                <Text style={{ color: THEME.slate800, fontSize: 12, fontWeight: '700' }}>
+                                  Ver en Vinculaciones
+                                </Text>
+                              </Pressable>
+
                               <Pressable
                                 onPress={() => {
                                   setCasoTerminosSeleccionado(caso);
@@ -16735,6 +17071,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   paddingVertical: 7,
                                   paddingHorizontal: 12,
                                   borderRadius: 6,
+                                  cursor: 'pointer',
                                 })}
                               >
                                 <Ionicons name="options-outline" size={15} color={THEME.white} />
@@ -24103,7 +24440,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       </Modal>
 
       {/* =================================================================== */}
-      {/* MODAL FICHA TÉCNICA SIMO 4.0 CNSC                                   */}
+      {/* MODAL FICHA TÉCNICA SIMO 4.0 CNSC (DISEÑO PROFESIONAL POR PESTAÑAS) */}
       {/* =================================================================== */}
       <Modal
         visible={modalDetalleSimoVisible}
@@ -24111,247 +24448,1088 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         animationType="fade"
         onRequestClose={() => setModalDetalleSimoVisible(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 860, maxHeight: '90%', padding: 22, gap: 16 }}>
-            {/* Header del Modal */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ backgroundColor: '#FEF3C7', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
-                  <Ionicons name="ribbon" size={20} color="#92400E" />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 17, fontWeight: '800', color: THEME.slate900 }}>
-                    Ficha Técnica SIMO 4.0 • OPEC #{registroSimoSeleccionado?.opec}
-                  </Text>
-                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
-                    Comisión Nacional del Servicio Civil (CNSC) • Secretaría Jurídica Distrital
-                  </Text>
-                </View>
-              </View>
-              <Pressable onPress={() => setModalDetalleSimoVisible(false)} style={{ padding: 4, cursor: 'pointer' }}>
-                <Ionicons name="close" size={22} color={THEME.slate500} />
-              </Pressable>
-            </View>
-
-            {registroSimoSeleccionado && (
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 14 }}>
-                {/* Identificación y Estado */}
-                <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                    <View>
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
-                        {registroSimoSeleccionado.denominacion}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: THEME.slate600, marginTop: 2 }}>
-                        Código {registroSimoSeleccionado.codigo} • Grado {registroSimoSeleccionado.grado} • Nivel {registroSimoSeleccionado.nivel}
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.7)', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <View
+            style={{
+              backgroundColor: THEME.white,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: THEME.slate200,
+              width: '100%',
+              maxWidth: 940,
+              maxHeight: '92%',
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            {/* Header Institucional Azul Marino (Estilo Ficha Técnica Plaza) */}
+            <View
+              style={{
+                backgroundColor: THEME.marca900,
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1, gap: 5 }}>
+                {/* Badges superiores */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>
+                      OPEC #{registroSimoSeleccionado?.opec}
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.white }}>
+                      Cód. {registroSimoSeleccionado?.codigo} - Grado {registroSimoSeleccionado?.grado}
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.white }}>
+                      Nivel {registroSimoSeleccionado?.nivel}
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: registroSimoSeleccionado?.esAscenso ? 'rgba(217, 119, 6, 0.35)' : 'rgba(37, 99, 235, 0.35)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.white }}>
+                      {registroSimoSeleccionado?.esAscenso ? 'Modalidad Ascenso' : 'Ingreso Abierto'}
+                    </Text>
+                  </View>
+                  {infoPernoVacanteSimo?.plaza && (
+                    <View style={{ backgroundColor: '#14532D', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#86EFAC' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#DCFCE7' }}>
+                        Plaza #{infoPernoVacanteSimo.plaza.id_plaza} en Planta
                       </Text>
                     </View>
-                    {/* Badge Estado */}
+                  )}
+                  {registroSimoSeleccionado?.plazaVinculada?.esVacanteDefinitiva && (
+                    <View style={{ backgroundColor: '#B91C1C', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>
+                        ⭐ Vacante Definitiva
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Denominación Principal */}
+                <Text style={{ color: THEME.white, fontSize: 17, fontWeight: '800' }}>
+                  {registroSimoSeleccionado?.denominacion}
+                </Text>
+
+                {/* Dependencia & Asignación Básica */}
+                <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11.5, fontWeight: '500' }}>
+                  {registroSimoSeleccionado?.dependencia} • Salario: {formatMoneda(registroSimoSeleccionado?.salario)} (Vig. {registroSimoSeleccionado?.vigenciaSalarial})
+                </Text>
+              </View>
+
+              {/* Botones de acción del header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <BotonManualFunciones
+                  cargo={registroSimoSeleccionado?.denominacion}
+                  codigo={registroSimoSeleccionado?.codigo}
+                  grado={registroSimoSeleccionado?.grado}
+                  variante="header"
+                  etiqueta="Manual Funciones (PDF)"
+                />
+                <Pressable
+                  onPress={() => setModalDetalleSimoVisible(false)}
+                  style={({ pressed }) => ({
+                    padding: 6,
+                    borderRadius: 6,
+                    backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    cursor: 'pointer',
+                  })}
+                >
+                  <Ionicons name="close" size={20} color={THEME.white} />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Selector de Pestañas Horizontal */}
+            <View
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: THEME.slate200,
+                backgroundColor: THEME.slate50,
+              }}
+            >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  gap: 6,
+                }}
+              >
+                {/* Tab 1: General & Planta */}
+                <Pressable
+                  onPress={() => setModalDetalleSimoTab('general')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 10,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalDetalleSimoTab === 'general' ? THEME.marca600 : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={16}
+                    color={modalDetalleSimoTab === 'general' ? THEME.marca700 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalDetalleSimoTab === 'general' ? '700' : '500',
+                      color: modalDetalleSimoTab === 'general' ? THEME.marca700 : THEME.slate600,
+                    }}
+                  >
+                    General & Planta
+                  </Text>
+                </Pressable>
+
+                {/* Tab 2: Propósito & Perfil */}
+                <Pressable
+                  onPress={() => setModalDetalleSimoTab('perfil')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 10,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalDetalleSimoTab === 'perfil' ? THEME.marca600 : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Ionicons
+                    name="locate-outline"
+                    size={16}
+                    color={modalDetalleSimoTab === 'perfil' ? THEME.marca700 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalDetalleSimoTab === 'perfil' ? '700' : '500',
+                      color: modalDetalleSimoTab === 'perfil' ? THEME.marca700 : THEME.slate600,
+                    }}
+                  >
+                    Propósito & Perfil
+                  </Text>
+                </Pressable>
+
+                {/* Tab 3: Manual de Funciones */}
+                <Pressable
+                  onPress={() => setModalDetalleSimoTab('funciones')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 10,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalDetalleSimoTab === 'funciones' ? THEME.marca600 : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={16}
+                    color={modalDetalleSimoTab === 'funciones' ? THEME.marca700 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalDetalleSimoTab === 'funciones' ? '700' : '500',
+                      color: modalDetalleSimoTab === 'funciones' ? THEME.marca700 : THEME.slate600,
+                    }}
+                  >
+                    Manual de Funciones
+                  </Text>
+                  {funcionesSimoDesglosadas.length > 0 && (
+                    <View
+                      style={{
+                        backgroundColor: modalDetalleSimoTab === 'funciones' ? THEME.marca100 : THEME.slate200,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '700',
+                          color: modalDetalleSimoTab === 'funciones' ? THEME.marca700 : THEME.slate600,
+                        }}
+                      >
+                        {funcionesSimoDesglosadas.length}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+
+                {/* Tab 4: Titular Anterior / PERNO */}
+                <Pressable
+                  onPress={() => setModalDetalleSimoTab('perno')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 10,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalDetalleSimoTab === 'perno' ? THEME.marca600 : 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Ionicons
+                    name="person-remove-outline"
+                    size={16}
+                    color={modalDetalleSimoTab === 'perno' ? '#B91C1C' : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalDetalleSimoTab === 'perno' ? '700' : '500',
+                      color: modalDetalleSimoTab === 'perno' ? '#B91C1C' : THEME.slate600,
+                    }}
+                  >
+                    Titular Anterior (PERNO)
+                  </Text>
+                  {infoPernoVacanteSimo?.titularGeneradorVacante && (
+                    <View
+                      style={{
+                        backgroundColor: modalDetalleSimoTab === 'perno' ? '#FEE2E2' : THEME.slate200,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '700',
+                          color: modalDetalleSimoTab === 'perno' ? '#B91C1C' : THEME.slate600,
+                        }}
+                      >
+                        {infoPernoVacanteSimo.historialPerno.length}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              </ScrollView>
+            </View>
+
+            {/* Contenido según Pestaña Activa */}
+            {registroSimoSeleccionado && (
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 16 }}>
+                {/* ========================================================================= */}
+                {/* PESTAÑA 1: GENERAL & PLANTA                                               */}
+                {/* ========================================================================= */}
+                {modalDetalleSimoTab === 'general' && (
+                  <View style={{ gap: 14 }}>
+                    {/* Tarjeta de Datos Técnicos en SIMO 4.0 */}
+                    <View style={{ backgroundColor: THEME.slate50, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="ribbon" size={17} color={THEME.marca700} />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.marca800, textTransform: 'uppercase' }}>
+                            DATOS DEL REPORTE OFICIAL EN SIMO 4.0 (CNSC)
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: THEME.marca600 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca800 }}>
+                            Convocatoria Distrito Capital 6
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 20, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: THEME.slate200, paddingTop: 10 }}>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>ID Único Entidad</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>#{registroSimoSeleccionado.idUnico}</Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>ID Cargo</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>#{registroSimoSeleccionado.idCargo || '---'}</Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Código & Grado</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>{registroSimoSeleccionado.codigo} - {registroSimoSeleccionado.grado}</Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Nivel Jerárquico</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>{registroSimoSeleccionado.nivel}</Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Modalidad Concurso</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: registroSimoSeleccionado.esAscenso ? '#92400E' : '#1E40AF' }}>
+                            {registroSimoSeleccionado.esAscenso ? 'Ascenso (Concurso Cerrado)' : 'Ingreso Abierto (Mérito General)'}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Asignación Básica</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.emerald800 }}>
+                            {formatMoneda(registroSimoSeleccionado.salario)}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Ubicación Geográfica</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800 }}>
+                            {registroSimoSeleccionado.municipio} ({registroSimoSeleccionado.departamento})
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Estado Oficial de Provisión en SIMO 4.0 */}
                     {(() => {
                       const cfg = ESTADOS_PROVISION_SIMO_CONFIG[registroSimoSeleccionado.estadoProvision];
                       return (
-                        <View style={{ backgroundColor: cfg?.colorBg || '#F1F5F9', borderColor: cfg?.colorBorder || '#CBD5E1', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: cfg?.colorText || '#334155' }}>
+                        <View
+                          style={{
+                            backgroundColor: cfg?.colorBg || '#F1F5F9',
+                            borderColor: cfg?.colorBorder || '#CBD5E1',
+                            borderWidth: 1.5,
+                            borderRadius: 12,
+                            padding: 14,
+                            gap: 6,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="swap-horizontal" size={17} color={cfg?.colorText || THEME.slate700} />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: cfg?.colorText || THEME.slate700, textTransform: 'uppercase' }}>
+                                ESTADO OFICIAL DE PROVISIÓN EN SIMO 4.0
+                              </Text>
+                            </View>
+                            <Pressable
+                              onPress={() => {
+                                setNuevoEstadoSimoValor(registroSimoSeleccionado.estadoProvision);
+                                setModalEstadoSimoVisible(true);
+                              }}
+                              style={{
+                                backgroundColor: THEME.white,
+                                borderWidth: 1,
+                                borderColor: cfg?.colorBorder || '#CBD5E1',
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: cfg?.colorText || THEME.slate800 }}>
+                                ✏️ Cambiar Estado
+                              </Text>
+                            </Pressable>
+                          </View>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: cfg?.colorText || THEME.slate900 }}>
                             {registroSimoSeleccionado.estadoProvision}
                           </Text>
-                          <Text style={{ fontSize: 9.5, color: cfg?.colorText || '#334155', opacity: 0.85 }}>
+                          <Text style={{ fontSize: 12, color: cfg?.colorText || THEME.slate700, lineHeight: 17, opacity: 0.9 }}>
                             {cfg?.descripcion}
                           </Text>
                         </View>
                       );
                     })()}
-                  </View>
 
-                  <View style={{ flexDirection: 'row', gap: 16, borderTopWidth: 1, borderTopColor: THEME.slate200, paddingTop: 10, flexWrap: 'wrap' }}>
-                    <View>
-                      <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>ID Único Entidad</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>#{registroSimoSeleccionado.idUnico}</Text>
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>ID Cargo</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>#{registroSimoSeleccionado.idCargo || '---'}</Text>
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Modalidad Concurso</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: registroSimoSeleccionado.esAscenso ? '#92400E' : '#1E40AF' }}>
-                        {registroSimoSeleccionado.esAscenso ? 'Ascenso' : 'Ingreso Abierto'}
+                    {/* Plaza de Planta Vinculada */}
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        🏛️ Cargo y Plaza en Planta de Personal Vinculada:
                       </Text>
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Asignación Básica</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.emerald800 }}>
-                        {formatMoneda(registroSimoSeleccionado.salario)} (Vig. {registroSimoSeleccionado.vigenciaSalarial})
-                      </Text>
-                    </View>
-                    <View>
-                      <Text style={{ fontSize: 10.5, color: THEME.slate400, textTransform: 'uppercase', fontWeight: '700' }}>Dependencia</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }}>{registroSimoSeleccionado.dependencia}</Text>
-                    </View>
-                  </View>
-                </View>
 
-                {/* Plaza de Planta Vinculada */}
-                {registroSimoSeleccionado.plazaVinculada ? (
-                  <View style={{ backgroundColor: '#F0FDF4', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0', gap: 8 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="business" size={16} color="#166534" />
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>
-                          🏛️ Plaza Vinculada • Plaza #{registroSimoSeleccionado.plazaVinculada.idPlaza}
-                        </Text>
-                      </View>
-                      <View style={{ backgroundColor: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#FEF3C7' : '#E0F2FE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#FDE68A' : '#BAE6FD' }}>
-                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#92400E' : '#0369A1' }}>
-                          {registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : registroSimoSeleccionado.plazaVinculada.situacion}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: '#DCFCE7', paddingTop: 8 }}>
-                      <View>
-                        <Text style={{ fontSize: 10.5, color: '#15803D', fontWeight: '700' }}>Cargo en Planta</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.denominacion}</Text>
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 10.5, color: '#15803D', fontWeight: '700' }}>Código & Grado</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.codigo}-{registroSimoSeleccionado.plazaVinculada.grado}</Text>
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 10.5, color: '#15803D', fontWeight: '700' }}>Titular Actual</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.titular}</Text>
-                      </View>
-                      {registroSimoSeleccionado.plazaVinculada.encargo && (
-                        <View>
-                          <Text style={{ fontSize: 10.5, color: '#15803D', fontWeight: '700' }}>Servidor en Encargo</Text>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E' }}>{registroSimoSeleccionado.plazaVinculada.encargo}</Text>
+                      {registroSimoSeleccionado.plazaVinculada ? (
+                        <View style={{ backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, borderWidth: 1.5, borderColor: '#86EFAC', gap: 10 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="checkmark-circle" size={18} color="#15803D" />
+                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#15803D' }}>
+                                Plaza #{registroSimoSeleccionado.plazaVinculada.idPlaza} — {registroSimoSeleccionado.plazaVinculada.denominacion}
+                              </Text>
+                            </View>
+                            <View style={{ backgroundColor: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#FEF3C7' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#FDE68A' : '#86EFAC' }}>
+                              <Text style={{ fontSize: 10.5, fontWeight: '800', color: registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '#92400E' : '#166534' }}>
+                                {registroSimoSeleccionado.plazaVinculada.esVacanteDefinitiva ? '⭐ VACANTE DEFINITIVA' : registroSimoSeleccionado.plazaVinculada.situacion}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: '#DCFCE7', paddingTop: 8 }}>
+                            <View>
+                              <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700' }}>CÓDIGO & GRADO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.codigo} - {registroSimoSeleccionado.plazaVinculada.grado}</Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700' }}>DEPENDENCIA PLANTA</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.dependencia}</Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700' }}>TITULAR REGISTRADO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.titular}</Text>
+                            </View>
+                            {registroSimoSeleccionado.plazaVinculada.encargo && (
+                              <View>
+                                <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700' }}>SERVIDOR EN ENCARGO</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E' }}>{registroSimoSeleccionado.plazaVinculada.encargo}</Text>
+                              </View>
+                            )}
+                            <View>
+                              <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700' }}>TIPO VINCULACIÓN</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.tipoVinculacion}</Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                            <Pressable
+                              onPress={() => {
+                                setModalDetalleSimoVisible(false);
+                                handleAbrirModalVincularPlaza(registroSimoSeleccionado);
+                              }}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 6,
+                                backgroundColor: '#E0F2FE',
+                                borderWidth: 1,
+                                borderColor: '#BAE6FD',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Ionicons name="swap-horizontal" size={13} color="#0369A1" />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#0369A1' }}>
+                                Modificar o Cambiar Plaza
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={{ backgroundColor: '#FFFBEB', borderRadius: 12, padding: 14, borderWidth: 1.5, borderColor: '#FDE68A', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="alert-circle" size={18} color="#D97706" />
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#92400E' }}>
+                              Vacante pendiente de vincular a un cargo físico de la planta
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 11.5, color: '#B45309' }}>
+                            Esta vacante reportada en SIMO 4.0 no tiene una plaza física asociada. Puede asociarla para sincronizar su titularidad y control de vacancia definitiva.
+                          </Text>
+                          <Pressable
+                            onPress={() => {
+                              setModalDetalleSimoVisible(false);
+                              handleAbrirModalVincularPlaza(registroSimoSeleccionado);
+                            }}
+                            style={{
+                              alignSelf: 'flex-start',
+                              backgroundColor: 'rgb(6, 95, 70)',
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              cursor: 'pointer',
+                              marginTop: 2,
+                            }}
+                          >
+                            <Ionicons name="link" size={14} color="#FFFFFF" />
+                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' }}>
+                              🏛️ Vincular Plaza Ahora
+                            </Text>
+                          </Pressable>
                         </View>
                       )}
-                      <View>
-                        <Text style={{ fontSize: 10.5, color: '#15803D', fontWeight: '700' }}>Tipo Vinculación</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#14532D' }}>{registroSimoSeleccionado.plazaVinculada.tipoVinculacion}</Text>
+                    </View>
+
+                    {/* Fechas de Generación y Registro */}
+                    <View style={{ flexDirection: 'row', gap: 14, backgroundColor: THEME.slate50, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, flexWrap: 'wrap' }}>
+                      <View style={{ flex: 1, minWidth: 160 }}>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '600' }}>Fecha Generación Vacante:</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                          {registroSimoSeleccionado.fechaGeneracionVacante || 'No registrada'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 160 }}>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '600' }}>Fecha Registro en SIMO 4.0:</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                          {registroSimoSeleccionado.fechaRegistroSimo || 'No registrada'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 160 }}>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '600' }}>Vigencia Salarial Reportada:</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                          {registroSimoSeleccionado.vigenciaSalarial || '2025/2026'}
+                        </Text>
                       </View>
                     </View>
                   </View>
-                ) : null}
+                )}
 
-                {/* Propósito del Empleo */}
-                <View style={{ gap: 4 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700, textTransform: 'uppercase' }}>
-                    🎯 Propósito del Empleo
-                  </Text>
-                  <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
-                    <Text style={{ fontSize: 12, color: THEME.slate800, lineHeight: 18 }}>
-                      {registroSimoSeleccionado.proposito || 'Sin propósito especificado en SIMO.'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Requisitos de Estudio y Experiencia */}
-                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700, textTransform: 'uppercase' }}>
-                      🎓 Requisito de Estudio
-                    </Text>
-                    <View style={{ backgroundColor: '#EFF6FF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE', minHeight: 80 }}>
-                      <Text style={{ fontSize: 11.5, color: '#1E3A8A', lineHeight: 17 }}>
-                        {registroSimoSeleccionado.requisitoEstudio || 'Según manual de funciones y competencias laborales.'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700, textTransform: 'uppercase' }}>
-                      💼 Requisito de Experiencia
-                    </Text>
-                    <View style={{ backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0', minHeight: 80 }}>
-                      <Text style={{ fontSize: 11.5, color: '#14532D', lineHeight: 17 }}>
-                        {registroSimoSeleccionado.requisitoExperiencia || 'Sin requisito de experiencia registrado.'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Funciones del Empleo */}
-                {registroSimoSeleccionado.funciones ? (
-                  <View style={{ gap: 4 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700, textTransform: 'uppercase' }}>
-                      📋 Funciones Principales
-                    </Text>
-                    <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, maxHeight: 150 }}>
-                      <ScrollView nestedScrollEnabled={true}>
-                        <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 17 }}>
-                          {registroSimoSeleccionado.funciones}
+                {/* ========================================================================= */}
+                {/* PESTAÑA 2: PROPÓSITO & PERFIL                                             */}
+                {/* ========================================================================= */}
+                {modalDetalleSimoTab === 'perfil' && (
+                  <View style={{ gap: 14 }}>
+                    {/* Tarjeta Hero: Propósito del Empleo */}
+                    <View
+                      style={{
+                        backgroundColor: '#EFF6FF',
+                        borderRadius: 12,
+                        padding: 16,
+                        borderWidth: 1.5,
+                        borderColor: '#BFDBFE',
+                        gap: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ backgroundColor: '#DBEAFE', padding: 6, borderRadius: 6 }}>
+                          <Ionicons name="locate" size={18} color="#1D4ED8" />
+                        </View>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          PROPÓSITO PRINCIPAL DEL EMPLEO
                         </Text>
-                      </ScrollView>
+                      </View>
+                      <Text style={{ fontSize: 13, color: '#1E3A8A', lineHeight: 21, fontWeight: '500' }}>
+                        {registroSimoSeleccionado.proposito ||
+                          `Ejecutar, coordinar y verificar las actividades técnicas, operativas y jurídicas propias del empleo en la ${registroSimoSeleccionado.dependencia}, garantizando el cumplimiento de los planes, programas y metas institucionales de la Secretaría Jurídica Distrital.`}
+                      </Text>
+                    </View>
+
+                    {/* Requisitos de Estudio y Experiencia */}
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 14 }}>
+                      {/* Formación Académica */}
+                      <View
+                        style={{
+                          flex: 1,
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={{ backgroundColor: '#EEF2FF', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: '#C7D2FE' }}>
+                            <Ionicons name="school" size={18} color="#4338CA" />
+                          </View>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#3730A3', textTransform: 'uppercase' }}>
+                            REQUISITO DE ESTUDIO / FORMACIÓN
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: THEME.white, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: THEME.slate200, flex: 1 }}>
+                          <Text style={{ fontSize: 12, color: THEME.slate800, lineHeight: 18 }}>
+                            {registroSimoSeleccionado.requisitoEstudio ||
+                              'Título profesional o formación académica según el Núcleo Básico de Conocimiento (NBC) reglamentado en el Manual Específico de Funciones y Competencias Laborales de la Entidad.'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Experiencia Laboral */}
+                      <View
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#F0FDF4',
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: '#BBF7D0',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={{ backgroundColor: '#DCFCE7', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: '#86EFAC' }}>
+                            <Ionicons name="briefcase" size={18} color="#15803D" />
+                          </View>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>
+                            REQUISITO DE EXPERIENCIA LABORAL
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: THEME.white, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#DCFCE7', flex: 1 }}>
+                          <Text style={{ fontSize: 12, color: '#14532D', lineHeight: 18 }}>
+                            {registroSimoSeleccionado.requisitoExperiencia ||
+                              'Experiencia profesional o técnica relacionada con las funciones del cargo, conforme al nivel jerárquico y requisitos normativos de la CNSC.'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Enlace al Manual Oficial */}
+                    <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: THEME.slate200, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="document-text" size={18} color={THEME.marca700} />
+                        <Text style={{ fontSize: 12, color: THEME.slate700, fontWeight: '600' }}>
+                          Manual Específico de Funciones y Competencias Laborales Oficial
+                        </Text>
+                      </View>
+                      <BotonManualFunciones
+                        cargo={registroSimoSeleccionado.denominacion}
+                        codigo={registroSimoSeleccionado.codigo}
+                        grado={registroSimoSeleccionado.grado}
+                        variante="boton"
+                        etiqueta="Ver Resolución del Manual (PDF)"
+                      />
                     </View>
                   </View>
-                ) : null}
+                )}
 
-                {/* Fechas de Generación y Reporte */}
-                <View style={{ flexDirection: 'row', gap: 12, backgroundColor: THEME.slate50, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>Fecha Generación Vacante:</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
-                      {registroSimoSeleccionado.fechaGeneracionVacante || 'No registrada'}
-                    </Text>
+                {/* ========================================================================= */}
+                {/* PESTAÑA 3: MANUAL DE FUNCIONES                                            */}
+                {/* ========================================================================= */}
+                {modalDetalleSimoTab === 'funciones' && (
+                  <View style={{ gap: 12 }}>
+                    {/* Header de Funciones */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: THEME.slate50, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="list" size={18} color={THEME.marca700} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                          Funciones Específicas del Empleo
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: THEME.marca600 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca800 }}>
+                          {funcionesSimoDesglosadas.length} Funciones Oficiales
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Listado de Funciones en Tarjetas Numeradas */}
+                    <View style={{ gap: 8 }}>
+                      {funcionesSimoDesglosadas.map((fnTexto, idx) => {
+                        const numStr = `${idx + 1}`;
+                        const cleanTexto = fnTexto.replace(/^\d+[\.\)]\s*/, '').trim();
+
+                        return (
+                          <View
+                            key={`fn-simo-${idx}`}
+                            style={{
+                              backgroundColor: THEME.white,
+                              borderRadius: 10,
+                              padding: 12,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              flexDirection: 'row',
+                              alignItems: 'flex-start',
+                              gap: 12,
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 13,
+                                backgroundColor: '#DBEAFE',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: 1,
+                              }}
+                            >
+                              <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#1E40AF' }}>
+                                {numStr}
+                              </Text>
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 12.5, color: THEME.slate800, lineHeight: 19 }}>
+                              {cleanTexto}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>Fecha de Registro en SIMO 4.0:</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
-                      {registroSimoSeleccionado.fechaRegistroSimo || 'No registrada'}
-                    </Text>
+                )}
+
+                {/* ========================================================================= */}
+                {/* PESTAÑA 4: TITULAR ANTERIOR / PERNO (CRUCE DE VACANTE DEFINITIVA)          */}
+                {/* ========================================================================= */}
+                {modalDetalleSimoTab === 'perno' && (
+                  <View style={{ gap: 14 }}>
+                    {/* Header explicativo del cruce */}
+                    <View style={{ backgroundColor: THEME.slate50, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: THEME.slate200, gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="git-branch" size={18} color={THEME.marca700} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.marca800, textTransform: 'uppercase' }}>
+                          EXPEDIENTE DE PERSONAL • CRUCE ID PERNO & POSICIÓN PLANTA
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 17 }}>
+                        La vacante definitiva se determina cruzando el <Text style={{ fontWeight: '700' }}>ID Perno ({infoPernoVacanteSimo?.idPerno || 'Sin ID'})</Text> de la plaza física con el campo <Text style={{ fontWeight: '700' }}>POSICION_PLANTA</Text> del histórico de nómina. Entre los servidores que ocuparon la posición, el servidor con la <Text style={{ fontWeight: '700', color: '#B91C1C' }}>fecha de retiro más actual</Text> es quien generó formalmente la vacante definitiva.
+                      </Text>
+                    </View>
+
+                    {/* Tarjeta Destacada: Servidor que generó la vacante definitiva */}
+                    {infoPernoVacanteSimo?.titularGeneradorVacante ? (
+                      <View
+                        style={{
+                          backgroundColor: '#FFF7ED',
+                          borderRadius: 14,
+                          padding: 16,
+                          borderWidth: 1.5,
+                          borderColor: '#FED7AA',
+                          gap: 12,
+                        }}
+                      >
+                        {/* Header de la tarjeta */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ backgroundColor: '#FDBA74', padding: 6, borderRadius: 6 }}>
+                              <Ionicons name="ribbon" size={18} color="#9A3412" />
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: '#9A3412', textTransform: 'uppercase' }}>
+                                ⭐ SERVIDOR QUE GENERÓ LA VACANTE DEFINITIVA
+                              </Text>
+                              <Text style={{ fontSize: 10.5, color: '#C2410C' }}>
+                                Último titular en nómina PERNO con retiro más reciente
+                              </Text>
+                            </View>
+                          </View>
+
+                          {infoPernoVacanteSimo.titularGeneradorVacante.fecha_retiro ? (
+                            <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                              <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#991B1B' }}>
+                                📅 Fecha de Retiro: {infoPernoVacanteSimo.titularGeneradorVacante.fecha_retiro}
+                              </Text>
+                            </View>
+                          ) : (
+                            <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#86EFAC' }}>
+                              <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#166534' }}>
+                                Estado: {infoPernoVacanteSimo.titularGeneradorVacante.estado_descripcion || 'Activo'}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Nombre del Funcionario */}
+                        <View style={{ backgroundColor: THEME.white, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FED7AA', gap: 10 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                              {infoPernoVacanteSimo.titularGeneradorVacante.nombre_completo}
+                            </Text>
+                            <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                                C.C. {infoPernoVacanteSimo.titularGeneradorVacante.cedula}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Grilla de Datos PERNO */}
+                          <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: THEME.slate100, paddingTop: 10 }}>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>CARGO EN NÓMINA PERNO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.cargo}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>CÓDIGO & GRADO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.cargo_cod} - {infoPernoVacanteSimo.titularGeneradorVacante.grado}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>ASIGNACIÓN BÁSICA</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.emerald800 }}>
+                                {formatMoneda(infoPernoVacanteSimo.titularGeneradorVacante.asignacion_basica)}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>DEPENDENCIA NÓMINA</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.dependencia}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>TIPO NOMBRAMIENTO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.tipo_nombramiento || 'ORDINARIO'}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>ACTO ADMINISTRATIVO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.acto_nombramiento} #{infoPernoVacanteSimo.titularGeneradorVacante.numero_acto_nombramiento || '---'} ({infoPernoVacanteSimo.titularGeneradorVacante.fecha_acto_nombramiento || 'S/F'})
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>FECHA EFECTIVA INGRESO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.fecha_efectiva_nombramiento || '---'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Seguridad Social */}
+                          <View style={{ flexDirection: 'row', gap: 14, backgroundColor: THEME.slate50, padding: 10, borderRadius: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                            <View>
+                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>EPS / Salud:</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_salud || 'No registrada'}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>Fondo Pensiones:</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_pension || 'No registrada'}
+                              </Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>Cesantías:</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_cesantias || 'No registrada'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={{ backgroundColor: '#FFFBEB', borderRadius: 12, padding: 16, borderWidth: 1.5, borderColor: '#FDE68A', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="information-circle" size={18} color="#D97706" />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#92400E' }}>
+                            Sin registro de titular en nómina PERNO para esta posición
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: '#B45309' }}>
+                          {infoPernoVacanteSimo?.plaza
+                            ? `La plaza #${infoPernoVacanteSimo.plaza.id_plaza} tiene ID Perno ${infoPernoVacanteSimo.plaza.id_perno || 'no asignado'}, pero no registra servidores asociados en el archivo histórico de nómina.`
+                            : 'Esta vacante aún no ha sido vinculada a una plaza de la planta. Vincúlela para consultar el titular que originó la vacante.'}
+                        </Text>
+                        {!infoPernoVacanteSimo?.plaza && (
+                          <Pressable
+                            onPress={() => {
+                              setModalDetalleSimoVisible(false);
+                              handleAbrirModalVincularPlaza(registroSimoSeleccionado);
+                            }}
+                            style={{
+                              alignSelf: 'flex-start',
+                              backgroundColor: 'rgb(6, 95, 70)',
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              cursor: 'pointer',
+                              marginTop: 4,
+                            }}
+                          >
+                            <Ionicons name="link" size={13} color="#FFFFFF" />
+                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' }}>
+                              🏛️ Vincular Plaza de Planta
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Historial Completo de Servidores que ocuparon esta posición */}
+                    {infoPernoVacanteSimo && infoPernoVacanteSimo.historialPerno.length > 1 && (
+                      <View style={{ gap: 8, marginTop: 4 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate800 }}>
+                            📜 Historial Completo de Ocupación en Nómina PERNO ({infoPernoVacanteSimo.historialPerno.length} registros):
+                          </Text>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                            Ordenado por fecha de retiro
+                          </Text>
+                        </View>
+
+                        <View style={{ gap: 6 }}>
+                          {infoPernoVacanteSimo.historialPerno.map((p, idx) => {
+                            const esElMasReciente = idx === 0;
+                            return (
+                              <View
+                                key={`perno-hist-${p.cedula}-${idx}`}
+                                style={{
+                                  backgroundColor: esElMasReciente ? '#FFFBEB' : THEME.white,
+                                  borderRadius: 8,
+                                  padding: 10,
+                                  borderWidth: 1,
+                                  borderColor: esElMasReciente ? '#FDE68A' : THEME.slate200,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 8,
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 240 }}>
+                                  <View
+                                    style={{
+                                      width: 22,
+                                      height: 22,
+                                      borderRadius: 11,
+                                      backgroundColor: esElMasReciente ? '#F59E0B' : THEME.slate200,
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: esElMasReciente ? THEME.white : THEME.slate700 }}>
+                                      #{idx + 1}
+                                    </Text>
+                                  </View>
+                                  <View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
+                                        {p.nombre_completo}
+                                      </Text>
+                                      {esElMasReciente && (
+                                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#991B1B' }}>
+                                            ⭐ Generó la vacante definitiva
+                                          </Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                      C.C. {p.cedula} • {p.cargo} (Cód. {p.cargo_cod} - Grado {p.grado})
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '600' }}>FECHA RETIRO</Text>
+                                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: p.fecha_retiro ? '#B91C1C' : '#047857' }}>
+                                      {p.fecha_retiro || 'Activo en Nómina'}
+                                    </Text>
+                                  </View>
+                                  <View style={{ backgroundColor: p.estado_funcionario === 'R' ? '#FEE2E2' : '#DCFCE7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.estado_funcionario === 'R' ? '#991B1B' : '#166534' }}>
+                                      {p.estado_funcionario === 'R' ? 'Retirado' : 'Activo'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>Ubicación Geográfica:</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
-                      {registroSimoSeleccionado.municipio} ({registroSimoSeleccionado.departamento})
-                    </Text>
-                  </View>
-                </View>
+                )}
               </ScrollView>
             )}
 
             {/* Footer de Acciones */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: THEME.slate100, paddingTop: 12, gap: 10, flexWrap: 'wrap' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTopWidth: 1,
+                borderTopColor: THEME.slate200,
+                backgroundColor: THEME.slate50,
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
               <Pressable
                 onPress={() => {
-                  setModalDetalleSimoVisible(false);
                   if (registroSimoSeleccionado) {
                     setNuevoEstadoSimoValor(registroSimoSeleccionado.estadoProvision);
                     setModalEstadoSimoVisible(true);
                   }
                 }}
-                style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, cursor: 'pointer' }}
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  borderWidth: 1,
+                  borderColor: '#FDE68A',
+                  paddingVertical: 8,
+                  paddingHorizontal: 14,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
               >
-                <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 12 }}>✏️ Cambiar Estado Provisión</Text>
+                <Ionicons name="pencil" size={13} color="#92400E" />
+                <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 12 }}>
+                  Cambiar Estado Provisión
+                </Text>
               </Pressable>
 
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {registroSimoSeleccionado && (
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                {registroSimoSeleccionado && infoPernoVacanteSimo?.titularGeneradorVacante && (
                   <Pressable
                     onPress={() => {
                       setModalDetalleSimoVisible(false);
                       handleVerEnDesvinculaciones(registroSimoSeleccionado);
                     }}
-                    style={{ backgroundColor: '#FFE4E6', borderWidth: 1, borderColor: '#FECDD3', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, cursor: 'pointer' }}
+                    style={{
+                      backgroundColor: '#FFE4E6',
+                      borderWidth: 1,
+                      borderColor: '#FECDD3',
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
                   >
-                    <Text style={{ color: '#BE123C', fontWeight: '700', fontSize: 12 }}>🚪 Ver en Retiros</Text>
+                    <Ionicons name="exit-outline" size={13} color="#BE123C" />
+                    <Text style={{ color: '#BE123C', fontWeight: '700', fontSize: 12 }}>
+                      Ver en Retiros
+                    </Text>
                   </Pressable>
                 )}
+
                 {registroSimoSeleccionado && (
                   <Pressable
                     onPress={() => {
                       setModalDetalleSimoVisible(false);
-                      handleIniciarVinculacionDesdeSimo(registroSimoSeleccionado);
+                      handleAbrirModalVincularPlaza(registroSimoSeleccionado);
                     }}
-                    style={{ backgroundColor: 'rgb(6, 95, 70)', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, cursor: 'pointer' }}
+                    style={{
+                      backgroundColor: 'rgb(6, 95, 70)',
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
                   >
-                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>➕ Iniciar Vinculación / Ascenso</Text>
+                    <Ionicons name="link" size={14} color="#FFFFFF" />
+                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>
+                      {registroSimoSeleccionado.plazaVinculada ? '🏛️ Modificar Plaza Vinculada' : '🏛️ Vincular Cargo en Planta'}
+                    </Text>
                   </Pressable>
                 )}
+
                 <Pressable
                   onPress={() => setModalDetalleSimoVisible(false)}
-                  style={{ backgroundColor: THEME.slate100, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, cursor: 'pointer' }}
+                  style={{
+                    backgroundColor: THEME.slate200,
+                    paddingVertical: 8,
+                    paddingHorizontal: 16,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                  }}
                 >
-                  <Text style={{ color: THEME.slate700, fontWeight: '600', fontSize: 12 }}>Cerrar</Text>
+                  <Text style={{ color: THEME.slate700, fontWeight: '700', fontSize: 12 }}>
+                    Cerrar
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -24461,6 +25639,322 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 style={{ backgroundColor: THEME.marca700, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6, cursor: 'pointer' }}
               >
                 <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>Guardar Estado</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL INSTITUCIONAL: VINCULAR VACANTE SIMO 4.0 CON CARGO EN PLANTA  */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalVincularPlazaSimoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVincularPlazaSimoVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 880, maxHeight: '90%', padding: 22, gap: 14 }}>
+            {/* Header del Modal */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ backgroundColor: '#DCFCE7', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#86EFAC' }}>
+                  <Ionicons name="link" size={20} color="#15803D" />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                    Vincular Vacante SIMO 4.0 con Cargo / Plaza en Planta
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                    OPEC #{registroSimoParaVincular?.opec} • {registroSimoParaVincular?.denominacion}
+                  </Text>
+                </View>
+              </View>
+              <Pressable onPress={() => setModalVincularPlazaSimoVisible(false)} style={{ padding: 4, cursor: 'pointer' }}>
+                <Ionicons name="close" size={22} color={THEME.slate500} />
+              </Pressable>
+            </View>
+
+            {registroSimoParaVincular && (
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 14 }}>
+                {/* 1. Tarjeta informativa de la vacante en SIMO 4.0 */}
+                <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: THEME.slate200, gap: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="ribbon" size={15} color={THEME.marca700} />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca800, textTransform: 'uppercase' }}>
+                        VACANTE REPORTADA EN SIMO 4.0 (CNSC)
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: THEME.marca600 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.marca800 }}>
+                        OPEC #{registroSimoParaVincular.opec}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900 }}>
+                    {registroSimoParaVincular.denominacion}
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: THEME.slate200, paddingTop: 8 }}>
+                    <View>
+                      <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>CÓDIGO & GRADO</Text>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>
+                        {registroSimoParaVincular.codigo} - {registroSimoParaVincular.grado} ({registroSimoParaVincular.nivel})
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>ASIGNACIÓN BÁSICA</Text>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.emerald800 }}>
+                        {formatMoneda(registroSimoParaVincular.salario)}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>DEPENDENCIA SIMO</Text>
+                      <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate800 }}>
+                        {registroSimoParaVincular.dependencia}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>ESTADO PROVISIÓN</Text>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>
+                        {registroSimoParaVincular.estadoProvision}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 2. Sección: Cargo y Plaza con la que está vinculada actualmente */}
+                <View>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate800, marginBottom: 6 }}>
+                    🏛️ Cargo y Plaza Vinculada en la Planta de Personal:
+                  </Text>
+
+                  {registroSimoParaVincular.plazaVinculada ? (
+                    <View style={{ backgroundColor: '#F0FDF4', borderRadius: 10, padding: 14, borderWidth: 1.5, borderColor: '#86EFAC', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="checkmark-circle" size={17} color="#15803D" />
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }}>
+                            Plaza #{registroSimoParaVincular.plazaVinculada.idPlaza} — {registroSimoParaVincular.plazaVinculada.denominacion}
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: registroSimoParaVincular.plazaVinculada.esVacanteDefinitiva ? '#FEF3C7' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: registroSimoParaVincular.plazaVinculada.esVacanteDefinitiva ? '#FDE68A' : '#86EFAC' }}>
+                          <Text style={{ fontSize: 10.5, fontWeight: '800', color: registroSimoParaVincular.plazaVinculada.esVacanteDefinitiva ? '#92400E' : '#166534' }}>
+                            {registroSimoParaVincular.plazaVinculada.esVacanteDefinitiva ? '⭐ VACANTE DEFINITIVA' : registroSimoParaVincular.plazaVinculada.situacion}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: '#DCFCE7', paddingTop: 8 }}>
+                        <View>
+                          <Text style={{ fontSize: 10, color: '#166534', fontWeight: '700' }}>CÓDIGO & GRADO</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#14532D' }}>
+                            {registroSimoParaVincular.plazaVinculada.codigo} - {registroSimoParaVincular.plazaVinculada.grado}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10, color: '#166534', fontWeight: '700' }}>DEPENDENCIA</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#14532D' }}>
+                            {registroSimoParaVincular.plazaVinculada.dependencia}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 10, color: '#166534', fontWeight: '700' }}>TITULAR REGISTRADO</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#14532D' }}>
+                            {registroSimoParaVincular.plazaVinculada.titular}
+                          </Text>
+                        </View>
+                        {registroSimoParaVincular.plazaVinculada.encargo && (
+                          <View>
+                            <Text style={{ fontSize: 10, color: '#166534', fontWeight: '700' }}>SERVIDOR EN ENCARGO</Text>
+                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#92400E' }}>
+                              {registroSimoParaVincular.plazaVinculada.encargo}
+                            </Text>
+                          </View>
+                        )}
+                        <View>
+                          <Text style={{ fontSize: 10, color: '#166534', fontWeight: '700' }}>TIPO VINCULACIÓN</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#14532D' }}>
+                            {registroSimoParaVincular.plazaVinculada.tipoVinculacion}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <Pressable
+                          onPress={() => handleDesvincularPlazaDeVacanteSimo(registroSimoParaVincular)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            backgroundColor: '#FEE2E2',
+                            borderWidth: 1,
+                            borderColor: '#FECDD3',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={12} color="#BE123C" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#BE123C' }}>
+                            Desvincular esta Plaza
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ backgroundColor: '#FFFBEB', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Ionicons name="alert-circle" size={20} color="#D97706" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E' }}>
+                          Vacante pendiente de vincular a un cargo / plaza física
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#B45309', marginTop: 1 }}>
+                          Seleccione a continuación la plaza de la planta correspondiente para asociarla a esta OPEC.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* 3. Selector de Plazas Disponibles en Planta */}
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate800 }}>
+                    🔍 Seleccionar o Cambiar Cargo / Plaza en Planta:
+                  </Text>
+
+                  {/* Buscador de Plazas */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate300,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <Ionicons name="search" size={15} color={THEME.slate400} style={{ marginRight: 6 }} />
+                    <TextInput
+                      value={busquedaPlazaParaVincular}
+                      onChangeText={setBusquedaPlazaParaVincular}
+                      placeholder="Buscar por plaza #, cargo, código, grado, dependencia, titular..."
+                      placeholderTextColor={THEME.slate400}
+                      style={{ flex: 1, fontSize: 12, color: THEME.slate900 }}
+                    />
+                    {busquedaPlazaParaVincular !== '' && (
+                      <Pressable onPress={() => setBusquedaPlazaParaVincular('')}>
+                        <Ionicons name="close-circle" size={15} color={THEME.slate400} />
+                      </Pressable>
+                    )}
+                  </View>
+
+                  {/* Listado de Plazas Sugeridas */}
+                  <View style={{ maxHeight: 260, borderWidth: 1, borderColor: THEME.slate200, borderRadius: 8, overflow: 'hidden' }}>
+                    <ScrollView nestedScrollEnabled={true} style={{ flex: 1 }} contentContainerStyle={{ padding: 6, gap: 6 }}>
+                      {plazasCandidatasParaVincular.length === 0 ? (
+                        <View style={{ padding: 20, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, color: THEME.slate500 }}>
+                            No se encontraron plazas con el criterio de búsqueda.
+                          </Text>
+                        </View>
+                      ) : (
+                        plazasCandidatasParaVincular.map((p) => {
+                          const esLaActual = registroSimoParaVincular.idPlazaVinculada === p.id_plaza;
+                          const titularUpper = String(p.titular_nombre || '').toUpperCase();
+                          const esVacDef = titularUpper.includes('VACANTE') || String(p.situacion_administrativa || '').toUpperCase().includes('VACANCIA');
+
+                          return (
+                            <View
+                              key={`plaza-opt-${p.id_plaza}`}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                backgroundColor: esLaActual ? '#F0FDF4' : esVacDef ? '#FEFCE8' : THEME.white,
+                                borderWidth: 1,
+                                borderColor: esLaActual ? '#86EFAC' : esVacDef ? '#FEF08A' : THEME.slate200,
+                                borderRadius: 8,
+                                padding: 10,
+                                gap: 10,
+                              }}
+                            >
+                              <View style={{ flex: 1, gap: 2 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: THEME.marca600 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.marca800 }}>
+                                      Plaza #{p.id_plaza}
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
+                                    {p.cargo}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                                    Cód. {p.codigo} - Grado {p.grado}
+                                  </Text>
+                                  {esVacDef && (
+                                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#92400E' }}>
+                                        VACANTE DEFINITIVA
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <Text style={{ fontSize: 10.5, color: THEME.slate600 }}>
+                                  {p.dependencia_cargo} • Titular: <Text style={{ fontWeight: '600' }}>{p.titular_nombre}</Text> {p.es_encargo && p.encargo_nombre ? `(Encargo: ${p.encargo_nombre})` : ''}
+                                </Text>
+                              </View>
+
+                              {esLaActual ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#86EFAC' }}>
+                                  <Ionicons name="checkmark" size={13} color="#166534" />
+                                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#166534' }}>
+                                    Plaza Actual
+                                  </Text>
+                                </View>
+                              ) : (
+                                <Pressable
+                                  onPress={() => handleAsignarPlazaAVacanteSimo(registroSimoParaVincular, p)}
+                                  style={{
+                                    backgroundColor: esVacDef ? '#D97706' : THEME.marca700,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <Ionicons name="link" size={12} color="#FFFFFF" />
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>
+                                    Vincular a esta Plaza
+                                  </Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          );
+                        })
+                      )}
+                    </ScrollView>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+
+            {/* Footer */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', borderTopWidth: 1, borderTopColor: THEME.slate100, paddingTop: 10 }}>
+              <Pressable
+                onPress={() => setModalVincularPlazaSimoVisible(false)}
+                style={{ backgroundColor: THEME.slate100, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6, cursor: 'pointer' }}
+              >
+                <Text style={{ color: THEME.slate700, fontWeight: '700', fontSize: 12 }}>Cerrar</Text>
               </Pressable>
             </View>
           </View>

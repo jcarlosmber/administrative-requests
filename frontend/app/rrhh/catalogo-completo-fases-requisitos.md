@@ -28,7 +28,7 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 ### 🔹 Fase 1: Verificación Lista CNSC
 * **Identificador de Fase**: `v_prov_1`
 * **Responsable**: Profesional Universitario TH
-* **Plazo Legal**: Verificación previa y reporte obligatorio en SIMO (dentro de los 5 días hábiles a la vacancia)
+* **Plazo Legal**: Verificación previa a la provisión transitoria
 * **Procedimiento General de Fase**: Constatar las alternativas de provisión por mérito en el Banco Nacional de Listas de Elegibles (BNLE) de la CNSC y expedir constancia suscrita de no existencia de listas aplicables antes de acudir a la provisión transitoria.
 
 #### Requisito 1.1 (`vp1_1`): Consulta en Banco Nacional de Listas de Elegibles de la CNSC y Constancia de Inexistencia
@@ -47,22 +47,6 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   2. Captura de pantalla de la consulta en el Banco Nacional de Listas de Elegibles (BNLE) con sello de fecha y hora.
   3. Constancia suscrita por el Director(a) de Gestión Corporativa / Responsable de Talento Humano donde se certifica formalmente la inexistencia de lista de elegibles vigente y aplicable.
   4. Memorando interno de comunicación de resultados de la consulta radicado en el sistema de gestión documental.
-
-#### Requisito 1.2 (`vp1_3`): Reporte previo de vacancia definitiva a la CNSC en SIMO (Ley 1960/2019)
-* **Obligatorio**: Sí
-* **⚖️ Fundamento Jurídico Aplicable**:  
-  Ley 1960 de 2019, Art. 1, Parágrafo 2 • Decreto 1083 de 2015, Art. 2.2.6.34 • Circular Externa CNSC 011 de 2021.
-* **💡 Resumen Jurídico (`notaNormativa`)**:  
-  Las entidades deben informar a la Comisión Nacional del Servicio Civil (CNSC) la existencia de las vacantes definitivas en empleos de carrera administrativa antes de su provisión mediante encargo o nombramiento provisional. El reporte debe realizarse a través del aplicativo SIMO, conforme a los lineamientos y plazos establecidos por la CNSC, con el propósito de garantizar la adecuada administración de la Oferta Pública de Empleos de Carrera (OPEC).
-* **📜 Mandato Legal & Texto Normativo Incluido (`textoNormativo`)**:  
-  *Ley 1960 de 2019, Art. 1, Parágrafo 2*: «Previo a proveer vacantes definitivas mediante encargo o nombramiento provisional, el nominador o en quien este haya delegado, informará la existencia de la vacante a la Comisión Nacional del Servicio Civil a través del medio que esta indique».  
-  *Circular Externa 011 de 2021 de la CNSC*: Establece que las entidades deben reportar las vacantes definitivas de empleos de carrera administrativa en el aplicativo SIMO dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad, de acuerdo con las instrucciones y el procedimiento definidos por la Comisión.
-* **📋 Instrucción Operativa para Talento Humano (`detalleProcedimiento`)**:  
-  Reportar en SIMO la vacante definitiva del empleo de carrera administrativa antes de efectuar su provisión transitoria, dentro del plazo establecido por la CNSC. Verificar que la información registrada en la OPEC esté completa y actualizada, y conservar la evidencia del reporte, incluyendo el registro de la vacante y los soportes que permitan acreditar el cumplimiento de esta obligación.
-* **📁 Posibles Evidencias Documentales**:
-  1. Comprobante electrónico de reporte de vacante definitiva emitido por la plataforma SIMO de la CNSC.
-  2. Captura de pantalla del módulo OPEC de la entidad en SIMO mostrando el código OPEC del empleo y el estado de la vacante reportada.
-  3. Acuse de recibo o confirmación de cargue de la novedad de vacancia ante la CNSC dentro de los 5 días hábiles legales.
 
 ---
 
