@@ -1,0 +1,1533 @@
+{
+  "disponibles": [
+    {
+      "simoId": 8,
+      "opec": "228169",
+      "idCargo": "453420",
+      "cargo": "AUXILIAR DE SERVICIOS GENERALES",
+      "codigo": "470",
+      "grado": "7",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 40,
+        "cargo": "AUXILIAR SERVICIOS GENERALES",
+        "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "DURLEY SOTELO HOYOS"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 40,
+          "cargo": "AUXILIAR SERVICIOS GENERALES",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "DURLEY SOTELO HOYOS"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 9,
+      "opec": "238023",
+      "idCargo": "493640",
+      "cargo": "SECRETARIO",
+      "codigo": "440",
+      "grado": "9",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE POLITICA JURIDICA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 39,
+        "cargo": "SECRETARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "ZULY NATALIA NANDAR CASTAÑEDA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 39,
+          "cargo": "SECRETARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "ZULY NATALIA NANDAR CASTAÑEDA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 35,
+          "dependencia": "OFICINA DE CONTROL INTERNO"
+        },
+        {
+          "id_plaza": 36,
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 10,
+      "opec": "238023",
+      "idCargo": "608952",
+      "cargo": "SECRETARIO",
+      "codigo": "440",
+      "grado": "9",
+      "dependenciaSimo": "OFICINA DE CONTROL INTERNO",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 35,
+        "cargo": "SECRETARIO",
+        "dependencia": "OFICINA DE CONTROL INTERNO",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "ANYELA PAOLA PULIDO GUTIERREZ"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 35,
+          "cargo": "SECRETARIO",
+          "dependencia": "OFICINA DE CONTROL INTERNO",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "ANYELA PAOLA PULIDO GUTIERREZ"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 36,
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        },
+        {
+          "id_plaza": 39,
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA"
+        }
+      ]
+    },
+    {
+      "simoId": 11,
+      "opec": "254169",
+      "idCargo": "603820",
+      "cargo": "SECRETARIO",
+      "codigo": "440",
+      "grado": "11",
+      "dependenciaSimo": "OFICINA ASESORA DE PLANEACIÓN",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 34,
+        "cargo": "SECRETARIO",
+        "dependencia": "OFICINA ASESORA DE PLANEACIÓN",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "FREDY ESTEBAN JAIMES CASTILLO"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 34,
+          "cargo": "SECRETARIO",
+          "dependencia": "OFICINA ASESORA DE PLANEACIÓN",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "FREDY ESTEBAN JAIMES CASTILLO"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 12,
+      "opec": "263315",
+      "idCargo": "651746",
+      "cargo": "AUXILIAR DE SERVICIOS GENERALES",
+      "codigo": "470",
+      "grado": "3",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 42,
+        "cargo": "AUXILIAR SERVICIOS GENERALES",
+        "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "MARTHA CLAUDIA ALDANA AVELINO"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 42,
+          "cargo": "AUXILIAR SERVICIOS GENERALES",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "MARTHA CLAUDIA ALDANA AVELINO"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 13,
+      "opec": "264031",
+      "idCargo": "653902",
+      "cargo": "SECRETARIO",
+      "codigo": "440",
+      "grado": "19",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": null,
+      "candidatasDep": [],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 14,
+      "opec": "264112",
+      "idCargo": "654132",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codigo": "407",
+      "grado": "26",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": null,
+      "candidatasDep": [],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 31,
+      "opec": "222793",
+      "idCargo": "424844",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "15",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 129,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "DANIELA RODRIGUEZ NARVAEZ"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 129,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "DANIELA RODRIGUEZ NARVAEZ"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 130,
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 32,
+      "opec": "223181",
+      "idCargo": "427212",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "1",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE POLITICA JURIDICA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 145,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+        "tipo_vinculacion": "",
+        "encargo_nombre": null
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 145,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+          "tipo_vinculacion": "",
+          "encargo_nombre": null
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 146,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 149,
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 33,
+      "opec": "224312",
+      "idCargo": "437672",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE POLITICA JURIDICA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 121,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "CRISTHIAM DAVID JIMENEZ VASQUEZ"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 121,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "CRISTHIAM DAVID JIMENEZ VASQUEZ"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 105,
+          "dependencia": "OFICINA ASESORA DE PLANEACIÓN"
+        },
+        {
+          "id_plaza": 116,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 117,
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS"
+        },
+        {
+          "id_plaza": 123,
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 34,
+      "opec": "228165",
+      "idCargo": "453410",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 52,
+        "cargo": "PROFESIONAL ESPECIALIZADO",
+        "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "NELSON JULIAN SALAZAR URRUTIA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 52,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "NELSON JULIAN SALAZAR URRUTIA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 58,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 60,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 63,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        }
+      ]
+    },
+    {
+      "simoId": 35,
+      "opec": "229786",
+      "idCargo": "457952",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "24",
+      "dependenciaSimo": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 79,
+        "cargo": "PROFESIONAL ESPECIALIZADO",
+        "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "IAM ALEXANDER OJEDA CARDENAS"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 79,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "IAM ALEXANDER OJEDA CARDENAS"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 82,
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS"
+        }
+      ]
+    },
+    {
+      "simoId": 36,
+      "opec": "230462",
+      "idCargo": "460330",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "8",
+      "dependenciaSimo": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 141,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "JEIMMY JOHANNA PAEZ GIL"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 141,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "JEIMMY JOHANNA PAEZ GIL"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 37,
+      "opec": "234160",
+      "idCargo": "471106",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "13",
+      "dependenciaSimo": "OFICINA DE CONTROL INTERNO",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 134,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "OFICINA DE CONTROL INTERNO",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "VICTOR HERNANDO MURILLO HURTADO"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 134,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "OFICINA DE CONTROL INTERNO",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "VICTOR HERNANDO MURILLO HURTADO"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 38,
+      "opec": "238025",
+      "idCargo": "493646",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 123,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "MONICA JULIANA SANMIGUEL ROJAS"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 123,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "MONICA JULIANA SANMIGUEL ROJAS"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 105,
+          "dependencia": "OFICINA ASESORA DE PLANEACIÓN"
+        },
+        {
+          "id_plaza": 116,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 117,
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS"
+        },
+        {
+          "id_plaza": 121,
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA"
+        }
+      ]
+    },
+    {
+      "simoId": 39,
+      "opec": "245268",
+      "idCargo": "555974",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "26",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 76,
+        "cargo": "PROFESIONAL ESPECIALIZADO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "FERNANDO PACHON PIÑEROS"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 76,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "FERNANDO PACHON PIÑEROS"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 40,
+      "opec": "246277",
+      "idCargo": "561314",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 117,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "CLAUDIA MARCELA CAMARGO CASTRO"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 117,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "CLAUDIA MARCELA CAMARGO CASTRO"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 105,
+          "dependencia": "OFICINA ASESORA DE PLANEACIÓN"
+        },
+        {
+          "id_plaza": 116,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 121,
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA"
+        },
+        {
+          "id_plaza": 123,
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 41,
+      "opec": "246278",
+      "idCargo": "561316",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "15",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 130,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "HELVER MANUEL MORA MONTOYA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 130,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "HELVER MANUEL MORA MONTOYA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 129,
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS"
+        }
+      ]
+    },
+    {
+      "simoId": 42,
+      "opec": "246804",
+      "idCargo": "563008",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "OFICINA ASESORA DE PLANEACIÓN",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 105,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "OFICINA ASESORA DE PLANEACIÓN",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "MARIA TERESA VALDERRAMA PEREIRA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 105,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "OFICINA ASESORA DE PLANEACIÓN",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "MARIA TERESA VALDERRAMA PEREIRA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 116,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        },
+        {
+          "id_plaza": 117,
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS"
+        },
+        {
+          "id_plaza": 121,
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA"
+        },
+        {
+          "id_plaza": 123,
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 43,
+      "opec": "249019",
+      "idCargo": "574630",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "1",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 149,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "NICOLAS SANTIAGO SOTO ALBA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 149,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "NICOLAS SANTIAGO SOTO ALBA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 145,
+          "dependencia": "DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA"
+        },
+        {
+          "id_plaza": 146,
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL"
+        }
+      ]
+    },
+    {
+      "simoId": 44,
+      "opec": "261997",
+      "idCargo": "630986",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "21",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 97,
+        "cargo": "PROFESIONAL ESPECIALIZADO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+        "tipo_vinculacion": "",
+        "encargo_nombre": null
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 97,
+          "cargo": "PROFESIONAL ESPECIALIZADO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_vinculacion": "",
+          "encargo_nombre": null
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 45,
+      "opec": "263025",
+      "idCargo": "650560",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "10",
+      "dependenciaSimo": "OFICINA DE CONTROL INTERNO",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 137,
+        "cargo": "PROFESIONAL UNIVERSITARIO",
+        "dependencia": "OFICINA DE CONTROL INTERNO",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "GLORIA INES MARTINEZ ORTIZ"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 137,
+          "cargo": "PROFESIONAL UNIVERSITARIO",
+          "dependencia": "OFICINA DE CONTROL INTERNO",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "GLORIA INES MARTINEZ ORTIZ"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 138,
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 46,
+      "opec": "264040",
+      "idCargo": "653928",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "8",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": null,
+      "candidatasDep": [],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 141,
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES"
+        }
+      ]
+    },
+    {
+      "simoId": 49,
+      "opec": "236227",
+      "idCargo": "485214",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codigo": "314",
+      "grado": "9",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 169,
+        "cargo": "TÉCNICO OPERATIVO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "ALVARO FELIPE ALEJO CASTIBLANCO"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 169,
+          "cargo": "TÉCNICO OPERATIVO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "ALVARO FELIPE ALEJO CASTIBLANCO"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    },
+    {
+      "simoId": 50,
+      "opec": "236228",
+      "idCargo": "653794",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codigo": "314",
+      "grado": "20",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 157,
+        "cargo": "TÉCNICO OPERATIVO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+        "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+        "encargo_nombre": "WALTER OSPINA ZAPATA"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 157,
+          "cargo": "TÉCNICO OPERATIVO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_vinculacion": "CARRERA ADMINISTRATIVA",
+          "encargo_nombre": "WALTER OSPINA ZAPATA"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": [
+        {
+          "id_plaza": 155,
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 51,
+      "opec": "246257",
+      "idCargo": "561294",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codigo": "314",
+      "grado": "15",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Disponible",
+      "coincidenciaExactaDep": {
+        "id_plaza": 162,
+        "cargo": "TÉCNICO OPERATIVO",
+        "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+        "tipo_vinculacion": "PROVISIONALIDAD",
+        "encargo_nombre": "JUAN DIEGO ACOSTA TORRES"
+      },
+      "candidatasDep": [
+        {
+          "id_plaza": 162,
+          "cargo": "TÉCNICO OPERATIVO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE GESTION JUDICIAL",
+          "tipo_vinculacion": "PROVISIONALIDAD",
+          "encargo_nombre": "JUAN DIEGO ACOSTA TORRES"
+        }
+      ],
+      "otrasCandidatasMismoCodGrado": []
+    }
+  ],
+  "ofertados_provistos": [
+    {
+      "simoId": 1,
+      "opec": "155418",
+      "idCargo": "376382",
+      "cargo": "SECRETARIO EJECUTIVO",
+      "codigo": "425",
+      "grado": "20",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 17,
+          "titular": "MARLY YULY ROJAS LAIDEO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-02-23T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-002",
+          "id_plaza": 17,
+          "servidor": "MARLY YULY ROJAS LAIDEO",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 2,
+      "opec": "164300",
+      "idCargo": "122156",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codigo": "407",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 3,
+      "opec": "170494",
+      "idCargo": "137301",
+      "cargo": "SECRETARIO EJECUTIVO",
+      "codigo": "425",
+      "grado": "21",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 4,
+      "opec": "170495",
+      "idCargo": "376378",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codigo": "407",
+      "grado": "20",
+      "dependenciaSimo": "DESPACHO SECRETARÍA JURÍDICA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 15,
+          "titular": "VACANTE DEFINITIVA",
+          "dependencia": "DESPACHO SECRETARÍA JURÍDICA",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-09-01T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-008",
+          "servidor": "BLAYITD SOLEY JIMENEZ RODRIGUEZ",
+          "dependencia": "DESPACHO SECRETARÃA JURÃDICA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-020",
+          "servidor": "ALBA KARINA ESTEVEZ AMAYA",
+          "dependencia": "DESPACHO SECRETARÃA JURÃDICA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 5,
+      "opec": "187900",
+      "idCargo": "335105",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codigo": "407",
+      "grado": "11",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 33,
+          "titular": "ERIKA MARCELA MEDINA SANTANA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-02T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-004",
+          "id_plaza": 33,
+          "servidor": "ERIKA MARCELA MEDINA SANTANA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 6,
+      "opec": "187900",
+      "idCargo": "561312",
+      "cargo": "AUXILIAR ADMINISTRATIVO",
+      "codigo": "407",
+      "grado": "11",
+      "dependenciaSimo": "OFICINA ASESORA DE PLANEACIÓN",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 33,
+          "titular": "ERIKA MARCELA MEDINA SANTANA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 7,
+      "opec": "196953",
+      "idCargo": "364677",
+      "cargo": "CONDUCTOR",
+      "codigo": "480",
+      "grado": "13",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 29,
+          "titular": "LUIS DAUVINY DUARTE ROA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-03-06T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-007",
+          "id_plaza": 29,
+          "servidor": "LUIS DAUVINY DUARTE ROA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 15,
+      "opec": "161279",
+      "idCargo": "376380",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "19",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 100,
+          "titular": "LEIDY JOHANNA HERRERA MENDEZ",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-08-19T05:00:00.000Z"
+        },
+        {
+          "id_plaza": 101,
+          "titular": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-02T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-003",
+          "id_plaza": 101,
+          "servidor": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-019",
+          "id_plaza": 100,
+          "servidor": "LEIDY JOHANNA HERRERA MENDEZ",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 103,
+          "titular": "LEIDY VANESSA NIETO ROJAS",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 16,
+      "opec": "161279",
+      "idCargo": "585954",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "19",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 100,
+          "titular": "LEIDY JOHANNA HERRERA MENDEZ",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS"
+        },
+        {
+          "id_plaza": 101,
+          "titular": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS"
+        },
+        {
+          "id_plaza": 103,
+          "titular": "LEIDY VANESSA NIETO ROJAS",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 17,
+      "opec": "194527",
+      "idCargo": "376374",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 18,
+      "opec": "194527",
+      "idCargo": "399091",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 19,
+      "opec": "194527",
+      "idCargo": "600470",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 20,
+      "opec": "194527",
+      "idCargo": "618852",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE GESTION JUDICIAL",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 21,
+      "opec": "194528",
+      "idCargo": "376372",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "26",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 77,
+          "titular": "ANGELA MARCELA RODRIGUEZ DIAZ",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-18T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-011",
+          "id_plaza": 77,
+          "servidor": "ANGELA MARCELA RODRIGUEZ DIAZ",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 22,
+      "opec": "196954",
+      "idCargo": "364679",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 107,
+          "titular": "GIOVANNY ALEXANDER CORTES PACHON",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-05T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-006",
+          "id_plaza": 107,
+          "servidor": "GIOVANNY ALEXANDER CORTES PACHON",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-026",
+          "servidor": "MARIA PAULA ROCHA VEGA",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 122,
+          "titular": "HUGO ALFONSO CABARCAS AYOLA",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        },
+        {
+          "id_plaza": 128,
+          "titular": "ANDRES FABIAN NOSSA GUZMAN",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL"
+        }
+      ]
+    },
+    {
+      "simoId": 23,
+      "opec": "198515",
+      "idCargo": "367841",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "19",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 103,
+          "titular": "LEIDY VANESSA NIETO ROJAS",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-07-21T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-015",
+          "id_plaza": 103,
+          "servidor": "LEIDY VANESSA NIETO ROJAS",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 100,
+          "titular": "LEIDY JOHANNA HERRERA MENDEZ",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS"
+        },
+        {
+          "id_plaza": 101,
+          "titular": "ANDREA DEL PILAR CARDENAS SARMIENTO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS"
+        }
+      ]
+    },
+    {
+      "simoId": 24,
+      "opec": "203050",
+      "idCargo": "376250",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "15",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 132,
+          "titular": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-02T05:00:00.000Z"
+        },
+        {
+          "id_plaza": 133,
+          "titular": "MAGDA PATRICIA PUENTES PARDO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-07-01T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-005",
+          "id_plaza": 132,
+          "servidor": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-014",
+          "id_plaza": 133,
+          "servidor": "MAGDA PATRICIA PUENTES PARDO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 25,
+      "opec": "203050",
+      "idCargo": "559960",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "15",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 132,
+          "titular": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-02T05:00:00.000Z"
+        },
+        {
+          "id_plaza": 133,
+          "titular": "MAGDA PATRICIA PUENTES PARDO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-07-01T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-005",
+          "id_plaza": 132,
+          "servidor": "ELIANA STEPHANIE ASTAIZA CHAVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-014",
+          "id_plaza": 133,
+          "servidor": "MAGDA PATRICIA PUENTES PARDO",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 26,
+      "opec": "203062",
+      "idCargo": "376264",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "24",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 83,
+          "titular": "LUZ ANDREA CUBILLOS GUALDRON",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-16T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-010",
+          "id_plaza": 83,
+          "servidor": "LUZ ANDREA CUBILLOS GUALDRON",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-016",
+          "id_plaza": 84,
+          "servidor": "DANIEL YIDID GRANADOS GELVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 27,
+      "opec": "203062",
+      "idCargo": "555976",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "24",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 83,
+          "titular": "LUZ ANDREA CUBILLOS GUALDRON",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-16T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-010",
+          "id_plaza": 83,
+          "servidor": "LUZ ANDREA CUBILLOS GUALDRON",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-016",
+          "id_plaza": 84,
+          "servidor": "DANIEL YIDID GRANADOS GELVES",
+          "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 28,
+      "opec": "207514",
+      "idCargo": "386821",
+      "cargo": "PROFESIONAL ESPECIALIZADO",
+      "codigo": "222",
+      "grado": "27",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 29,
+      "opec": "215625",
+      "idCargo": "405783",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 122,
+          "titular": "HUGO ALFONSO CABARCAS AYOLA",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-10T05:00:00.000Z"
+        },
+        {
+          "id_plaza": 128,
+          "titular": "ANDRES FABIAN NOSSA GUZMAN",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-06-17T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-009",
+          "id_plaza": 122,
+          "servidor": "HUGO ALFONSO CABARCAS AYOLA",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-013",
+          "id_plaza": 128,
+          "servidor": "ANDRES FABIAN NOSSA GUZMAN",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 107,
+          "titular": "GIOVANNY ALEXANDER CORTES PACHON",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 30,
+      "opec": "215625",
+      "idCargo": "563004",
+      "cargo": "PROFESIONAL UNIVERSITARIO",
+      "codigo": "219",
+      "grado": "18",
+      "dependenciaSimo": "DIRECCION DISTRITAL DE INSPECCION  VIGILANCIA Y CONTROL",
+      "estadoProvision": "Provisto - Uso de Listas: ME",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 122,
+          "titular": "HUGO ALFONSO CABARCAS AYOLA",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "CARRERA ADMINISTRATIVA",
+          "fecha_ingreso": "2026-03-10T05:00:00.000Z"
+        },
+        {
+          "id_plaza": 128,
+          "titular": "ANDRES FABIAN NOSSA GUZMAN",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-06-17T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [
+        {
+          "idCaso": "TR-VINC-2026-009",
+          "id_plaza": 122,
+          "servidor": "HUGO ALFONSO CABARCAS AYOLA",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        },
+        {
+          "idCaso": "TR-VINC-2026-013",
+          "id_plaza": 128,
+          "servidor": "ANDRES FABIAN NOSSA GUZMAN",
+          "dependencia": "DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL",
+          "modalidad": "CARRERA_ADMINISTRATIVA"
+        }
+      ],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 107,
+          "titular": "GIOVANNY ALEXANDER CORTES PACHON",
+          "dependencia": "DIRECCIÓN DE GESTIÓN CORPORATIVA"
+        }
+      ]
+    },
+    {
+      "simoId": 47,
+      "opec": "194717",
+      "idCargo": "364787",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codigo": "314",
+      "grado": "20",
+      "dependenciaSimo": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [
+        {
+          "id_plaza": 152,
+          "titular": "RODRIGO DIDIER MUÑOZ CONTRERAS",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES",
+          "tipo_nombramiento": "PERIODO PRUEBA",
+          "fecha_ingreso": "2026-04-22T05:00:00.000Z"
+        }
+      ],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": []
+    },
+    {
+      "simoId": 48,
+      "opec": "199731",
+      "idCargo": "368747",
+      "cargo": "TÉCNICO OPERATIVO",
+      "codigo": "314",
+      "grado": "20",
+      "dependenciaSimo": "DIRECCIÓN DE GESTIÓN CORPORATIVA",
+      "estadoProvision": "Ofertado",
+      "candidatasPlantaDep": [],
+      "candidatasCasosDep": [],
+      "otrasPlantaMismoCodGrado": [
+        {
+          "id_plaza": 152,
+          "titular": "RODRIGO DIDIER MUÑOZ CONTRERAS",
+          "dependencia": "OFICINA DE LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES"
+        }
+      ]
+    }
+  ]
+}
