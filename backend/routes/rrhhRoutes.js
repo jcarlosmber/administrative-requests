@@ -85,7 +85,7 @@ const CATALOGO_FORMATOS = [
     tipo: 'XLSX',
     proceso: 'DESVINCULACION',
     fasesRecomendadas: ['Circuito de Paz y Salvo', 'Cierre y Liquidación'],
-    formularioGoogleUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfvOxm8Du2CU6nGLPlN3bjLPjF7X765F8vCfaaPUlAFhtgSNg/viewform?usp=header',
+    formularioGoogleUrl: 'https://forms.gle/7PNzLqVSzmmK94wQ9',
     descripcion: 'Encuesta institucional y valoración de la experiencia laboral del servidor público saliente. Disponible para diligenciamiento digital en línea vía Google Forms o en plantilla Excel.',
   },
   {

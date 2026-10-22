@@ -522,9 +522,34 @@ module.exports = function (pool) {
       }
 
       if (estado && estado !== 'TODOS') {
-        params.push(estado.trim());
-        const idx = params.length;
-        query += ` AND UPPER(estado_cargo) = UPPER($${idx})`;
+        const estNorm = estado.trim().toUpperCase();
+        if (estNorm === 'VACANTE DEFINITIVA') {
+          query += ` AND (
+            UPPER(estado_cargo) = 'VACANTE DEFINITIVA' OR 
+            UPPER(COALESCE(titular_nombre, '')) ILIKE '%VACANTE DEFINITIVA%' OR 
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%VACANTE DEFINITIVA%' OR 
+            UPPER(COALESCE(tipo_vinculacion_cargo, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+            UPPER(COALESCE(tipo_vinculacion, '')) ILIKE '%VACANTE DEFINITIVA%'
+          )`;
+        } else if (estNorm === 'VACANTE TEMPORAL') {
+          query += ` AND (
+            UPPER(estado_cargo) = 'VACANTE TEMPORAL' OR 
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%TEMPORAL%' OR 
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%LICENCIA%' OR 
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%PERIODO DE PRUEBA%' OR 
+            UPPER(COALESCE(titular_nombre, '')) ILIKE '%TEMPORAL%'
+          )`;
+        } else if (estNorm === 'OCUPADO') {
+          query += ` AND (
+            (UPPER(estado_cargo) = 'OCUPADO' OR estado_cargo IS NULL) AND 
+            UPPER(COALESCE(titular_nombre, '')) NOT ILIKE '%VACANTE DEFINITIVA%' AND 
+            UPPER(COALESCE(situacion_titular, '')) NOT ILIKE '%VACANTE DEFINITIVA%'
+          )`;
+        } else {
+          params.push(estado.trim());
+          const idx = params.length;
+          query += ` AND UPPER(estado_cargo) = UPPER($${idx})`;
+        }
       }
 
       if (dependencia && dependencia !== 'TODAS') {
@@ -630,13 +655,20 @@ module.exports = function (pool) {
           for (const sitItem of rawSits) {
             const upperSit = sitItem.toUpperCase();
             if (upperSit === 'VACANTE DEFINITIVA') {
-              params.push('VACANTE DEFINITIVA');
-              const idx = params.length;
-              sitClauses.push(`(UPPER(tipo_vinculacion) = $${idx} OR UPPER(estado_cargo) = $${idx})`);
+              sitClauses.push(`(
+                UPPER(tipo_vinculacion) = 'VACANTE DEFINITIVA' OR 
+                UPPER(estado_cargo) = 'VACANTE DEFINITIVA' OR
+                UPPER(COALESCE(titular_nombre, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+                UPPER(COALESCE(situacion_titular, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+                UPPER(COALESCE(tipo_vinculacion_cargo, '')) ILIKE '%VACANTE DEFINITIVA%'
+              )`);
             } else if (upperSit === 'VACANTE TEMPORAL') {
-              params.push('VACANTE TEMPORAL');
-              const idx = params.length;
-              sitClauses.push(`(UPPER(tipo_vinculacion) = $${idx} OR UPPER(estado_cargo) = $${idx})`);
+              sitClauses.push(`(
+                UPPER(tipo_vinculacion) = 'VACANTE TEMPORAL' OR 
+                UPPER(estado_cargo) = 'VACANTE TEMPORAL' OR
+                UPPER(COALESCE(situacion_titular, '')) ILIKE '%TEMPORAL%' OR
+                UPPER(COALESCE(titular_nombre, '')) ILIKE '%TEMPORAL%'
+              )`);
             } else {
               params.push(`%${sitItem}%`);
               const idx = params.length;
@@ -725,10 +757,26 @@ module.exports = function (pool) {
       const countRes = await pool.query(`
         SELECT 
           COUNT(*) as total_plazas,
-          COUNT(CASE WHEN estado_cargo = 'OCUPADO' THEN 1 END) as ocupadas,
-          COUNT(CASE WHEN estado_cargo = 'VACANTE DEFINITIVA' THEN 1 END) as vacantes_definitivas,
-          COUNT(CASE WHEN estado_cargo = 'VACANTE TEMPORAL' THEN 1 END) as vacantes_temporales,
-          COUNT(CASE WHEN estado_cargo = 'ENCARGO' THEN 1 END) as encargos,
+          COUNT(CASE WHEN (
+            (estado_cargo = 'OCUPADO' OR estado_cargo IS NULL) AND
+            UPPER(COALESCE(titular_nombre, '')) NOT ILIKE '%VACANTE DEFINITIVA%' AND
+            UPPER(COALESCE(situacion_titular, '')) NOT ILIKE '%VACANTE DEFINITIVA%'
+          ) THEN 1 END) as ocupadas,
+          COUNT(CASE WHEN (
+            estado_cargo = 'VACANTE DEFINITIVA' OR
+            UPPER(COALESCE(titular_nombre, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+            UPPER(COALESCE(tipo_vinculacion_cargo, '')) ILIKE '%VACANTE DEFINITIVA%' OR
+            UPPER(COALESCE(tipo_vinculacion, '')) ILIKE '%VACANTE DEFINITIVA%'
+          ) THEN 1 END) as vacantes_definitivas,
+          COUNT(CASE WHEN (
+            estado_cargo = 'VACANTE TEMPORAL' OR
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%TEMPORAL%' OR
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%LICENCIA%' OR
+            UPPER(COALESCE(situacion_titular, '')) ILIKE '%PERIODO DE PRUEBA%' OR
+            UPPER(COALESCE(titular_nombre, '')) ILIKE '%TEMPORAL%'
+          ) THEN 1 END) as vacantes_temporales,
+          COUNT(CASE WHEN (es_encargo = true OR encargo_nombre IS NOT NULL) THEN 1 END) as encargos,
           COALESCE(SUM(CASE WHEN total_devengado IS NOT NULL AND total_devengado > 0 THEN total_devengado ELSE asignacion_basica END), 0) as masa_salarial_mensual,
           COALESCE(SUM(total_devengado), 0) as total_devengado_mensual,
           COALESCE(SUM(asignacion_basica), 0) as masa_salarial_basica

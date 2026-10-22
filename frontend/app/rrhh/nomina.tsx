@@ -372,13 +372,14 @@ export default function NominaScreen() {
           !String(titularNombreFinal).trim().toUpperCase().includes('VACANTE')
         );
 
+        const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
         const esVacanteDefinitiva = !tienePeriodoPrueba && !titularRealValido && (
-          (String(estadoCargoFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-          (String(titularNombreFinal || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-          sitTitularNorm === 'VACANTE DEFINITIVA'
+          (String(estadoCargoFinal || '')).toUpperCase().includes('VACANTE DEFINITIVA') ||
+          (String(titularNombreFinal || '')).toUpperCase().includes('VACANTE DEFINITIVA') ||
+          sitTitularNorm.includes('VACANTE DEFINITIVA') ||
+          tipoVincCargo.includes('VACANTE DEFINITIVA')
         );
 
-        const tipoVincCargo = String(p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || '').toUpperCase();
         const sitAdmin = String(p.situacion_administrativa || m?.situacion_administrativa || '').toUpperCase();
         const esProvActivo = tipoVincCargo.includes('PROVISIONAL') || sitAdmin.includes('PROVISIONAL') || p.pv === 'PV' || m?.pv === 'PV';
 
@@ -1422,33 +1423,32 @@ export default function NominaScreen() {
       if (!coincideNivel(p.nivel, nivelSeleccionado)) return false;
     }
     if (estadoSeleccionado !== 'TODOS') {
-      const estFiltro = estadoSeleccionado.toUpperCase();
+      const estFiltro = estadoSeleccionado.toUpperCase().trim();
       const estCargo = (p.estado_cargo || '').toUpperCase();
       const sitTit = (p.situacion_titular || '').toUpperCase();
       const titNom = (p.titular_nombre || '').toUpperCase();
-      const vinc = (p.tipo_vinculacion || '').toUpperCase();
+      const vinc = (p.tipo_vinculacion || p.tipo_vinculacion_cargo || '').toUpperCase();
 
       if (estFiltro === 'VACANTE DEFINITIVA') {
         const esDef = (
-          estCargo === 'VACANTE DEFINITIVA' ||
-          sitTit === 'VACANTE DEFINITIVA' ||
-          titNom === 'VACANTE DEFINITIVA' ||
-          vinc === 'VACANTE DEFINITIVA'
+          estCargo.includes('VACANTE DEFINITIVA') ||
+          sitTit.includes('VACANTE DEFINITIVA') ||
+          titNom.includes('VACANTE DEFINITIVA') ||
+          vinc.includes('VACANTE DEFINITIVA')
         );
-        if (sitTit.includes('PERIODO DE PRUEBA') || estCargo === 'OCUPADO') return false;
+        if (sitTit.includes('PERIODO DE PRUEBA')) return false;
         if (!esDef) return false;
       } else if (estFiltro === 'VACANTE TEMPORAL') {
-        if (estCargo === 'OCUPADO') return false;
         const esTemp = (
-          estCargo === 'VACANTE TEMPORAL' ||
+          estCargo.includes('VACANTE TEMPORAL') ||
           sitTit.includes('TEMPORAL') ||
           sitTit.includes('LICENCIA') ||
           titNom.includes('TEMPORAL')
         );
         if (!esTemp) return false;
       } else if (estFiltro === 'OCUPADO') {
+        if (sitTit.includes('VACANTE DEFINITIVA') || titNom.includes('VACANTE DEFINITIVA')) return false;
         if (estCargo === 'OCUPADO') return true;
-        if (sitTit === 'VACANTE DEFINITIVA' || titNom === 'VACANTE DEFINITIVA') return false;
       } else {
         if (estCargo !== estFiltro) return false;
       }
@@ -1525,25 +1525,24 @@ export default function NominaScreen() {
 
       if (estFiltro === 'VACANTE DEFINITIVA') {
         const esDef = (
-          estCargo === 'VACANTE DEFINITIVA' ||
-          sitTit === 'VACANTE DEFINITIVA' ||
-          titNom === 'VACANTE DEFINITIVA' ||
-          vinc === 'VACANTE DEFINITIVA'
+          estCargo.includes('VACANTE DEFINITIVA') ||
+          sitTit.includes('VACANTE DEFINITIVA') ||
+          titNom.includes('VACANTE DEFINITIVA') ||
+          vinc.includes('VACANTE DEFINITIVA')
         );
-        if (sitTit.includes('PERIODO DE PRUEBA') || estCargo === 'OCUPADO') return false;
+        if (sitTit.includes('PERIODO DE PRUEBA')) return false;
         if (!esDef) return false;
       } else if (estFiltro === 'VACANTE TEMPORAL') {
-        if (estCargo === 'OCUPADO') return false;
         const esTemp = (
-          estCargo === 'VACANTE TEMPORAL' ||
+          estCargo.includes('VACANTE TEMPORAL') ||
           sitTit.includes('TEMPORAL') ||
           sitTit.includes('LICENCIA') ||
           titNom.includes('TEMPORAL')
         );
         if (!esTemp) return false;
       } else if (estFiltro === 'OCUPADO') {
+        if (sitTit.includes('VACANTE DEFINITIVA') || titNom.includes('VACANTE DEFINITIVA')) return false;
         if (estCargo === 'OCUPADO') return true;
-        if (sitTit === 'VACANTE DEFINITIVA' || titNom === 'VACANTE DEFINITIVA') return false;
       } else {
         if (estCargo !== estFiltro) return false;
       }

@@ -346,24 +346,24 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
   }
 
   if (filtros.estado && filtros.estado !== 'TODOS') {
-    const estFiltro = filtros.estado.toUpperCase();
+    const estFiltro = filtros.estado.toUpperCase().trim();
     result = result.filter((p) => {
       const estCargo = (p.estado_cargo || '').toUpperCase();
       const sitTit = (p.situacion_titular || '').toUpperCase();
       const titNom = (p.titular_nombre || '').toUpperCase();
-      const vinc = (p.tipo_vinculacion || '').toUpperCase();
+      const vinc = (p.tipo_vinculacion || p.tipo_vinculacion_cargo || '').toUpperCase();
 
       if (estFiltro === 'VACANTE DEFINITIVA') {
         return (
-          estCargo === 'VACANTE DEFINITIVA' ||
-          sitTit === 'VACANTE DEFINITIVA' ||
-          titNom === 'VACANTE DEFINITIVA' ||
-          vinc === 'VACANTE DEFINITIVA'
+          estCargo.includes('VACANTE DEFINITIVA') ||
+          sitTit.includes('VACANTE DEFINITIVA') ||
+          titNom.includes('VACANTE DEFINITIVA') ||
+          vinc.includes('VACANTE DEFINITIVA')
         );
       }
       if (estFiltro === 'VACANTE TEMPORAL') {
         return (
-          estCargo === 'VACANTE TEMPORAL' ||
+          estCargo.includes('VACANTE TEMPORAL') ||
           sitTit.includes('TEMPORAL') ||
           sitTit.includes('LICENCIA') ||
           sitTit.includes('PERIODO DE PRUEBA') ||
@@ -373,8 +373,8 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
       if (estFiltro === 'OCUPADO') {
         return (
           (estCargo === 'OCUPADO' || !estCargo) &&
-          sitTit !== 'VACANTE DEFINITIVA' &&
-          titNom !== 'VACANTE DEFINITIVA'
+          !sitTit.includes('VACANTE DEFINITIVA') &&
+          !titNom.includes('VACANTE DEFINITIVA')
         );
       }
       return estCargo === estFiltro;
@@ -537,10 +537,11 @@ export const nominaService = {
             const titularEsProvisional = !tieneTitularReal && !tieneTitularPeriodoPrueba && (sitTitularUpper.includes('PROVISIONAL') || (esProv && (!sitTitularUpper || sitTitularUpper === 'PROVISIONALIDAD')));
 
             const esVacDef = !tieneTitularReal && !tieneTitularPeriodoPrueba && (
-              (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
-              titNombreUpper === 'VACANTE DEFINITIVA' ||
+              (String(p.estado_cargo || '')).toUpperCase().includes('VACANTE DEFINITIVA') ||
+              titNombreUpper.includes('VACANTE DEFINITIVA') ||
               titNombreUpper.includes('VACANTE') ||
-              sitTitularUpper === 'VACANTE DEFINITIVA' ||
+              sitTitularUpper.includes('VACANTE DEFINITIVA') ||
+              tipoVincCargo.includes('VACANTE DEFINITIVA') ||
               titularEsProvisional
             );
 
