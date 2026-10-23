@@ -234,11 +234,6 @@ module.exports = function (pool) {
     }
 
     return dep;
-  }GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
-      return 'DIRECCIÓN DE GESTIÓN CORPORATIVA';
-    }
-
-    return dep;
   }
 
   // Parseador de funciones
