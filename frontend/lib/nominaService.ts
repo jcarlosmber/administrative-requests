@@ -556,26 +556,39 @@ export const nominaService = {
               titularEsProvisional
             );
 
+            const pernoEncargo = (p.encargo_cedula || m?.encargo_cedula)
+              ? listPerno.find(per => String(per.cedula).trim() === String(p.encargo_cedula || m?.encargo_cedula).trim())
+              : null;
+            const encargoEstaRetirado = Boolean(pernoEncargo && (pernoEncargo.estado_funcionario === 'R' || !!pernoEncargo.fecha_retiro));
+
+            const encargoNombreFinal = (!encargoEstaRetirado && (p.encargo_nombre !== undefined && p.encargo_nombre !== null))
+              ? p.encargo_nombre
+              : (!encargoEstaRetirado ? (m?.encargo_nombre || null) : null);
+            const encargoCedulaFinal = (!encargoEstaRetirado && (p.encargo_cedula !== undefined && p.encargo_cedula !== null))
+              ? p.encargo_cedula
+              : (!encargoEstaRetirado ? (m?.encargo_cedula || null) : null);
+
             const tieneEncargo = Boolean(
-              p.es_encargo ||
-              m?.es_encargo ||
-              (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
-              (p.encargo_cedula && String(p.encargo_cedula).trim() !== '') ||
-              tipoVincCargo.includes('ENCARGO')
+              !encargoEstaRetirado && (
+                p.es_encargo ||
+                m?.es_encargo ||
+                (p.encargo_nombre && p.encargo_nombre.trim() !== '') ||
+                (p.encargo_cedula && String(p.encargo_cedula).trim() !== '') ||
+                Boolean(encargoNombreFinal)
+              )
             );
 
-            const encargoNombreFinal = (p.encargo_nombre !== undefined && p.encargo_nombre !== null)
-              ? p.encargo_nombre
-              : (m?.encargo_nombre || null);
-            const encargoCedulaFinal = (p.encargo_cedula !== undefined && p.encargo_cedula !== null)
-              ? p.encargo_cedula
-              : (m?.encargo_cedula || null);
             const esEncargoFinal = tieneEncargo || Boolean(encargoNombreFinal);
             const idEscaleraFinal = p.id_escalera !== undefined ? p.id_escalera : (m?.id_escalera || null);
             const peldanoEscaleraFinal = p.peldano_escalera !== undefined ? p.peldano_escalera : (m?.peldano_escalera || null);
 
-            let servidorActivoNombreFinal = p.servidor_activo_nombre || m?.servidor_activo_nombre || encargoNombreFinal || null;
-            let servidorActivoCedulaFinal = p.servidor_activo_cedula || m?.servidor_activo_cedula || encargoCedulaFinal || null;
+            const pernoActivo = (p.servidor_activo_cedula || m?.servidor_activo_cedula)
+              ? listPerno.find(per => String(per.cedula).trim() === String(p.servidor_activo_cedula || m?.servidor_activo_cedula).trim())
+              : null;
+            const activoEstaRetirado = Boolean(pernoActivo && (pernoActivo.estado_funcionario === 'R' || !!pernoActivo.fecha_retiro));
+
+            let servidorActivoNombreFinal = activoEstaRetirado ? null : (p.servidor_activo_nombre || m?.servidor_activo_nombre || encargoNombreFinal || null);
+            let servidorActivoCedulaFinal = activoEstaRetirado ? null : (p.servidor_activo_cedula || m?.servidor_activo_cedula || encargoCedulaFinal || null);
 
             if (!servidorActivoNombreFinal) {
               if (tieneEncargo || encargoNombreFinal) {
@@ -587,9 +600,19 @@ export const nominaService = {
               }
             }
 
-            const estadoCargoFinal = esVacDef 
+            let estadoCargoFinal = esVacDef 
               ? 'VACANTE DEFINITIVA' 
               : (p.estado_cargo || m?.estado_cargo || 'OCUPADO');
+
+            // Si el titular está en encargo en otro puesto y no hay encargo ni ocupante activo en esta plaza, es VACANTE TEMPORAL
+            if (
+              !esVacDef &&
+              (sitTitularUpper.includes('ENCARGO') || tipoVincCargo.includes('ENCARGO')) &&
+              !encargoNombreFinal &&
+              !servidorActivoNombreFinal
+            ) {
+              estadoCargoFinal = 'VACANTE TEMPORAL';
+            }
 
             const titularNombreFinal = (esVacDef && !tieneTitularReal && !tieneTitularPeriodoPrueba)
               ? 'VACANTE DEFINITIVA'

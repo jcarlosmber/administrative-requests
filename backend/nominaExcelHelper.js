@@ -305,6 +305,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
   const mapaPernoPorCedula = new Map();
   const mapaPernoPorId = new Map();
   const mapaSideapPorId = new Map();
+  const cedulasRetiradasSet = new Set();
 
   const sheetPernoAux = obtenerHojaPerno(workbook);
   if (sheetPernoAux && sheetPernoAux.rowCount > 2) {
@@ -314,6 +315,13 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       const cRaw = cleanDoc(getVal(rowP.getCell(1)));
       if (!cRaw) continue;
 
+      const estadoFuncRaw = cleanText(getVal(rowP.getCell(5)) || '').toUpperCase();
+      const fechaRetiroRaw = cleanDate(getVal(rowP.getCell(42)));
+      const esRetirado = estadoFuncRaw === 'R' || estadoFuncRaw.includes('RETIRAD') || !!fechaRetiroRaw;
+      if (esRetirado) {
+        cedulasRetiradasSet.add(cRaw);
+      }
+
       const ape1 = cleanText(getVal(rowP.getCell(2)) || '').toUpperCase();
       const ape2 = cleanText(getVal(rowP.getCell(3)) || '').toUpperCase();
       const nom = cleanText(getVal(rowP.getCell(4)) || '').toUpperCase();
@@ -322,6 +330,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       const infoPerno = {
         cedula: cRaw,
         nombreCompleto: nomComp,
+        esRetirado,
         direccion: cleanText(getVal(rowP.getCell(7)) || '').toUpperCase(),
         telefono: cleanText(getVal(rowP.getCell(8)) || ''),
         sexo: cleanText(getVal(rowP.getCell(9)) || '').toUpperCase(),
@@ -338,6 +347,22 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       if (infoPerno.idPerno) {
         mapaPernoPorId.set(infoPerno.idPerno, infoPerno);
       }
+    }
+  }
+
+  // Consultar también en la base de datos personal_perno_sjd para detectar personal retirado previamente
+  if (pool) {
+    try {
+      const qRet = await pool.query(`
+        SELECT cedula FROM public.personal_perno_sjd 
+        WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
+      `);
+      for (const r of qRet.rows) {
+        const cClean = cleanDoc(r.cedula);
+        if (cClean) cedulasRetiradasSet.add(cClean);
+      }
+    } catch (eQ) {
+      // Ignorar si aún no hay tabla o conexión
     }
   }
 
@@ -499,6 +524,16 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       if (pernoInfo.nombreCompleto) titularNombre = pernoInfo.nombreCompleto;
     }
 
+    const funcionarioActualRetirado = (cedulaActual && cedulasRetiradasSet.has(cedulaActual)) || 
+      (cedulaActual && mapaPernoPorCedula.get(cedulaActual)?.esRetirado);
+
+    if (funcionarioActualRetirado) {
+      // Si la persona registrada como ocupante en el Excel ya está retirada de la entidad,
+      // no puede ser ni ocupante activo ni encargo.
+      nombreActual = '';
+      cedulaActual = null;
+    }
+
     const normActual = nombreActual.toUpperCase();
     const normTitular = titularNombre.toUpperCase();
     const actualEsVacante = !normActual || normActual.includes('VACANTE') || normActual.includes('VACANCIA');
@@ -524,7 +559,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       tipoVinculacion.includes('PROVISIONAL') || 
       situacionAdmin.includes('PROVISIONAL');
 
-    if (!actualEsVacante && !esProvisionalFila) {
+    if (!actualEsVacante && !esProvisionalFila && !funcionarioActualRetirado) {
       const hayDiferencia = titularCedula && cedulaActual 
         ? (titularCedula !== cedulaActual) 
         : (titularNombre && normActual !== normTitular);
@@ -540,13 +575,15 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     const servidorActivoCedulaFinal = actualEsVacante ? null : cedulaActual;
 
     let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 23)) || '').trim().toUpperCase();
-    if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
+    if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT') || (actualEsVacante && estadoCargo === 'OCUPADO')) {
       if (actualEsVacante && titularEsVacante) {
         estadoCargo = 'VACANTE DEFINITIVA';
-      } else if (normActual.includes('TEMPORAL') || normTitular.includes('TEMPORAL') || situacionAdmin.includes('TEMPORAL') || situacionTitular.includes('TEMPORAL')) {
+      } else if (normActual.includes('TEMPORAL') || normTitular.includes('TEMPORAL') || situacionAdmin.includes('TEMPORAL') || situacionTitular.includes('TEMPORAL') || situacionTitular.includes('ENCARGO')) {
         estadoCargo = 'VACANTE TEMPORAL';
-      } else if (!actualEsVacante || !titularEsVacante) {
+      } else if (!actualEsVacante) {
         estadoCargo = 'OCUPADO';
+      } else if (!titularEsVacante) {
+        estadoCargo = 'VACANTE TEMPORAL';
       } else {
         estadoCargo = 'VACANTE DEFINITIVA';
       }
@@ -730,6 +767,28 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
 
     procesados++;
     actualizados++;
+  }
+
+  if (pool) {
+    try {
+      await pool.query(`
+        UPDATE public.planta_personal_sjd p
+        SET encargo_cedula = NULL,
+            encargo_nombre = NULL,
+            es_encargo = false,
+            servidor_activo_cedula = NULL,
+            servidor_activo_nombre = NULL,
+            estado_cargo = CASE 
+              WHEN UPPER(COALESCE(p.situacion_titular, '')) LIKE '%ENCARGO%' THEN 'VACANTE TEMPORAL'
+              ELSE p.estado_cargo
+            END
+        FROM public.personal_perno_sjd perno
+        WHERE (p.encargo_cedula = perno.cedula OR p.servidor_activo_cedula = perno.cedula)
+          AND (perno.estado_funcionario = 'R' OR perno.fecha_retiro IS NOT NULL);
+      `);
+    } catch (eClean) {
+      console.warn('Advertencia en limpieza de retirados en planta_personal_sjd:', eClean.message);
+    }
   }
 
   return {
@@ -1118,6 +1177,28 @@ async function procesarExtraccionPerno(sheet, pool) {
     total_vinculaciones_todas: novedades_vinculacion.length,
     total_desvinculaciones_todas: novedades_desvinculacion.length,
   };
+
+  if (pool) {
+    try {
+      await pool.query(`
+        UPDATE public.planta_personal_sjd p
+        SET encargo_cedula = NULL,
+            encargo_nombre = NULL,
+            es_encargo = false,
+            servidor_activo_cedula = NULL,
+            servidor_activo_nombre = NULL,
+            estado_cargo = CASE 
+              WHEN UPPER(COALESCE(p.situacion_titular, '')) LIKE '%ENCARGO%' THEN 'VACANTE TEMPORAL'
+              ELSE p.estado_cargo
+            END
+        FROM public.personal_perno_sjd perno
+        WHERE (p.encargo_cedula = perno.cedula OR p.servidor_activo_cedula = perno.cedula)
+          AND (perno.estado_funcionario = 'R' OR perno.fecha_retiro IS NOT NULL);
+      `);
+    } catch (eCleanPerno) {
+      console.warn('Advertencia en limpieza de retirados en planta_personal_sjd tras perno:', eCleanPerno.message);
+    }
+  }
 
   return {
     sheetName: sheet.name,
