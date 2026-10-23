@@ -1148,11 +1148,11 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                           }}
                         >
                           <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
-                            {plazaEnriquecida?.es_provisional ? 'SERVIDOR PROVISIONAL' : (plazaEnriquecida?.es_titular_vacante ? 'ESTADO DE LA PLAZA' : 'TITULAR DIRECTO')}
+                            {plazaEnriquecida?.es_provisional ? 'SERVIDOR PROVISIONAL' : (plazaEnriquecida?.es_titular_vacante ? 'ESTADO DE LA PLAZA' : (String(plazaActiva.situacion_titular || '').toUpperCase().includes('ENCARGO') ? 'TITULAR EN OTRO EMPLEO' : 'TITULAR DIRECTO'))}
                           </Text>
                         </View>
                         <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
-                          {plazaEnriquecida?.es_provisional ? 'Servidor desempeñando el empleo en provisionalidad' : (plazaEnriquecida?.es_titular_vacante ? 'Plaza en vacancia definitiva' : 'Servidor en ejercicio del cargo')}
+                          {plazaEnriquecida?.es_provisional ? 'Servidor desempeñando el empleo en provisionalidad' : (plazaEnriquecida?.es_titular_vacante ? 'Plaza en vacancia definitiva' : (String(plazaActiva.situacion_titular || '').toUpperCase().includes('ENCARGO') ? 'Titular en encargo en otro empleo (Vacante Temporal)' : 'Servidor en ejercicio del cargo'))}
                         </Text>
                       </View>
                       <Ionicons

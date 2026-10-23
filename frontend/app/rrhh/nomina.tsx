@@ -2038,7 +2038,7 @@ export default function NominaScreen() {
     const nombreActivo = String(
       plazaModal.servidor_activo_nombre ||
       plazaModal.encargo_nombre ||
-      (!esTitularVacante ? plazaModal.titular_nombre : '') ||
+      (!esTitularVacante && !situacionTitularModalNorm.includes('ENCARGO') ? plazaModal.titular_nombre : '') ||
       mockMatch?.servidor_activo_nombre ||
       mockMatch?.encargo_nombre ||
       ''
@@ -11096,6 +11096,175 @@ export default function NominaScreen() {
                             </View>
                           </View>
                         )}
+                      </View>
+                    </View>
+                  ) : !plazaModalEnriquecida?.es_titular_vacante ? (
+                    /* CUANDO LA PLAZA NO TIENE SERVIDOR ACTIVO PERO TIENE TITULAR LEGÍTIMO (VACANTE TEMPORAL - TITULAR EN ENCARGO O COMISIÓN) */
+                    <View style={{ gap: 12, marginBottom: 20 }}>
+                      {/* BLOQUE 1: OCUPACIÓN ACTUAL (SIN SERVIDOR ACTIVO / DESOCUPADA) */}
+                      <View
+                        style={{
+                          backgroundColor: '#FFFBEB',
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#FDE68A',
+                          padding: 14,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View
+                              style={{
+                                backgroundColor: '#F59E0B',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                                PRIMERO: SERVIDOR ACTIVO
+                              </Text>
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400E' }}>
+                              Plaza temporalmente desocupada
+                            </Text>
+                          </View>
+                          <Ionicons name="time-outline" size={16} color="#B45309" />
+                        </View>
+
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400E', marginBottom: 4 }}>
+                          Sin servidor activo / Vacante Temporal
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación de la Plaza</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309', marginTop: 1 }}>
+                              VACANTE TEMPORAL
+                            </Text>
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Ocupación Actual</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Desocupada / Sin encargo asignado
+                            </Text>
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Disponibilidad</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Apta para provisión transitoria mediante encargo
+                            </Text>
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Causa de la Vacancia</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Titular en situación de encargo en otro empleo
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* BLOQUE 2: SERVIDOR TITULAR DEL CARGO (LUEGO) */}
+                      <View
+                        style={{
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 14,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View
+                              style={{
+                                backgroundColor: THEME.marca700,
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                                LUEGO: TITULAR DEL CARGO
+                              </Text>
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
+                              Servidor titular en propiedad con derechos de carrera
+                            </Text>
+                          </View>
+                          <Ionicons name="ribbon-outline" size={16} color={THEME.marca700} />
+                        </View>
+
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
+                          {plazaModalEnriquecida?.nombre_titular || plazaModal.titular_nombre || 'No registrado'}
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.cedula_titular || plazaModal.titular_cedula 
+                                ? `C.C. ${plazaModalEnriquecida?.cedula_titular || plazaModal.titular_cedula}` 
+                                : 'No registrada'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                                {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : 'No registrada'}
+                              </Text>
+                              {plazaModalEnriquecida?.edad_titular ? (
+                                <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            {plazaModalEnriquecida?.fecha_nacimiento_titular ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                F. Nac: {formatFecha(plazaModalEnriquecida.fecha_nacimiento_titular)}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca700, marginTop: 1 }}>
+                              {cleanLabel(plazaModalEnriquecida?.situacion_titular || plazaModal.situacion_titular, 'EN ENCARGO')}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal.tipo_vinculacion_entidad || 'CARRERA ADMINISTRATIVA'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || 'EN PROPIEDAD'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento (Col. AK)</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.numero_acto_nombramiento && plazaModalEnriquecida.numero_acto_nombramiento !== '---'
+                                ? `Acto #${plazaModalEnriquecida.numero_acto_nombramiento}`
+                                : (plazaModalEnriquecida?.acto_nombramiento || '---')}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Conserva titularidad de la plaza en vacancia temporal
+                            </Text>
+                          </View>
+                        </View>
                       </View>
                     </View>
                   ) : (
