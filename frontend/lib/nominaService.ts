@@ -50,6 +50,7 @@ export interface PersonaPerno {
   total_devengado?: number | null;
   // Campos vinculados a la Planta Oficial
   plaza_id_plaza?: number | null;
+  plaza_id_perno?: number | null;
   plaza_id_sideap?: number | null;
   plaza_nivel?: string | null;
   plaza_cargo?: string | null;
@@ -64,6 +65,10 @@ export interface PersonaPerno {
   plaza_situacion_titular?: string | null;
   plaza_tipo_vinculacion?: string | null;
   plaza_situacion_administrativa?: string | null;
+  plaza_titular_nombre?: string | null;
+  plaza_titular_cedula?: string | null;
+  plaza_servidor_activo_nombre?: string | null;
+  plaza_servidor_activo_cedula?: string | null;
   plaza_encargo_cedula?: string | null;
   plaza_encargo_nombre?: string | null;
   plaza_es_encargo?: boolean | null;
@@ -72,6 +77,12 @@ export interface PersonaPerno {
   plaza_peldano_escalera?: number | null;
   plaza_resolucion_manual?: string | null;
   plaza_manual_funciones?: string | null;
+  plaza_ocupante_actual_nombre?: string | null;
+  plaza_ocupante_actual_cedula?: string | null;
+  plaza_ocupante_actual_modalidad?: string | null;
+  plaza_ocupante_actual_detalle?: string | null;
+  plaza_ocupante_es_misma_persona?: boolean | null;
+  plaza_cruce_origen?: 'POSICION_PLANTA' | 'CEDULA' | 'CARGO_GRADO' | string | null;
 }
 
 export interface PlazaNomina {

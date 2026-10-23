@@ -1349,41 +1349,98 @@ export default function NominaScreen() {
     return pernoFiltrado.slice(inicio, inicio + filasPorPaginaPerno);
   }, [pernoFiltrado, paginaPerno]);
 
-  // Enriquecimiento de la persona seleccionada en el Modal
+  // Enriquecimiento de la persona seleccionada en el Modal con cruce a Planta Oficial
   const pernoModalEnriquecida = useMemo(() => {
     if (!pernoModal) return null;
     const listPlazas = todasLasPlazas;
     const pCed = String(pernoModal.cedula || '').trim();
-    const esRetirado = pernoModal.estado_funcionario === 'R' || !!pernoModal.fecha_retiro;
+    const pCedLimpia = pCed.replace(/\D/g, '');
+    const posPlanta = pernoModal.posicion_planta ? Number(pernoModal.posicion_planta) : null;
 
-    // 1. Coincidencia estricta por cédula (titular, encargo o servidor activo)
-    let matchPlaza = pCed
-      ? listPlazas.find(
-          (pl) =>
-            String(pl.titular_cedula || '').trim() === pCed ||
-            String(pl.encargo_cedula || '').trim() === pCed ||
-            String(pl.servidor_activo_cedula || '').trim() === pCed
-        )
-      : null;
+    let matchPlaza: PlazaNomina | null = null;
+    let cruceOrigen: 'POSICION_PLANTA' | 'CEDULA' | 'CARGO_GRADO' | null = null;
 
-    // 2. Si no coincide por cédula, SOLO buscar por posicion_planta si el funcionario NO está retirado
-    // y si el cargo coincide para evitar falsos positivos con plazas activas de otros funcionarios
-    if (!matchPlaza && !esRetirado && pernoModal.posicion_planta) {
+    // 1. Cruce prioritario solicitado: POSICION_PLANTA (Fila AE de Planta Perno) con ID PERNO de Planta Oficial
+    if (posPlanta && !isNaN(posPlanta)) {
+      matchPlaza = listPlazas.find((pl) => Number(pl.id_perno) === posPlanta) || null;
+      if (matchPlaza) {
+        cruceOrigen = 'POSICION_PLANTA';
+      } else {
+        // Fallback secundario si id_perno no coincide pero id_plaza sí
+        matchPlaza = listPlazas.find((pl) => Number(pl.id_plaza) === posPlanta) || null;
+        if (matchPlaza) cruceOrigen = 'POSICION_PLANTA';
+      }
+    }
+
+    // 2. Si no se encontró por POSICION_PLANTA -> ID PERNO, cruzar por Cédula (titular, encargo o servidor activo)
+    if (!matchPlaza && pCedLimpia) {
       matchPlaza = listPlazas.find(
         (pl) =>
-          (Number(pl.id_perno) === Number(pernoModal.posicion_planta) ||
-            Number(pl.id_plaza) === Number(pernoModal.posicion_planta)) &&
-          (!pernoModal.cargo ||
-            !pl.cargo ||
-            pl.cargo.trim().toUpperCase() === pernoModal.cargo.trim().toUpperCase())
-      );
+          String(pl.titular_cedula || '').replace(/\D/g, '') === pCedLimpia ||
+          String(pl.encargo_cedula || '').replace(/\D/g, '') === pCedLimpia ||
+          String(pl.servidor_activo_cedula || '').replace(/\D/g, '') === pCedLimpia
+      ) || null;
+      if (matchPlaza) cruceOrigen = 'CEDULA';
+    }
+
+    // 3. Fallback adicional por coincidencia de cargo y grado en planta
+    if (!matchPlaza && pernoModal.cargo) {
+      const pernoCargoNorm = pernoModal.cargo.trim().toUpperCase();
+      const pernoGrado = pernoModal.grado ? String(pernoModal.grado).trim() : null;
+      matchPlaza = listPlazas.find(
+        (pl) =>
+          pl.cargo &&
+          pl.cargo.trim().toUpperCase() === pernoCargoNorm &&
+          (!pernoGrado || String(pl.grado || '').trim() === pernoGrado)
+      ) || null;
+      if (matchPlaza) cruceOrigen = 'CARGO_GRADO';
     }
 
     if (!matchPlaza) return pernoModal;
 
+    // Determinar la persona que está desempeñando actualmente la plaza oficial
+    const tieneEncargo = Boolean(
+      (matchPlaza.encargo_nombre && matchPlaza.encargo_nombre.trim() !== '') ||
+      matchPlaza.es_encargo
+    );
+    const titularNom = matchPlaza.titular_nombre ? String(matchPlaza.titular_nombre).trim() : null;
+    const esTitularVacante = !titularNom || titularNom.toUpperCase() === 'VACANTE DEFINITIVA' || titularNom.toUpperCase().includes('VACANTE');
+
+    let ocupanteActualNombre: string | null = null;
+    let ocupanteActualCedula: string | null = null;
+    let ocupanteActualModalidad: string = 'VACANTE';
+    let ocupanteActualDetalle: string = '';
+
+    if (tieneEncargo && matchPlaza.encargo_nombre) {
+      ocupanteActualNombre = matchPlaza.encargo_nombre;
+      ocupanteActualCedula = matchPlaza.encargo_cedula || null;
+      ocupanteActualModalidad = 'ENCARGO';
+      ocupanteActualDetalle = 'Servidor desempeñando el cargo mediante Encargo';
+    } else if (matchPlaza.servidor_activo_nombre && !matchPlaza.servidor_activo_nombre.toUpperCase().includes('VACANTE')) {
+      ocupanteActualNombre = matchPlaza.servidor_activo_nombre;
+      ocupanteActualCedula = matchPlaza.servidor_activo_cedula || null;
+      const vincUpper = (matchPlaza.tipo_vinculacion || '').toUpperCase();
+      ocupanteActualModalidad = vincUpper.includes('PROVISIONAL') ? 'PROVISIONAL' : 'TITULAR';
+      ocupanteActualDetalle = matchPlaza.tipo_vinculacion || (ocupanteActualModalidad === 'PROVISIONAL' ? 'Nombramiento Provisional' : 'Titular Activo');
+    } else if (!esTitularVacante && titularNom) {
+      ocupanteActualNombre = titularNom;
+      ocupanteActualCedula = matchPlaza.titular_cedula || null;
+      ocupanteActualModalidad = 'TITULAR';
+      ocupanteActualDetalle = matchPlaza.situacion_titular || matchPlaza.tipo_vinculacion || 'Titular en Propiedad';
+    } else {
+      ocupanteActualNombre = null;
+      ocupanteActualCedula = null;
+      ocupanteActualModalidad = 'VACANTE';
+      ocupanteActualDetalle = matchPlaza.estado_cargo || 'Plaza Vacante Definitiva';
+    }
+
+    const ocupanteCedLimpia = String(ocupanteActualCedula || '').replace(/\D/g, '');
+    const esMismaPersona = Boolean(pCedLimpia && ocupanteCedLimpia && pCedLimpia === ocupanteCedLimpia);
+
     return {
       ...pernoModal,
       plaza_id_plaza: pernoModal.plaza_id_plaza || matchPlaza.id_plaza,
+      plaza_id_perno: matchPlaza.id_perno || null,
       plaza_id_sideap: pernoModal.plaza_id_sideap || matchPlaza.id_sideap,
       plaza_nivel: pernoModal.plaza_nivel || matchPlaza.nivel,
       plaza_cargo: pernoModal.plaza_cargo || matchPlaza.cargo,
@@ -1398,6 +1455,10 @@ export default function NominaScreen() {
       plaza_situacion_titular: pernoModal.plaza_situacion_titular || matchPlaza.situacion_titular,
       plaza_tipo_vinculacion: pernoModal.plaza_tipo_vinculacion || matchPlaza.tipo_vinculacion,
       plaza_situacion_administrativa: pernoModal.plaza_situacion_administrativa || matchPlaza.situacion_administrativa,
+      plaza_titular_nombre: matchPlaza.titular_nombre || null,
+      plaza_titular_cedula: matchPlaza.titular_cedula || null,
+      plaza_servidor_activo_nombre: matchPlaza.servidor_activo_nombre || null,
+      plaza_servidor_activo_cedula: matchPlaza.servidor_activo_cedula || null,
       plaza_encargo_cedula: pernoModal.plaza_encargo_cedula || matchPlaza.encargo_cedula,
       plaza_encargo_nombre: pernoModal.plaza_encargo_nombre || matchPlaza.encargo_nombre,
       plaza_es_encargo: pernoModal.plaza_es_encargo !== undefined ? pernoModal.plaza_es_encargo : matchPlaza.es_encargo,
@@ -1406,6 +1467,12 @@ export default function NominaScreen() {
       plaza_peldano_escalera: pernoModal.plaza_peldano_escalera || matchPlaza.peldano_escalera,
       plaza_manual_funciones: pernoModal.plaza_manual_funciones || matchPlaza.manual_funciones || matchPlaza.resolucion_manual || null,
       plaza_resolucion_manual: pernoModal.plaza_resolucion_manual || matchPlaza.resolucion_manual || matchPlaza.manual_funciones || null,
+      plaza_ocupante_actual_nombre: ocupanteActualNombre,
+      plaza_ocupante_actual_cedula: ocupanteActualCedula,
+      plaza_ocupante_actual_modalidad: ocupanteActualModalidad,
+      plaza_ocupante_actual_detalle: ocupanteActualDetalle,
+      plaza_ocupante_es_misma_persona: esMismaPersona,
+      plaza_cruce_origen: cruceOrigen,
     };
   }, [pernoModal, plazas, todasLasPlazas]);
 
@@ -12358,11 +12425,21 @@ export default function NominaScreen() {
                       </View>
                     )}
 
+                    {/* Badge Posición Nómina PERNO (Fila AE) */}
+                    {pernoModalEnriquecida?.posicion_planta ? (
+                      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ color: THEME.white, fontSize: 10.5, fontWeight: '700' }}>
+                          Pos. Nómina AE #{pernoModalEnriquecida.posicion_planta}
+                        </Text>
+                      </View>
+                    ) : null}
+
                     {/* Badge Plaza Planta */}
                     {pernoModalEnriquecida?.plaza_id_plaza ? (
                       <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
                         <Text style={{ color: THEME.white, fontSize: 10.5, fontWeight: '700' }}>
                           Plaza Oficial #{pernoModalEnriquecida.plaza_id_plaza}
+                          {pernoModalEnriquecida.plaza_id_perno ? ` (ID Perno: ${pernoModalEnriquecida.plaza_id_perno})` : ''}
                           {pernoModalEnriquecida.plaza_es_encargo ? ' (Encargo)' : ''}
                         </Text>
                       </View>
@@ -12885,13 +12962,279 @@ export default function NominaScreen() {
                     )}
 
                     {/* ======================================================== */}
-                    {/* TAB 4: PLANTA OFICIAL, CARGO & MANUAL DE FUNCIONES       */}
+                    {/* TAB 4: PLANTA OFICIAL, CARGO & OCUPANTE ACTUAL           */}
                     {/* ======================================================== */}
                     {modalPernoTab === 'planta' && (
                       <View style={{ gap: 16 }}>
                         {pernoModalEnriquecida.plaza_id_plaza ? (
                           <View style={{ gap: 16 }}>
-                            {/* Tarjeta de Plaza */}
+                            {/* ======================================================== */}
+                            {/* TARJETA 1: PERSONA QUE ESTÁ ACTUALMENTE EN LA PLAZA      */}
+                            {/* ======================================================== */}
+                            <View
+                              style={{
+                                backgroundColor: THEME.white,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                overflow: 'hidden',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.05,
+                                shadowRadius: 6,
+                              }}
+                            >
+                              {/* Cabecera de la Tarjeta de Persona Actual */}
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca900,
+                                  paddingHorizontal: 16,
+                                  paddingVertical: 12,
+                                  flexDirection: isDesktop ? 'row' : 'column',
+                                  alignItems: isDesktop ? 'center' : 'flex-start',
+                                  justifyContent: 'space-between',
+                                  gap: 8,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                  <View
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 16,
+                                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <Ionicons name="person" size={17} color={THEME.white} />
+                                  </View>
+                                  <View>
+                                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.white }}>
+                                      Persona que Ocupa Actualmente la Plaza Oficial
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: 'rgba(214, 228, 244, 0.8)', marginTop: 1 }}>
+                                      {pernoModalEnriquecida.posicion_planta
+                                        ? `Cruce Fila AE POSICION_PLANTA #${pernoModalEnriquecida.posicion_planta} ➔ ID PERNO #${pernoModalEnriquecida.plaza_id_perno || pernoModalEnriquecida.posicion_planta} (Plaza #${pernoModalEnriquecida.plaza_id_plaza})`
+                                        : `Cruce a Planta Oficial · Plaza #${pernoModalEnriquecida.plaza_id_plaza}`}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                {/* Badges de Estado y Modalidad */}
+                                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  {pernoModalEnriquecida.plaza_ocupante_actual_modalidad === 'ENCARGO' ? (
+                                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#B45309' }}>
+                                        EN ENCARGO
+                                      </Text>
+                                    </View>
+                                  ) : pernoModalEnriquecida.plaza_ocupante_actual_modalidad === 'PROVISIONAL' ? (
+                                    <View style={{ backgroundColor: '#FFEDD5', paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 6, borderWidth: 1, borderColor: '#FED7AA' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#C2410C' }}>
+                                        PROVISIONAL
+                                      </Text>
+                                    </View>
+                                  ) : pernoModalEnriquecida.plaza_ocupante_actual_modalidad === 'TITULAR' ? (
+                                    <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 6, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#047857' }}>
+                                        TITULAR EN PROPIEDAD
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 6, borderWidth: 1, borderColor: '#FECACA' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#DC2626' }}>
+                                        VACANTE DEFINITIVA
+                                      </Text>
+                                    </View>
+                                  )}
+
+                                  {/* Botón para abrir la plaza técnica */}
+                                  <Pressable
+                                    onPress={() => {
+                                      const pl = todasLasPlazas.find(
+                                        (p) => p.id_plaza === pernoModalEnriquecida.plaza_id_plaza
+                                      );
+                                      if (pl) setPlazaModal(pl);
+                                    }}
+                                    style={({ pressed }) => ({
+                                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                                      paddingHorizontal: 9,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      borderWidth: 1,
+                                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    })}
+                                  >
+                                    <Ionicons name="open-outline" size={13} color={THEME.white} />
+                                    <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700' }}>
+                                      Ver Ficha Plaza #{pernoModalEnriquecida.plaza_id_plaza}
+                                    </Text>
+                                  </Pressable>
+                                </View>
+                              </View>
+
+                              {/* Cuerpo de la Tarjeta del Ocupante */}
+                              <View style={{ padding: 16, gap: 14 }}>
+                                {pernoModalEnriquecida.plaza_ocupante_actual_nombre ? (
+                                  <>
+                                    <View
+                                      style={{
+                                        flexDirection: isDesktop ? 'row' : 'column',
+                                        alignItems: isDesktop ? 'center' : 'flex-start',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        paddingBottom: 12,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: THEME.slate100,
+                                      }}
+                                    >
+                                      <View style={{ flex: 1 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                          <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                                            {pernoModalEnriquecida.plaza_ocupante_actual_nombre}
+                                          </Text>
+
+                                          {pernoModalEnriquecida.plaza_ocupante_es_misma_persona ? (
+                                            <View style={{ backgroundColor: '#DEF7EC', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#BCF0DA' }}>
+                                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#03543F' }}>
+                                                Mismo servidor del expediente
+                                              </Text>
+                                            </View>
+                                          ) : (
+                                            <View style={{ backgroundColor: '#E1EFFE', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1E429F' }}>
+                                                Ocupante actual en Planta Oficial
+                                              </Text>
+                                            </View>
+                                          )}
+                                        </View>
+
+                                        <Text style={{ fontSize: 12.5, color: THEME.slate600, marginTop: 3 }}>
+                                          {pernoModalEnriquecida.plaza_ocupante_actual_cedula
+                                            ? `Cédula de Ciudadanía: C.C. ${pernoModalEnriquecida.plaza_ocupante_actual_cedula}`
+                                            : 'Documento no registrado en Planta Oficial'}
+                                          {' • '}
+                                          <Text style={{ fontWeight: '600', color: THEME.slate700 }}>
+                                            {pernoModalEnriquecida.plaza_ocupante_actual_detalle}
+                                          </Text>
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    {/* Sub-tarjetas si hay Titular y Encargo simultáneo */}
+                                    {(pernoModalEnriquecida.plaza_encargo_nombre && pernoModalEnriquecida.plaza_titular_nombre && !pernoModalEnriquecida.plaza_titular_nombre.toUpperCase().includes('VACANTE')) ? (
+                                      <View
+                                        style={{
+                                          flexDirection: isDesktop ? 'row' : 'column',
+                                          gap: 12,
+                                          backgroundColor: THEME.slate50,
+                                          padding: 12,
+                                          borderRadius: 8,
+                                          borderWidth: 1,
+                                          borderColor: THEME.slate200,
+                                        }}
+                                      >
+                                        {/* Titular en Propiedad */}
+                                        <View style={{ flex: 1, gap: 3 }}>
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                            <Ionicons name="shield-checkmark" size={14} color={THEME.marca700} />
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
+                                              Titular en Propiedad de la Plaza
+                                            </Text>
+                                          </View>
+                                          <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800 }}>
+                                            {pernoModalEnriquecida.plaza_titular_nombre}
+                                          </Text>
+                                          <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                            {pernoModalEnriquecida.plaza_titular_cedula ? `C.C. ${pernoModalEnriquecida.plaza_titular_cedula}` : 'Sin C.C.'}
+                                            {pernoModalEnriquecida.plaza_situacion_titular ? ` • ${pernoModalEnriquecida.plaza_situacion_titular}` : ''}
+                                          </Text>
+                                        </View>
+
+                                        <View style={{ width: isDesktop ? 1 : '100%', height: isDesktop ? '100%' : 1, backgroundColor: THEME.slate200 }} />
+
+                                        {/* Servidor en Encargo */}
+                                        <View style={{ flex: 1, gap: 3 }}>
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                            <Ionicons name="ribbon" size={14} color="#B45309" />
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase' }}>
+                                              Servidor que Desempeña en Encargo
+                                            </Text>
+                                          </View>
+                                          <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800 }}>
+                                            {pernoModalEnriquecida.plaza_encargo_nombre}
+                                          </Text>
+                                          <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                            {pernoModalEnriquecida.plaza_encargo_cedula ? `C.C. ${pernoModalEnriquecida.plaza_encargo_cedula}` : 'Sin C.C.'}
+                                            {' • '}En ejercicio del empleo
+                                          </Text>
+                                        </View>
+                                      </View>
+                                    ) : (
+                                      <View
+                                        style={{
+                                          flexDirection: isDesktop ? 'row' : 'column',
+                                          gap: 12,
+                                        }}
+                                      >
+                                        <View style={{ flex: 1, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                          <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                            Cargo y Nivel en Planta Oficial
+                                          </Text>
+                                          <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                            {pernoModalEnriquecida.plaza_cargo || pernoModalEnriquecida.cargo}
+                                          </Text>
+                                          <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 1 }}>
+                                            Nivel: {pernoModalEnriquecida.plaza_nivel || 'N/A'} • Cód. {pernoModalEnriquecida.plaza_codigo || pernoModalEnriquecida.cargo_cod} - Grado {pernoModalEnriquecida.plaza_grado || pernoModalEnriquecida.grado}
+                                          </Text>
+                                        </View>
+
+                                        <View style={{ flex: 1, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                          <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                                            Dependencia y Ubicación
+                                          </Text>
+                                          <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                            {pernoModalEnriquecida.plaza_dependencia_cargo || pernoModalEnriquecida.dependencia}
+                                          </Text>
+                                          <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                                            Funcional: {pernoModalEnriquecida.plaza_dependencia_funcional || pernoModalEnriquecida.plaza_dependencia_cargo || 'Misma'}
+                                          </Text>
+                                        </View>
+                                      </View>
+                                    )}
+                                  </>
+                                ) : (
+                                  <View
+                                    style={{
+                                      backgroundColor: '#FEF2F2',
+                                      padding: 14,
+                                      borderRadius: 8,
+                                      borderWidth: 1,
+                                      borderColor: '#FECACA',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 12,
+                                    }}
+                                  >
+                                    <Ionicons name="alert-circle" size={24} color="#DC2626" />
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#991B1B' }}>
+                                        Plaza Actualmente Vacante Definitiva
+                                      </Text>
+                                      <Text style={{ fontSize: 12, color: '#B91C1C', marginTop: 1 }}>
+                                        No hay ningún servidor nombrado ni en encargo actualmente en esta plaza oficial de la Secretaría Jurídica Distrital.
+                                      </Text>
+                                    </View>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+
+                            {/* Tarjeta Técnica de la Plaza */}
                             <View style={{ backgroundColor: '#EFF6FF', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: '#BFDBFE' }}>
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E40AF' }}>
