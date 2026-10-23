@@ -40,6 +40,13 @@ interface Vehicle {
   brand: string;
 }
 
+interface MissingField {
+  section: string;
+  field: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
 export default function VisitorsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -160,13 +167,153 @@ export default function VisitorsScreen() {
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Cálculo detallado en tiempo real de todos los campos que faltan
+  const missingFields = useMemo<MissingField[]>(() => {
+    const missing: MissingField[] = [];
+
+    // 1. Visitantes
+    if (!visitors || visitors.length === 0) {
+      missing.push({
+        section: 'Información de Visitantes',
+        field: 'Listado de visitantes',
+        description: 'Debes registrar al menos una persona que ingresará a la entidad.',
+        icon: 'people-outline'
+      });
+    } else {
+      visitors.forEach((v, idx) => {
+        const num = idx + 1;
+        const hasName = !!v.name?.trim();
+        const hasDoc = !!v.document?.trim();
+        if (!hasName && !hasDoc) {
+          missing.push({
+            section: 'Información de Visitantes',
+            field: `Visitante #${num}`,
+            description: `Faltan tanto el nombre como el documento del Visitante #${num}.`,
+            icon: 'person-outline'
+          });
+        } else {
+          if (!hasName) {
+            missing.push({
+              section: 'Información de Visitantes',
+              field: `Nombre (Visitante #${num})`,
+              description: `Ingresa el nombre completo del Visitante #${num}.`,
+              icon: 'person-outline'
+            });
+          }
+          if (!hasDoc) {
+            missing.push({
+              section: 'Información de Visitantes',
+              field: `Documento (Visitante #${num})`,
+              description: `Ingresa el número de identificación (CC/CE/TI) de ${v.name.trim() || `Visitante #${num}`}.`,
+              icon: 'card-outline'
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Acceso Vehicular (si el switch está activo)
+    if (hasVehicle) {
+      if (!vehicles || vehicles.length === 0) {
+        missing.push({
+          section: 'Acceso Vehicular',
+          field: 'Vehículos',
+          description: 'Debes registrar la placa y marca del vehículo o apagar la opción de vehículo.',
+          icon: 'car-outline'
+        });
+      } else {
+        vehicles.forEach((vh, idx) => {
+          const num = idx + 1;
+          const hasPlate = !!vh.plate?.trim();
+          const hasBrand = !!vh.brand?.trim();
+          if (!hasPlate) {
+            missing.push({
+              section: 'Acceso Vehicular',
+              field: `Placa (Vehículo #${num})`,
+              description: `Ingresa la placa del vehículo #${num} (Ej. ABC123).`,
+              icon: 'barcode-outline'
+            });
+          }
+          if (!hasBrand) {
+            missing.push({
+              section: 'Acceso Vehicular',
+              field: `Marca (Vehículo #${num})`,
+              description: `Ingresa la marca o tipo de vehículo #${num} (Ej. Mazda, Renault, Pulsar).`,
+              icon: 'car-sport-outline'
+            });
+          }
+        });
+      }
+    }
+
+    // 3. Funcionario Responsable
+    if (!responsible.name?.trim()) {
+      missing.push({
+        section: 'Funcionario Responsable',
+        field: 'Nombre del Funcionario',
+        description: 'Ingresa el nombre del funcionario o contratista que autoriza o atiende la visita.',
+        icon: 'briefcase-outline'
+      });
+    }
+    if (!responsible.dependency?.trim()) {
+      missing.push({
+        section: 'Funcionario Responsable',
+        field: 'Dependencia Institucional',
+        description: 'Selecciona la dependencia o área de la Secretaría Jurídica Distrital.',
+        icon: 'business-outline'
+      });
+    }
+    if (!responsible.phone?.trim()) {
+      missing.push({
+        section: 'Funcionario Responsable',
+        field: 'Teléfono / Extensión',
+        description: 'Ingresa el número telefónico institucional o celular de contacto.',
+        icon: 'call-outline'
+      });
+    }
+
+    // 4. Motivo de la Visita
+    if (!visitReason?.trim()) {
+      missing.push({
+        section: 'Motivo de la Visita',
+        field: 'Descripción del Motivo',
+        description: 'Escribe una breve descripción del objeto o propósito de la visita.',
+        icon: 'document-text-outline'
+      });
+    }
+
+    // 5. Vigencia de Fechas
+    if (fromDate && toDate && new Date(toDate) < new Date(fromDate)) {
+      missing.push({
+        section: 'Vigencia del Ingreso',
+        field: 'Rango de Fechas',
+        description: 'La fecha "Hasta" no puede ser anterior a la fecha "Desde".',
+        icon: 'calendar-outline'
+      });
+    }
+
+    // 6. Autorización de Datos
+    if (!acceptedTerms) {
+      missing.push({
+        section: 'Protección de Datos',
+        field: 'Autorización de Tratamiento',
+        description: 'Debes marcar la casilla aceptando la política de protección de datos personales.',
+        icon: 'shield-checkmark-outline'
+      });
+    }
+
+    return missing;
+  }, [visitors, hasVehicle, vehicles, responsible, visitReason, fromDate, toDate, acceptedTerms]);
 
   const progress = useMemo(() => {
     let p = 10;
-    const vFull = visitors.every(v => v.name && v.document);
+    const vFull = visitors.length > 0 && visitors.every(v => v.name?.trim() && v.document?.trim());
     if (vFull) p += 25;
-    if (responsible.name && responsible.phone) p += 25;
+    if (responsible.name?.trim() && responsible.phone?.trim() && responsible.dependency?.trim()) p += 25;
     if (visitReason.trim()) p += 15;
     if (acceptedTerms) p += 25;
     return Math.min(p, 100);
@@ -187,6 +334,16 @@ export default function VisitorsScreen() {
   const handleRegister = async () => {
     try {
       setErrorMessage('');
+      setAttemptedSubmit(true);
+
+      // Si faltan datos, desplegar inmediatamente el modal detallado
+      if (missingFields.length > 0) {
+        setShowValidationModal(true);
+        setErrorMessage(`Falta completar ${missingFields.length} dato${missingFields.length > 1 ? 's' : ''} requerido${missingFields.length > 1 ? 's' : ''} para poder radicar la solicitud.`);
+        return;
+      }
+
+      setLoading(true);
 
       const validVisitors = visitors.map(v => ({
         name: v.name.trim(),
@@ -195,34 +352,7 @@ export default function VisitorsScreen() {
       const trimmedResponsibleName = responsible.name.trim();
       const trimmedResponsiblePhone = responsible.phone.trim();
       const trimmedResponsibleDependency = responsible.dependency.trim();
-
-      if (!validVisitors.every(v => v.name && v.document)) {
-        setErrorMessage('Todos los visitantes deben tener nombre y documento completos.');
-        return;
-      }
-
-      if (!trimmedResponsibleName || !trimmedResponsiblePhone || !trimmedResponsibleDependency) {
-        setErrorMessage('Completa los datos del funcionario responsable antes de continuar.');
-        return;
-      }
-
       const trimmedReason = visitReason.trim();
-      if (!trimmedReason) {
-        setErrorMessage('Ingresa una breve descripción del motivo de la visita.');
-        return;
-      }
-
-      if (new Date(toDate) < new Date(fromDate)) {
-        setErrorMessage('La fecha final no puede ser anterior a la fecha inicial.');
-        return;
-      }
-
-      if (!acceptedTerms) {
-        setErrorMessage('Debes aceptar la autorización de tratamiento de datos para continuar.');
-        return;
-      }
-
-      setLoading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -302,7 +432,11 @@ export default function VisitorsScreen() {
             <ResponsiveContainer>
               {!isDesktop && <MobileHeader />}
 
-              <Hero progress={progress} />
+              <Hero 
+                progress={progress} 
+                missingCount={missingFields.length} 
+                onPressMissing={() => setShowValidationModal(true)} 
+              />
 
               <View style={{ gap: 18 }}>
                 <Card title="Información de Visitantes" icon="people">
@@ -322,6 +456,8 @@ export default function VisitorsScreen() {
                         value={v.name} 
                         onChangeText={(txt: string) => updateVisitor(v.id, 'name', txt)} 
                         placeholder="Ej. Juan Pérez" 
+                        hasError={attemptedSubmit && !v.name?.trim()}
+                        errorText="Nombre obligatorio"
                       />
                       <Field 
                         label="Documento" 
@@ -329,6 +465,8 @@ export default function VisitorsScreen() {
                         value={v.document} 
                         onChangeText={(txt: string) => updateVisitor(v.id, 'document', txt)} 
                         placeholder="CC / CE / TI" 
+                        hasError={attemptedSubmit && !v.document?.trim()}
+                        errorText="Documento obligatorio"
                       />
                     </View>
                   ))}
@@ -410,6 +548,8 @@ export default function VisitorsScreen() {
                                 onChangeText={(txt: string) => updateVehicle(vh.id, 'plate', txt)} 
                                 placeholder="ABC123"
                                 maxLength={6}
+                                hasError={hasVehicle && attemptedSubmit && !vh.plate?.trim()}
+                                errorText="Placa obligatoria"
                               />
                             </View>
                             <View style={{ flex: 1 }}>
@@ -418,6 +558,8 @@ export default function VisitorsScreen() {
                                 value={vh.brand} 
                                 onChangeText={(txt: string) => updateVehicle(vh.id, 'brand', txt)} 
                                 placeholder="Ej. Mazda"
+                                hasError={hasVehicle && attemptedSubmit && !vh.brand?.trim()}
+                                errorText="Marca obligatoria"
                               />
                             </View>
                           </View>
@@ -438,26 +580,50 @@ export default function VisitorsScreen() {
                     value={responsible.name} 
                     onChangeText={(txt: string) => setResponsible({ ...responsible, name: txt })} 
                     placeholder="Persona que autoriza" 
+                    hasError={attemptedSubmit && !responsible.name?.trim()}
+                    errorText="Nombre obligatorio"
                   />
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.label}>Dependencia</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, marginLeft: 4 }}>
+                        <Text style={[styles.label, { marginBottom: 0, marginLeft: 0 }, attemptedSubmit && !responsible.dependency && { color: '#DC2626', fontWeight: '800' }]}>
+                          Dependencia <Text style={{ color: '#DC2626' }}>*</Text>
+                        </Text>
+                        {attemptedSubmit && !responsible.dependency && (
+                          <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '700' }}>Obligatorio</Text>
+                        )}
+                      </View>
                       <TouchableOpacity 
-                        style={styles.inputWrap} 
+                        style={[
+                          styles.inputWrap,
+                          attemptedSubmit && !responsible.dependency && { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
+                        ]} 
                         onPress={() => setShowDeps(true)}
                         accessibilityRole="combobox"
                         accessibilityLabel="Dependencia"
                         aria-label="Dependencia"
                         {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                       >
-                        <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Ionicons 
+                          name="business-outline" 
+                          size={18} 
+                          color={attemptedSubmit && !responsible.dependency ? '#DC2626' : COLORS.muted} 
+                          style={{ marginRight: 10 }} 
+                        />
                         <Text 
-                          style={[styles.input, !responsible.dependency && { color: '#94A3B8' }]} 
+                          style={[
+                            styles.input, 
+                            !responsible.dependency && { color: attemptedSubmit ? '#F87171' : '#94A3B8' }
+                          ]} 
                           numberOfLines={1}
                         >
                           {responsible.dependency || "Seleccionar"}
                         </Text>
-                        <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                        <Ionicons 
+                          name="chevron-down" 
+                          size={16} 
+                          color={attemptedSubmit && !responsible.dependency ? '#DC2626' : COLORS.muted} 
+                        />
                       </TouchableOpacity>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -468,6 +634,8 @@ export default function VisitorsScreen() {
                         onChangeText={(txt: string) => setResponsible({ ...responsible, phone: txt })} 
                         placeholder="Ej. 1234"
                         keyboardType="phone-pad"
+                        hasError={attemptedSubmit && !responsible.phone?.trim()}
+                        errorText="Teléfono obligatorio"
                       />
                     </View>
                   </View>
@@ -480,6 +648,8 @@ export default function VisitorsScreen() {
                     value={visitReason} 
                     onChangeText={setVisitReason} 
                     placeholder="Ej. Reunión técnica sobre lineamientos jurídicos" 
+                    hasError={attemptedSubmit && !visitReason?.trim()}
+                    errorText="Motivo obligatorio"
                   />
                 </Card>
 
@@ -506,7 +676,10 @@ export default function VisitorsScreen() {
                     <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={styles.label}>Hasta (Fecha)</Text>
                       <TouchableOpacity 
-                        style={styles.inputWrap} 
+                        style={[
+                          styles.inputWrap,
+                          fromDate && toDate && new Date(toDate) < new Date(fromDate) && { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
+                        ]} 
                         onPress={() => {
                           setModalTarget('to');
                           setShowDatePicker(true);
@@ -516,37 +689,77 @@ export default function VisitorsScreen() {
                         aria-label="Hasta (Fecha)"
                         {...({ 'data-field-role': 'select', 'data-field-name': 'Hasta (Fecha)' } as any)}
                       >
-                        <Ionicons name="calendar-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Ionicons 
+                          name="calendar-outline" 
+                          size={18} 
+                          color={fromDate && toDate && new Date(toDate) < new Date(fromDate) ? '#DC2626' : COLORS.muted} 
+                          style={{ marginRight: 10 }} 
+                        />
                         <Text style={styles.input}>{toDate}</Text>
                         <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                       </TouchableOpacity>
                     </View>
                   </View>
+                  {fromDate && toDate && new Date(toDate) < new Date(fromDate) && (
+                    <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700', marginTop: 8 }}>
+                      ⚠️ La fecha Hasta no puede ser anterior a la fecha Desde.
+                    </Text>
+                  )}
                 </Card>
 
                 <TouchableOpacity 
-                  style={styles.termsBox} 
+                  style={[
+                    styles.termsBox,
+                    attemptedSubmit && !acceptedTerms && { 
+                      borderColor: '#EF4444', 
+                      backgroundColor: '#FEF2F2', 
+                      borderWidth: 1.5, 
+                      borderRadius: 14,
+                      padding: 12
+                    }
+                  ]} 
                   onPress={() => setAcceptedTerms(!acceptedTerms)}
                 >
-                  <View style={[styles.checkbox, acceptedTerms && styles.checkboxOn]}>
+                  <View style={[
+                    styles.checkbox, 
+                    acceptedTerms && styles.checkboxOn,
+                    attemptedSubmit && !acceptedTerms && { borderColor: '#EF4444' }
+                  ]}>
                     {acceptedTerms && <Ionicons name="checkmark" size={16} color={COLORS.white} />}
                   </View>
-                  <Text style={styles.termsText}>
-                    Autorizo el tratamiento de datos según el <Text style={{ color: COLORS.primary, fontWeight: '700' }} onPress={() => setShowPolicy(true)}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>.
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.termsText}>
+                      Autorizo el tratamiento de datos según el <Text style={{ color: COLORS.primary, fontWeight: '700' }} onPress={() => setShowPolicy(true)}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>.
+                    </Text>
+                    {attemptedSubmit && !acceptedTerms && (
+                      <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '800', marginTop: 4 }}>
+                        ⚠️ Debes marcar esta casilla de autorización para poder radicar.
+                      </Text>
+                    )}
+                  </View>
                 </TouchableOpacity>
 
                 {errorMessage ? (
-                  <View style={styles.errorBox}>
-                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  <View style={[styles.errorBox, { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 }]}>
+                    <Ionicons name="alert-circle" size={22} color="#B91C1C" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.errorText}>{errorMessage}</Text>
+                    </View>
+                    {missingFields.length > 0 && (
+                      <TouchableOpacity 
+                        onPress={() => setShowValidationModal(true)}
+                        style={{ backgroundColor: '#B91C1C', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>VER QUÉ FALTA</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ) : null}
 
                 <TouchableOpacity 
-                  style={[styles.mainBtn, (!acceptedTerms || progress < 40) && { opacity: 0.5 }]} 
+                  style={[styles.mainBtn, loading && { opacity: 0.6 }]} 
                   onPress={handleRegister}
-                  disabled={!acceptedTerms || loading}
+                  disabled={loading}
                 >
                   <LinearGradient 
                     colors={[COLORS.primary, COLORS.primaryDark]} 
@@ -558,6 +771,17 @@ export default function VisitorsScreen() {
                     <Ionicons name="checkmark-circle" size={22} color={COLORS.white} />
                   </LinearGradient>
                 </TouchableOpacity>
+
+                {missingFields.length > 0 && (
+                  <TouchableOpacity 
+                    onPress={() => setShowValidationModal(true)}
+                    style={{ alignItems: 'center', paddingVertical: 8, marginTop: -4 }}
+                  >
+                    <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600', textAlign: 'center' }}>
+                      ¿Dudas sobre qué datos faltan? <Text style={{ color: COLORS.primary, fontWeight: '800', textDecorationLine: 'underline' }}>Toca aquí para ver la lista de pendientes ({missingFields.length})</Text>
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </ResponsiveContainer>
           </ScrollView>
@@ -605,6 +829,12 @@ export default function VisitorsScreen() {
           }
           setShowDatePicker(false);
         }}
+      />
+
+      <ValidationModal 
+        visible={showValidationModal} 
+        onClose={() => setShowValidationModal(false)} 
+        missingFields={missingFields} 
       />
     </SafeAreaView>
   );
@@ -660,7 +890,15 @@ function MobileHeader() {
   );
 }
 
-function Hero({ progress }: { progress: number }) {
+function Hero({ 
+  progress, 
+  missingCount, 
+  onPressMissing 
+}: { 
+  progress: number; 
+  missingCount: number; 
+  onPressMissing: () => void; 
+}) {
   return (
     <View style={styles.hero}>
       <View style={styles.heroRow}>
@@ -674,7 +912,37 @@ function Hero({ progress }: { progress: number }) {
         <View style={styles.barBg}>
           <Animated.View style={[styles.barFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.barLabel}>{progress}% Completado</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 6 }}>
+          <Text style={styles.barLabel}>{progress}% Completado</Text>
+          {missingCount > 0 ? (
+            <TouchableOpacity 
+              onPress={onPressMissing}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                gap: 6, 
+                backgroundColor: '#FEF2F2', 
+                paddingHorizontal: 10, 
+                paddingVertical: 5, 
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#FCA5A5'
+              }}
+            >
+              <Ionicons name="alert-circle" size={15} color="#DC2626" />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#DC2626' }}>
+                Faltan {missingCount} dato{missingCount > 1 ? 's' : ''} (Ver qué falta)
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: '#A7F3D0' }}>
+              <Ionicons name="checkmark-circle" size={15} color="#059669" />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#059669' }}>
+                Todos los datos listos
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -699,19 +967,128 @@ function Card({ title, icon, right, children }: any) {
   );
 }
 
-function Field({ label, icon, ...props }: any) {
+function Field({ label, icon, hasError, errorText, required = true, ...props }: any) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputWrap}>
-        {icon && <Ionicons name={icon} size={18} color={COLORS.muted} style={{ marginRight: 10 }} />}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, marginLeft: 4 }}>
+        <Text style={[styles.label, { marginBottom: 0, marginLeft: 0 }, hasError && { color: '#DC2626', fontWeight: '800' }]}>
+          {label} {required && <Text style={{ color: '#DC2626' }}>*</Text>}
+        </Text>
+        {hasError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="alert-circle" size={12} color="#DC2626" />
+            <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '700' }}>
+              {errorText || 'Obligatorio'}
+            </Text>
+          </View>
+        )}
+      </View>
+      <View style={[
+        styles.inputWrap,
+        hasError && { borderColor: '#EF4444', backgroundColor: '#FEF2F2' }
+      ]}>
+        {icon && <Ionicons name={icon} size={18} color={hasError ? '#DC2626' : COLORS.muted} style={{ marginRight: 10 }} />}
         <TextInput 
-          placeholderTextColor="#94A3B8" 
+          placeholderTextColor={hasError ? '#F87171' : '#94A3B8'} 
           style={styles.input} 
           {...props} 
         />
       </View>
     </View>
+  );
+}
+
+function ValidationModal({ visible, onClose, missingFields }: { visible: boolean; onClose: () => void; missingFields: MissingField[] }) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, MissingField[]>();
+    missingFields.forEach(item => {
+      const arr = map.get(item.section) || [];
+      arr.push(item);
+      map.set(item.section, arr);
+    });
+    return Array.from(map.entries());
+  }, [missingFields]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBlur}>
+        <BlurView intensity={25} style={StyleSheet.absoluteFill} />
+        <View style={[styles.modalPanel, { maxWidth: 540, maxHeight: '85%', padding: 24 }]}>
+          {/* Encabezado */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.line, paddingBottom: 14, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#FCA5A5' }}>
+                <Ionicons name="alert-circle" size={26} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
+                  ¿Qué datos faltan para radicar?
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.muted, fontWeight: '600', marginTop: 2 }}>
+                  Faltan {missingFields.length} campo{missingFields.length > 1 ? 's' : ''} obligatorio{missingFields.length > 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Banner de guía */}
+          <View style={{ backgroundColor: '#FFFBEB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A', marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, color: '#B45309', fontWeight: '700', lineHeight: 18 }}>
+              Para procesar y autorizar el acceso en portería de la entidad, por favor completa los siguientes puntos pendientes:
+            </Text>
+          </View>
+
+          {/* Lista agrupada */}
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+            <View style={{ gap: 12, paddingRight: 4 }}>
+              {grouped.map(([sectionTitle, items]) => (
+                <View key={sectionTitle} style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: COLORS.line }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.3 }}>
+                      {sectionTitle.toUpperCase()}
+                    </Text>
+                    <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#B91C1C' }}>
+                        {items.length} pendiente{items.length > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 8 }}>
+                    {items.map((item, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#FFFFFF', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#F1F5F9' }}>
+                        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginTop: 2 }}>
+                          <Ionicons name={item.icon || 'alert-circle-outline'} size={16} color="#DC2626" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                            {item.field}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17, marginTop: 2, fontWeight: '500' }}>
+                            {item.description}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Botón de acción */}
+          <TouchableOpacity 
+            style={[styles.modalBtn, { marginTop: 18 }]} 
+            onPress={onClose}
+          >
+            <Text style={styles.modalBtnText}>ENTENDIDO, COMPLETAR DATOS</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
