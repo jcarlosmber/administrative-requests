@@ -5529,8 +5529,16 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
       });
   }, [registroSimoParaVincular, busquedaPlazaParaVincular]);
 
-  const obtenerTitularGeneradorVacante = (r: RegistroSimoOpec): PersonaPerno | null => {
-    if (!r) return null;
+  const esProvisionalFuncionario = (p?: PersonaPerno | null): boolean => {
+    if (!p) return false;
+    const tn = String(p.tipo_nombramiento || '').toUpperCase();
+    const tf = String(p.tipo_funcionario || '').toUpperCase();
+    const car = String(p.cargo || '').toUpperCase();
+    return tn.includes('PROVISIONAL') || tf.includes('PROVISIONAL') || car.includes('PROVISIONAL');
+  };
+
+  const obtenerDetalleGeneradorVacante = (r: RegistroSimoOpec) => {
+    if (!r) return { titularCarrera: null, ultimoProvisional: null, plaza: null, idPerno: null, registrosPerno: [] };
     const todasLasPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
     const todoElPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
 
@@ -5553,7 +5561,9 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
       });
     }
 
-    if (!plaza || !plaza.id_perno) return null;
+    if (!plaza || !plaza.id_perno) {
+      return { titularCarrera: null, ultimoProvisional: null, plaza: plaza || null, idPerno: null, registrosPerno: [] };
+    }
 
     const idPerno = Number(plaza.id_perno);
     const registrosPerno = todoElPerno.filter(
@@ -5568,7 +5578,25 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         return timeB - timeA;
       });
 
-    return retirados.length > 0 ? retirados[0] : null;
+    // 1. Titular de Carrera Administrativa que generó formalmente la vacante definitiva (Ley 909/2004)
+    const retiradosCarrera = retirados.filter((p) => !esProvisionalFuncionario(p));
+    const titularCarrera = retiradosCarrera.length > 0 ? retiradosCarrera[0] : null;
+
+    // 2. Último servidor provisional que ocupó transitoriamente el cargo (NO generó la vacante definitiva)
+    const retiradosProvisionales = retirados.filter((p) => esProvisionalFuncionario(p));
+    const ultimoProvisional = retiradosProvisionales.length > 0 ? retiradosProvisionales[0] : null;
+
+    return {
+      plaza,
+      idPerno,
+      titularCarrera,
+      ultimoProvisional,
+      registrosPerno,
+    };
+  };
+
+  const obtenerTitularGeneradorVacante = (r: RegistroSimoOpec): PersonaPerno | null => {
+    return obtenerDetalleGeneradorVacante(r).titularCarrera;
   };
 
   const handleAbrirFichaSimo = (r: RegistroSimoOpec) => {
@@ -5607,6 +5635,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         plaza,
         idPerno: plaza?.id_perno || null,
         titularGeneradorVacante: null,
+        ultimoProvisionalDesvinculado: null,
         historialPerno: [],
       };
     }
@@ -5626,14 +5655,20 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
       return nombB - nombA;
     });
 
-    // El titular que generó la vacante definitiva es el que tiene la fecha de retiro más reciente
+    // En empleos de carrera (Ley 909/2004), la vacante definitiva es generada por el titular de carrera retirado
     const retirados = historialOrdenado.filter((p) => p.fecha_retiro || p.estado_funcionario === 'R');
-    const titularGeneradorVacante = retirados.length > 0 ? retirados[0] : (historialOrdenado[0] || null);
+    const retiradosCarrera = retirados.filter((p) => !esProvisionalFuncionario(p));
+    const titularGeneradorVacante = retiradosCarrera.length > 0 ? retiradosCarrera[0] : null;
+
+    // Último servidor que ocupó transitoriamente el empleo en provisionalidad
+    const retiradosProvisional = retirados.filter((p) => esProvisionalFuncionario(p));
+    const ultimoProvisionalDesvinculado = retiradosProvisional.length > 0 ? retiradosProvisional[0] : null;
 
     return {
       plaza,
       idPerno,
       titularGeneradorVacante,
+      ultimoProvisionalDesvinculado,
       historialPerno: historialOrdenado,
     };
   }, [registroSimoSeleccionado]);
@@ -16589,7 +16624,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         ) : (
                           registrosSimoFiltrados.map((r, idx) => {
-                            const titularGenerador = obtenerTitularGeneradorVacante(r);
+                            const detalleGenerador = obtenerDetalleGeneradorVacante(r);
+                            const titularGenerador = detalleGenerador.titularCarrera;
+                            const ultimoProvisional = detalleGenerador.ultimoProvisional;
                             const cfg = ESTADOS_PROVISION_SIMO_CONFIG[r.estadoProvision] || {
                               label: r.estadoProvision,
                               descripcion: '',
@@ -16715,7 +16752,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   {titularGenerador ? (
                                     <View style={{ gap: 2 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <Ionicons name="person" size={12} color="#991B1B" />
+                                        <Ionicons name="ribbon" size={13} color="#991B1B" />
                                         <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>
                                           {titularGenerador.nombre_completo}
                                         </Text>
@@ -16724,29 +16761,57 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         <Text style={{ fontSize: 10, color: THEME.slate500, fontWeight: '600' }}>
                                           C.C. {titularGenerador.cedula}
                                         </Text>
-                                        {titularGenerador.fecha_retiro ? (
-                                          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
-                                            <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#991B1B' }}>
-                                              📅 Retiro: {titularGenerador.fecha_retiro}
-                                            </Text>
-                                          </View>
-                                        ) : (
-                                          <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#166534' }}>
-                                              {titularGenerador.estado_descripcion || 'Activo'}
-                                            </Text>
-                                          </View>
-                                        )}
+                                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#991B1B' }}>
+                                            ⭐ Carrera • {titularGenerador.fecha_retiro ? `Retiro: ${titularGenerador.fecha_retiro}` : 'Retirado'}
+                                          </Text>
+                                        </View>
                                       </View>
                                       <Text style={{ fontSize: 9.5, color: THEME.slate500 }} numberOfLines={1}>
                                         {titularGenerador.cargo} (Pos. #{titularGenerador.posicion_planta})
                                       </Text>
+                                      {ultimoProvisional && (
+                                        <Text style={{ fontSize: 9, color: THEME.slate400 }} numberOfLines={1}>
+                                          Últ. prov.: {ultimoProvisional.nombre_completo}
+                                        </Text>
+                                      )}
+                                    </View>
+                                  ) : ultimoProvisional ? (
+                                    <View style={{ gap: 2 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                        <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                                          <Text style={{ fontSize: 8.5, fontWeight: '800', color: '#1E40AF' }}>
+                                            ORIGINARIA
+                                          </Text>
+                                        </View>
+                                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>
+                                          {ultimoProvisional.nombre_completo}
+                                        </Text>
+                                      </View>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                        <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>
+                                          C.C. {ultimoProvisional.cedula}
+                                        </Text>
+                                        <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#475569' }}>
+                                            Fin prov.: {ultimoProvisional.fecha_retiro || 'Cese'}
+                                          </Text>
+                                        </View>
+                                      </View>
+                                      <Text style={{ fontSize: 9, color: '#64748B', fontStyle: 'italic' }} numberOfLines={1}>
+                                        Ocupante provisional (no generó vacancia)
+                                      </Text>
                                     </View>
                                   ) : (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                      <Ionicons name="remove-circle-outline" size={13} color={THEME.slate400} />
-                                      <Text style={{ fontSize: 11, color: THEME.slate400, fontStyle: 'italic' }}>
-                                        Sin retiro en nómina
+                                    <View style={{ gap: 2 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                        <Ionicons name="sparkles-outline" size={12} color="#0D9488" />
+                                        <Text style={{ fontSize: 11, color: '#0F766E', fontWeight: '700' }}>
+                                          Vacante originaria
+                                        </Text>
+                                      </View>
+                                      <Text style={{ fontSize: 9.5, color: THEME.slate400, fontStyle: 'italic' }}>
+                                        Sin titular previo en nómina
                                       </Text>
                                     </View>
                                   )}
@@ -25166,11 +25231,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         </Text>
                       </View>
                       <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 17 }}>
-                        La vacante definitiva se determina cruzando el <Text style={{ fontWeight: '700' }}>ID Perno ({infoPernoVacanteSimo?.idPerno || 'Sin ID'})</Text> de la plaza física con el campo <Text style={{ fontWeight: '700' }}>POSICION_PLANTA</Text> del histórico de nómina. Entre los servidores que ocuparon la posición, el servidor con la <Text style={{ fontWeight: '700', color: '#B91C1C' }}>fecha de retiro más actual</Text> es quien generó formalmente la vacante definitiva.
+                        En el régimen de carrera administrativa (Ley 909 de 2004), la vacante definitiva es originada formalmente por el <Text style={{ fontWeight: '700', color: '#B91C1C' }}>retiro de un servidor con derechos de carrera</Text> (renuncia, pensión, etc.). Los servidores nombrados en provisionalidad ocupan transitoriamente cargos que ya se encuentran vacantes; por ende, su desvinculación <Text style={{ fontWeight: '700', color: '#B91C1C' }}>no genera la vacante definitiva</Text>.
                       </Text>
                     </View>
 
-                    {/* Tarjeta Destacada: Servidor que generó la vacante definitiva */}
+                    {/* Tarjeta Destacada: Servidor de Carrera que generó la vacante definitiva */}
                     {infoPernoVacanteSimo?.titularGeneradorVacante ? (
                       <View
                         style={{
@@ -25190,10 +25255,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                             <View>
                               <Text style={{ fontSize: 12, fontWeight: '800', color: '#9A3412', textTransform: 'uppercase' }}>
-                                ⭐ SERVIDOR QUE GENERÓ LA VACANTE DEFINITIVA
+                                ⭐ TITULAR DE CARRERA QUE GENERÓ LA VACANTE DEFINITIVA
                               </Text>
                               <Text style={{ fontSize: 10.5, color: '#C2410C' }}>
-                                Último titular en nómina PERNO con retiro más reciente
+                                Servidor con derechos de carrera en nómina PERNO cuyo retiro originó la vacancia definitiva
                               </Text>
                             </View>
                           </View>
@@ -25254,8 +25319,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                             <View>
                               <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>TIPO NOMBRAMIENTO</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
-                                {infoPernoVacanteSimo.titularGeneradorVacante.tipo_nombramiento || 'ORDINARIO'}
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534' }}>
+                                {infoPernoVacanteSimo.titularGeneradorVacante.tipo_nombramiento || 'CARRERA'}
                               </Text>
                             </View>
                             <View>
@@ -25272,26 +25337,98 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                           </View>
 
-                          {/* Seguridad Social */}
-                          <View style={{ flexDirection: 'row', gap: 14, backgroundColor: THEME.slate50, padding: 10, borderRadius: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                          {/* Ocupante transitorio provisional posterior (si aplica) */}
+                          {infoPernoVacanteSimo.ultimoProvisionalDesvinculado && (
+                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#EFF6FF', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE', marginTop: 4 }}>
+                              <Ionicons name="information-circle" size={16} color="#1D4ED8" />
+                              <Text style={{ flex: 1, fontSize: 11, color: '#1E40AF', lineHeight: 16 }}>
+                                <Text style={{ fontWeight: '700' }}>Ocupante posterior en provisionalidad:</Text> Posteriormente el empleo fue ocupado de forma transitoria por <Text style={{ fontWeight: '700' }}>{infoPernoVacanteSimo.ultimoProvisionalDesvinculado.nombre_completo}</Text> (C.C. {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.cedula}, fin provisión: {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.fecha_retiro || 'Retirado'}), quien no generó la vacante definitiva conforme a la Ley 909 de 2004.
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    ) : infoPernoVacanteSimo?.ultimoProvisionalDesvinculado ? (
+                      <View
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: 14,
+                          padding: 16,
+                          borderWidth: 1.5,
+                          borderColor: '#CBD5E1',
+                          gap: 12,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ backgroundColor: '#DBEAFE', padding: 6, borderRadius: 6 }}>
+                              <Ionicons name="business" size={18} color="#1E40AF" />
+                            </View>
                             <View>
-                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>EPS / Salud:</Text>
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
-                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_salud || 'No registrada'}
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>
+                                🏛️ VACANCIA DEFINITIVA ORIGINARIA DE PLANTA
+                              </Text>
+                              <Text style={{ fontSize: 10.5, color: '#475569' }}>
+                                Cargo sin registro de titular de carrera previo retirado en nómina PERNO
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF' }}>
+                              Vacante Originaria
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={{ backgroundColor: THEME.white, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                            <View>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                                Último ocupante transitorio en provisionalidad:
+                              </Text>
+                              <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900, marginTop: 2 }}>
+                                {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.nombre_completo}
+                              </Text>
+                            </View>
+                            <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: '#CBD5E1' }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                                C.C. {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.cedula}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: THEME.slate100, paddingTop: 10 }}>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>TIPO NOMBRAMIENTO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E40AF' }}>
+                                {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.tipo_nombramiento || 'PROVISIONAL'}
                               </Text>
                             </View>
                             <View>
-                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>Fondo Pensiones:</Text>
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
-                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_pension || 'No registrada'}
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>FECHA CESE / RETIRO</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#B91C1C' }}>
+                                {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.fecha_retiro || 'No registrada'}
                               </Text>
                             </View>
                             <View>
-                              <Text style={{ fontSize: 9.5, color: THEME.slate500, fontWeight: '600' }}>Cesantías:</Text>
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
-                                {infoPernoVacanteSimo.titularGeneradorVacante.fondo_cesantias || 'No registrada'}
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>CARGO EN NÓMINA</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.cargo}
                               </Text>
                             </View>
+                            <View>
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '700' }}>DEPENDENCIA</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                {infoPernoVacanteSimo.ultimoProvisionalDesvinculado.dependencia}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A', marginTop: 4 }}>
+                            <Ionicons name="information-circle" size={16} color="#B45309" />
+                            <Text style={{ flex: 1, fontSize: 11, color: '#92400E', lineHeight: 16 }}>
+                              <Text style={{ fontWeight: '700' }}>Aclaración legal (Ley 909 de 2004):</Text> Los funcionarios en provisionalidad ocupan transitoriamente empleos vacantes. Su retiro o desvinculación no genera la vacante definitiva, por lo que este empleo se cataloga como vacancia originaria de la planta institucional ofertada en el proceso de selección CNSC.
+                            </Text>
                           </View>
                         </View>
                       </View>
@@ -25350,16 +25487,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                         <View style={{ gap: 6 }}>
                           {infoPernoVacanteSimo.historialPerno.map((p, idx) => {
-                            const esElMasReciente = idx === 0;
+                            const esGeneradorCarrera = infoPernoVacanteSimo.titularGeneradorVacante &&
+                              p.cedula === infoPernoVacanteSimo.titularGeneradorVacante.cedula &&
+                              p.fecha_retiro === infoPernoVacanteSimo.titularGeneradorVacante.fecha_retiro;
+                            const esProvisional = esProvisionalFuncionario(p);
+
                             return (
                               <View
                                 key={`perno-hist-${p.cedula}-${idx}`}
                                 style={{
-                                  backgroundColor: esElMasReciente ? '#FFFBEB' : THEME.white,
+                                  backgroundColor: esGeneradorCarrera ? '#FEF2F2' : (esProvisional ? '#F8FAFC' : THEME.white),
                                   borderRadius: 8,
                                   padding: 10,
                                   borderWidth: 1,
-                                  borderColor: esElMasReciente ? '#FDE68A' : THEME.slate200,
+                                  borderColor: esGeneradorCarrera ? '#FCA5A5' : (esProvisional ? '#E2E8F0' : THEME.slate200),
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
@@ -25373,12 +25514,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       width: 22,
                                       height: 22,
                                       borderRadius: 11,
-                                      backgroundColor: esElMasReciente ? '#F59E0B' : THEME.slate200,
+                                      backgroundColor: esGeneradorCarrera ? '#DC2626' : (esProvisional ? '#94A3B8' : THEME.slate200),
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <Text style={{ fontSize: 10, fontWeight: '800', color: esElMasReciente ? THEME.white : THEME.slate700 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: (esGeneradorCarrera || esProvisional) ? THEME.white : THEME.slate700 }}>
                                       #{idx + 1}
                                     </Text>
                                   </View>
@@ -25387,10 +25528,17 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
                                         {p.nombre_completo}
                                       </Text>
-                                      {esElMasReciente && (
-                                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                      {esGeneradorCarrera && (
+                                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
                                           <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#991B1B' }}>
-                                            ⭐ Generó la vacante definitiva
+                                            ⭐ Generó la vacante definitiva (Titular Carrera)
+                                          </Text>
+                                        </View>
+                                      )}
+                                      {esProvisional && (
+                                        <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#1E40AF' }}>
+                                            Ocupante transitorio (Provisionalidad)
                                           </Text>
                                         </View>
                                       )}
@@ -25403,14 +25551,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                   <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '600' }}>FECHA RETIRO</Text>
+                                    <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '600' }}>
+                                      {esProvisional ? 'FIN PROVISIÓN' : 'FECHA RETIRO'}
+                                    </Text>
                                     <Text style={{ fontSize: 11.5, fontWeight: '700', color: p.fecha_retiro ? '#B91C1C' : '#047857' }}>
                                       {p.fecha_retiro || 'Activo en Nómina'}
                                     </Text>
                                   </View>
-                                  <View style={{ backgroundColor: p.estado_funcionario === 'R' ? '#FEE2E2' : '#DCFCE7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
-                                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.estado_funcionario === 'R' ? '#991B1B' : '#166534' }}>
-                                      {p.estado_funcionario === 'R' ? 'Retirado' : 'Activo'}
+                                  <View style={{ backgroundColor: esProvisional ? '#F1F5F9' : (p.estado_funcionario === 'R' ? '#FEE2E2' : '#DCFCE7'), paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: esProvisional ? '#CBD5E1' : (p.estado_funcionario === 'R' ? '#FCA5A5' : '#86EFAC') }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: esProvisional ? '#475569' : (p.estado_funcionario === 'R' ? '#991B1B' : '#166534') }}>
+                                      {esProvisional ? 'Provisional' : (p.estado_funcionario === 'R' ? 'Retirado' : 'Activo')}
                                     </Text>
                                   </View>
                                 </View>
